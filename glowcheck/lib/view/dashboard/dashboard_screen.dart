@@ -50,7 +50,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.paddingOf(context).bottom;
-    final dockBottom = kIsWeb ? 16.0 : 12 + (bottom > 0 ? bottom : 8);
+    final double dockBottom = kIsWeb ? 16.0 : 12.0 + (bottom > 0 ? bottom : 8.0);
 
     return DashboardScope(
       goTab: goTab,
