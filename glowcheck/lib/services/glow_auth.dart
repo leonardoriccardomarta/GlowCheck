@@ -89,7 +89,7 @@ class GlowAuth {
     }
     final json = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode >= 400 || json['ok'] != true) {
-      throw Exception(json['error'] as String? ?? GlowL10n.t('auth_failed'));
+      throw Exception(_authError(json));
     }
     final user = json['user'];
     if (user is Map<String, dynamic>) {
@@ -98,5 +98,23 @@ class GlowAuth {
         'token': json['token'],
       };
     }
-    throw Exception(GlowL10n.t('auth_missing'));  }
+    throw Exception(GlowL10n.t('auth_missing'));
+  }
+
+  static String _authError(Map<String, dynamic> json) {
+    final key = json['errorKey'] as String?;
+    if (key != null && key.isNotEmpty) return GlowL10n.t(key);
+    switch (json['error'] as String?) {
+      case 'Email or password does not match.':
+        return GlowL10n.t('err_email_pass');
+      case 'An account with this email already exists.':
+        return GlowL10n.t('auth_exists');
+      case 'Name, email and a password of at least 6 characters.':
+        return GlowL10n.t('login_fields');
+      case 'Unsupported social login.':
+        return GlowL10n.t('auth_social');
+      default:
+        return json['error'] as String? ?? GlowL10n.t('auth_failed');
+    }
+  }
 }

@@ -121,6 +121,14 @@ class _GlowPlainFieldImplState extends State<GlowPlainFieldImpl>
         hidden = true;
         return false;
       }
+      if (widget is IgnorePointer && widget.ignoring) {
+        hidden = true;
+        return false;
+      }
+      if (widget is TickerMode && !widget.enabled) {
+        hidden = true;
+        return false;
+      }
       if (widget is Visibility && !widget.visible) {
         hidden = true;
         return false;

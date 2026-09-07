@@ -43,8 +43,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final store = GlowStore.instance;
     return store.history.where((scan) {
       final badge = scan.badge.toUpperCase();
-      if (_filter == 'match' && scan.score < 75) return false;
-      if (_filter == 'caution' && scan.score >= 75) return false;
+      if (_filter == 'match' && scan.score < 70) return false;
+      if (_filter == 'caution' && scan.score >= 70) return false;
       if (_filter == 'saved' && !store.isPinned(scan.at)) return false;
       if (q.isEmpty) return true;
       final inci = scan.lines.any((item) => item.name.toLowerCase().contains(q));

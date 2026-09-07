@@ -4,9 +4,9 @@ import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/models/scan_result.dart';
 import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
+import 'package:fitnessapp/services/glow_share.dart';
 import 'package:fitnessapp/view/paywall/paywall_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 class FinishWorkoutScreen extends StatefulWidget {
   static String routeName = "/FinishWorkoutScreen";
@@ -399,8 +399,8 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
       'name': scan.productName,
       'headline': scan.headline,
     });
-    await Clipboard.setData(ClipboardData(text: text));
-    if (!mounted) return;
+    final outcome = await GlowShare.text(text: text, title: 'GlowCheck');
+    if (!mounted || outcome != GlowShareOutcome.copied) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(GlowL10n.t('score_copied'))),
     );

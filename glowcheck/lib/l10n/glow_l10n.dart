@@ -336,6 +336,8 @@ const _it = <String, String>{
   'auth_unreachable': 'L’API di autenticazione non è raggiungibile su {url}. Controlla AUTH_API_URL.',
   'auth_failed': 'Accesso non riuscito.',
   'auth_missing': 'Nella risposta di autenticazione manca l’utente.',
+  'auth_exists': 'Esiste già un account con questa email.',
+  'auth_social': 'Questo accesso social non è ancora collegato.',
   'apple_user': 'Utente Apple',
   'google_user': 'Utente Google',
 };
@@ -564,6 +566,8 @@ const _en = <String, String>{
   'auth_unreachable': 'Auth API is not reachable at {url}. Check AUTH_API_URL.',
   'auth_failed': 'Auth failed.',
   'auth_missing': 'Auth response was missing a user.',
+  'auth_exists': 'An account with this email already exists.',
+  'auth_social': 'This social login is not connected yet.',
   'apple_user': 'Apple user',
   'google_user': 'Google user',
 };
@@ -792,6 +796,8 @@ const _es = <String, String>{
   'auth_unreachable': 'La API de autenticación no es accesible en {url}. Revisa AUTH_API_URL.',
   'auth_failed': 'Error de autenticación.',
   'auth_missing': 'Faltaba el usuario en la respuesta de autenticación.',
+  'auth_exists': 'Ya existe una cuenta con este email.',
+  'auth_social': 'Este acceso social aún no está conectado.',
   'apple_user': 'Usuario de Apple',
   'google_user': 'Usuario de Google',
 };
@@ -1020,6 +1026,8 @@ const _fr = <String, String>{
   'auth_unreachable': 'L’API d’authentification n’est pas joignable à {url}. Vérifiez AUTH_API_URL.',
   'auth_failed': 'Échec de l’authentification.',
   'auth_missing': 'Il manquait un utilisateur dans la réponse d’authentification.',
+  'auth_exists': 'Un compte existe déjà avec cet e-mail.',
+  'auth_social': 'Cette connexion sociale n’est pas encore reliée.',
   'apple_user': 'Utilisateur Apple',
   'google_user': 'Utilisateur Google',
 };
@@ -1248,6 +1256,8 @@ const _de = <String, String>{
   'auth_unreachable': 'Die Auth-API unter {url} ist nicht erreichbar. Prüfe AUTH_API_URL.',
   'auth_failed': 'Anmeldung fehlgeschlagen.',
   'auth_missing': 'In der Auth-Antwort fehlte ein Nutzer.',
+  'auth_exists': 'Es gibt bereits ein Konto mit dieser E-Mail.',
+  'auth_social': 'Dieser Social-Login ist noch nicht verbunden.',
   'apple_user': 'Apple-Nutzer',
   'google_user': 'Google-Nutzer',
 };

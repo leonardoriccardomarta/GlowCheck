@@ -23,38 +23,53 @@ const socialSchema = z.object({
   clientId: z.string().max(200).optional(),
 });
 
+function fail(res: { status: (code: number) => { json: (body: unknown) => unknown } }, errorKey: string, error: string) {
+  return res.status(400).json({ ok: false, errorKey, error });
+}
+
+function keyFromMessage(message: string) {
+  if (message.includes('does not match')) return 'err_email_pass';
+  if (message.includes('already exists')) return 'auth_exists';
+  if (message.includes('at least 6')) return 'login_fields';
+  if (message.includes('Unsupported')) return 'auth_social';
+  return 'auth_failed';
+}
+
 authRouter.post('/register', (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ ok: false, error: 'Name, email and a password of at least 6 characters.' });
+    return fail(res, 'login_fields', 'Name, email and a password of at least 6 characters.');
   }
   try {
     return res.json(registerUser(parsed.data));
   } catch (error) {
-    return res.status(400).json({ ok: false, error: error instanceof Error ? error.message : 'Register failed.' });
+    const message = error instanceof Error ? error.message : 'Register failed.';
+    return fail(res, keyFromMessage(message), message);
   }
 });
 
 authRouter.post('/login', (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ ok: false, error: 'Email or password does not match.' });
+    return fail(res, 'err_email_pass', 'Email or password does not match.');
   }
   try {
     return res.json(loginUser(parsed.data));
   } catch (error) {
-    return res.status(400).json({ ok: false, error: error instanceof Error ? error.message : 'Login failed.' });
+    const message = error instanceof Error ? error.message : 'Login failed.';
+    return fail(res, keyFromMessage(message), message);
   }
 });
 
 authRouter.post('/social', (req, res) => {
   const parsed = socialSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ ok: false, error: 'Unsupported social login.' });
+    return fail(res, 'auth_social', 'Unsupported social login.');
   }
   try {
     return res.json(socialUser(parsed.data));
   } catch (error) {
-    return res.status(400).json({ ok: false, error: error instanceof Error ? error.message : 'Social login failed.' });
+    const message = error instanceof Error ? error.message : 'Social login failed.';
+    return fail(res, keyFromMessage(message), message);
   }
 });

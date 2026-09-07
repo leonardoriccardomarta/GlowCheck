@@ -36,8 +36,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
   List<ScanResult> get _items {
     final history = GlowStore.instance.history;
-    if (_tab == 'match') return history.where((s) => s.score >= 75).toList();
-    if (_tab == 'caution') return history.where((s) => s.score < 75).toList();
+    if (_tab == 'match') return history.where((s) => s.score >= 70).toList();
+    if (_tab == 'caution') return history.where((s) => s.score < 70).toList();
     if (_tab == 'saved') return history.where((s) => GlowStore.instance.isPinned(s.at)).toList();
     return history;
   }
