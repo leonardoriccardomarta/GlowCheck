@@ -16,8 +16,9 @@ function publicDir() {
 
 export function createApp() {
   const app = express();
+  const onVercel = Boolean(process.env.VERCEL);
   const webRoot = publicDir();
-  const hasWeb = fs.existsSync(path.join(webRoot, 'index.html'));
+  const hasWeb = !onVercel && fs.existsSync(path.join(webRoot, 'index.html'));
 
   app.set('trust proxy', 1);
   app.use(
@@ -34,21 +35,21 @@ export function createApp() {
   app.use(morgan('dev'));
   app.use(express.json({ limit: '8mb' }));
 
+  const info = {
+    name: 'GlowCheck API',
+    ok: true,
+    health: '/health',
+    analyze: 'POST /analyze',
+    auth: 'POST /auth/register /auth/login /auth/social',
+  };
+
   app.get('/health', (_req, res) => {
     res.json({ ok: true, name: 'GlowCheck API' });
   });
 
-  if (!hasWeb) {
-    app.get('/', (_req, res) => {
-      res.json({
-        name: 'GlowCheck API',
-        ok: true,
-        health: '/health',
-        analyze: 'POST /analyze',
-        auth: 'POST /auth/register /auth/login /auth/social',
-      });
-    });
-  }
+  app.get('/', (_req, res) => {
+    res.json(info);
+  });
 
   app.use('/auth', rateLimit, authRouter);
   app.use('/analyze', rateLimit, analyzeRouter);
@@ -57,9 +58,15 @@ export function createApp() {
     app.use(express.static(webRoot));
     app.use((req, res, next) => {
       if (req.method !== 'GET') return next();
-      res.sendFile(path.join(webRoot, 'index.html'));
+      const index = path.join(webRoot, 'index.html');
+      if (!fs.existsSync(index)) return next();
+      res.sendFile(index);
     });
   }
+
+  app.use((req, res) => {
+    res.status(404).json({ ok: false, error: 'Not found', path: req.path });
+  });
 
   return app;
 }
