@@ -1,5 +1,11 @@
+import express from 'express';
 import { env } from './config/env';
-import app from './index';
+import { createApp } from './app';
+
+const app = createApp();
+
+void express;
+module.exports = app;
 
 if (!process.env.VERCEL) {
   app.listen(Number(env.PORT), () => {
