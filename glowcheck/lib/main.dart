@@ -43,6 +43,14 @@ class MyApp extends StatelessWidget {
           foregroundColor: AppColors.ink,
           elevation: 0,
         ),
+        inputDecorationTheme: const InputDecorationTheme(
+          filled: true,
+          fillColor: AppColors.card,
+          hoverColor: Colors.transparent,
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+        ),
       ),
       home: const SplashScreen(),
     );

@@ -189,7 +189,11 @@ class _Field extends StatelessWidget {
           icon: Icon(icon, color: AppColors.muted),
           hintText: hint,
           hintStyle: const TextStyle(color: AppColors.midGrayColor),
+          filled: true,
+          fillColor: AppColors.card,
           border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
         ),
       ),
     );

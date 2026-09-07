@@ -33,11 +33,20 @@ class GlowSearchBar extends StatelessWidget {
             child: TextField(
               controller: controller,
               onChanged: onChanged,
-              decoration: InputDecoration(
+              cursorColor: AppColors.ink,
+              style: const TextStyle(color: AppColors.ink, fontSize: 14),
+              decoration: const InputDecoration(
+                isDense: true,
+                isCollapsed: true,
+                filled: true,
+                fillColor: AppColors.card,
+                hoverColor: Colors.transparent,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+              ).copyWith(
                 hintText: hint,
                 hintStyle: const TextStyle(color: AppColors.midGrayColor, fontSize: 14),
-                border: InputBorder.none,
-                isDense: true,
               ),
             ),
           ),

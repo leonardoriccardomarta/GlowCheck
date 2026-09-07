@@ -56,17 +56,17 @@ class GlowL10n {
   }
 
   static Future<void> pick(BuildContext context) async {
-    final selected = await showModalBottomSheet<String>(
+    final selected = await showDialog<String>(
       context: context,
-      backgroundColor: const Color(0xFFF7F4EF),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
+      useRootNavigator: true,
       builder: (context) {
         final current = currentCode;
-        return SafeArea(
+        return Dialog(
+          backgroundColor: const Color(0xFFF7F4EF),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,7 +80,7 @@ class GlowL10n {
                   t('language_hint'),
                   style: const TextStyle(color: Color(0xFF8A857E), fontSize: 13, height: 1.4),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
                 for (final lang in supported)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
@@ -91,7 +91,7 @@ class GlowL10n {
                     trailing: current == lang.code
                         ? const Icon(Icons.check_rounded)
                         : null,
-                    onTap: () => Navigator.pop(context, lang.code),
+                    onTap: () => Navigator.of(context, rootNavigator: true).pop(lang.code),
                   ),
               ],
             ),
