@@ -1,10 +1,6 @@
-import type { IncomingMessage, ServerResponse } from 'http';
-import { createApp } from '../src/app';
+import app from '../src/index';
 
 export const maxDuration = 60;
 
-const app = createApp();
-
-export default function handler(req: IncomingMessage, res: ServerResponse) {
-  return app(req, res);
-}
+export default app;
+module.exports = app;

@@ -1,8 +1,8 @@
-import { createApp } from './app';
 import { env } from './config/env';
+import app from './index';
 
-const app = createApp();
-
-app.listen(Number(env.PORT), () => {
-  console.log(`GlowCheck API running on port ${env.PORT}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(Number(env.PORT), () => {
+    console.log(`GlowCheck API running on port ${env.PORT}`);
+  });
+}
