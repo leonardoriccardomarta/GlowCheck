@@ -48,9 +48,10 @@ class _GlowPlainFieldImplState extends State<GlowPlainFieldImpl>
       ..padding = '0'
       ..backgroundColor = '#ffffff'
       ..color = '#111111'
-      ..fontSize = '16px'
-      ..lineHeight = '24px'
+      ..fontSize = '14px'
+      ..lineHeight = '20px'
       ..fontFamily = 'Poppins, sans-serif'
+      ..fontWeight = '400'
       ..boxSizing = 'border-box'
       ..visibility = 'hidden';
     _input.style.setProperty('-webkit-appearance', 'none');
