@@ -75,25 +75,29 @@ class GlowLanguageButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final lang = GlowL10n.currentLang();
     final color = light ? const Color(0xFFF7F4EF) : const Color(0xFF1C1917);
-    return InkWell(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: () => GlowL10n.pick(context),
-      borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              lang.nativeName,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44, minWidth: 96),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text(
+                lang.nativeName,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
               ),
-            ),
-            const SizedBox(width: 2),
-            Icon(Icons.expand_more_rounded, size: 18, color: color),
-          ],
+              const SizedBox(width: 2),
+              Icon(Icons.expand_more_rounded, size: 18, color: color),
+            ],
+          ),
         ),
       ),
     );
