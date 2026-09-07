@@ -3,6 +3,7 @@ import 'package:fitnessapp/routes.dart';
 import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:fitnessapp/view/splash/splash_screen.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 void main() async {
@@ -37,6 +38,17 @@ class MyApp extends StatelessWidget {
           elevation: 0,
         ),
       ),
+      builder: (context, child) {
+        if (!kIsWeb || child == null) return child ?? const SizedBox.shrink();
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(
+            padding: mq.padding.copyWith(top: 0),
+            viewPadding: mq.viewPadding.copyWith(top: 0),
+          ),
+          child: child,
+        );
+      },
       home: const SplashScreen(),
     );
   }
