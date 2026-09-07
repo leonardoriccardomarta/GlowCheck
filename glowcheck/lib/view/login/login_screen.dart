@@ -1,3 +1,4 @@
+import 'package:fitnessapp/common_widgets/glow_plain_field.dart';
 import 'package:fitnessapp/common_widgets/glow_ui.dart';
 import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/services/glow_auth.dart';
@@ -181,19 +182,14 @@ class _Field extends StatelessWidget {
         color: AppColors.card,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: TextField(
-        controller: controller,
-        obscureText: obscure,
-        keyboardType: keyboard,
-        decoration: InputDecoration(
-          icon: Icon(icon, color: AppColors.muted),
-          hintText: hint,
-          hintStyle: const TextStyle(color: AppColors.midGrayColor),
-          filled: true,
-          fillColor: AppColors.card,
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
+      child: SizedBox(
+        height: 52,
+        child: GlowPlainField(
+          controller: controller,
+          hint: hint,
+          icon: icon,
+          obscure: obscure,
+          email: keyboard == TextInputType.emailAddress,
         ),
       ),
     );

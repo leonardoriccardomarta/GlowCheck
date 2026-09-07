@@ -46,41 +46,7 @@ class _UserProfileState extends State<UserProfile> {
               GlowL10n.t('profile_title'),
               style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: 14),
-            Material(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(24),
-              child: InkWell(
-                onTap: () => GlowL10n.pick(context),
-                borderRadius: BorderRadius.circular(24),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.language_rounded, color: AppColors.ink),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              GlowL10n.t('language'),
-                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                            ),
-                            Text(
-                              GlowL10n.currentLang().nativeName,
-                              style: const TextStyle(color: AppColors.muted, fontSize: 13),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right, color: AppColors.muted),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 18),
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -166,7 +132,10 @@ class _UserProfileState extends State<UserProfile> {
             const SizedBox(height: 16),
             Row(
               children: [
-                _Stat(title: store.planLabel, label: GlowL10n.t('plan')),
+                _Stat(
+                  title: store.isPro ? GlowL10n.t('plan_short_pro') : GlowL10n.t('plan_short_free'),
+                  label: GlowL10n.t('plan'),
+                ),
                 const SizedBox(width: 10),
                 _Stat(title: "${store.history.length}", label: GlowL10n.t('scans')),
                 const SizedBox(width: 10),

@@ -1,3 +1,4 @@
+import 'package:fitnessapp/view/profile/language_screen.dart';
 import 'package:flutter/material.dart';
 
 typedef GlowLocaleSetter = Future<void> Function(String code);
@@ -55,54 +56,10 @@ class GlowL10n {
     return text;
   }
 
-  static Future<void> pick(BuildContext context) async {
-    final selected = await showDialog<String>(
-      context: context,
-      useRootNavigator: true,
-      builder: (context) {
-        final current = currentCode;
-        return Dialog(
-          backgroundColor: const Color(0xFFF7F4EF),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  t('language_title'),
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  t('language_hint'),
-                  style: const TextStyle(color: Color(0xFF8A857E), fontSize: 13, height: 1.4),
-                ),
-                const SizedBox(height: 10),
-                for (final lang in supported)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      lang.nativeName,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    trailing: current == lang.code
-                        ? const Icon(Icons.check_rounded)
-                        : null,
-                    onTap: () => Navigator.of(context, rootNavigator: true).pop(lang.code),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
+  static Future<void> pick(BuildContext context) {
+    return Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(builder: (_) => const LanguageScreen()),
     );
-    if (selected != null) {
-      currentCode = normalize(selected);
-      await persistLocale?.call(currentCode);
-    }
   }
 }
 
@@ -118,14 +75,25 @@ class GlowLanguageButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final lang = GlowL10n.currentLang();
     final color = light ? const Color(0xFFF7F4EF) : const Color(0xFF1C1917);
-    return TextButton(
-      onPressed: () => GlowL10n.pick(context),
-      child: Text(
-        lang.nativeName,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.w700,
-          fontSize: 13,
+    return InkWell(
+      onTap: () => GlowL10n.pick(context),
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              lang.nativeName,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(width: 2),
+            Icon(Icons.expand_more_rounded, size: 18, color: color),
+          ],
         ),
       ),
     );
@@ -304,6 +272,8 @@ const _it = <String, String>{
   'provider_device': 'Questo dispositivo',
   'plan_pro': 'GlowCheck Pro',
   'plan_free': 'Scansione gratis',
+  'plan_short_pro': 'Pro',
+  'plan_short_free': 'Free',
   'paywall_restore': 'Ripristina',
   'paywall_title': 'GlowCheck Pro',
   'paywall_sub': 'Il primo INCI leggibile è gratis. Pro continua a valutare ogni flacone rispetto alla tua pelle.',
@@ -530,6 +500,8 @@ const _en = <String, String>{
   'provider_device': 'This device',
   'plan_pro': 'GlowCheck Pro',
   'plan_free': 'Free scan',
+  'plan_short_pro': 'Pro',
+  'plan_short_free': 'Free',
   'paywall_restore': 'Restore',
   'paywall_title': 'GlowCheck Pro',
   'paywall_sub': 'First readable INCI is free. Pro keeps scoring every bottle vs your skin.',
@@ -756,6 +728,8 @@ const _es = <String, String>{
   'provider_device': 'Este dispositivo',
   'plan_pro': 'GlowCheck Pro',
   'plan_free': 'Escaneo gratis',
+  'plan_short_pro': 'Pro',
+  'plan_short_free': 'Free',
   'paywall_restore': 'Restaurar',
   'paywall_title': 'GlowCheck Pro',
   'paywall_sub': 'El primer INCI legible es gratis. Pro sigue evaluando cada bote frente a tu piel.',
@@ -982,6 +956,8 @@ const _fr = <String, String>{
   'provider_device': 'Cet appareil',
   'plan_pro': 'GlowCheck Pro',
   'plan_free': 'Scan gratuit',
+  'plan_short_pro': 'Pro',
+  'plan_short_free': 'Free',
   'paywall_restore': 'Restaurer',
   'paywall_title': 'GlowCheck Pro',
   'paywall_sub': 'Le premier INCI lisible est gratuit. Pro continue d’évaluer chaque flacon face à votre peau.',
@@ -1208,6 +1184,8 @@ const _de = <String, String>{
   'provider_device': 'Dieses Gerät',
   'plan_pro': 'GlowCheck Pro',
   'plan_free': 'Gratis-Scan',
+  'plan_short_pro': 'Pro',
+  'plan_short_free': 'Free',
   'paywall_restore': 'Wiederherstellen',
   'paywall_title': 'GlowCheck Pro',
   'paywall_sub': 'Das erste lesbare INCI ist gratis. Pro bewertet weiter jede Flasche gegenüber deiner Haut.',

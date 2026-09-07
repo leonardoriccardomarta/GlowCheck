@@ -39,8 +39,17 @@
     input, textarea {
       background: #ffffff !important;
       background-color: #ffffff !important;
-      -webkit-appearance: none;
-      appearance: none;
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      outline: none !important;
+      -webkit-appearance: none !important;
+      appearance: none !important;
+    }
+    input:-webkit-autofill,
+    input:-webkit-autofill:focus {
+      -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+      -webkit-text-fill-color: #111111 !important;
     }
   </style>
 </head>

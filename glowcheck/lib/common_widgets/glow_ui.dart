@@ -1,3 +1,4 @@
+import 'package:fitnessapp/common_widgets/glow_plain_field.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:flutter/material.dart';
 
@@ -30,24 +31,10 @@ class GlowSearchBar extends StatelessWidget {
           const Icon(Icons.search, color: AppColors.muted, size: 22),
           const SizedBox(width: 10),
           Expanded(
-            child: TextField(
+            child: GlowPlainField(
               controller: controller,
+              hint: hint,
               onChanged: onChanged,
-              cursorColor: AppColors.ink,
-              style: const TextStyle(color: AppColors.ink, fontSize: 14),
-              decoration: const InputDecoration(
-                isDense: true,
-                isCollapsed: true,
-                filled: true,
-                fillColor: AppColors.card,
-                hoverColor: Colors.transparent,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-              ).copyWith(
-                hintText: hint,
-                hintStyle: const TextStyle(color: AppColors.midGrayColor, fontSize: 14),
-              ),
             ),
           ),
           Material(

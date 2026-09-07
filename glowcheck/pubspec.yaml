@@ -46,6 +46,7 @@ dependencies:
   http: ^1.2.2
   image_picker: ^1.1.2
   shared_preferences: ^2.3.2
+  web: ^1.1.1
   calendar_agenda:
     path: dev_lib/calendar_agenda/
 
