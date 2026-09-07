@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../l10n/glow_l10n.dart';
 import '../models/scan_result.dart';
 
 class GlowStore extends ChangeNotifier {
@@ -12,6 +13,7 @@ class GlowStore extends ChangeNotifier {
   static const _key = 'glowcheck.v1';
 
   bool ready = false;
+  String localeCode = 'it';
   String? skinType;
   String? mainGoal;
   String? spendBand;
@@ -39,6 +41,7 @@ class GlowStore extends ChangeNotifier {
     final raw = prefs.getString(_key);
     if (raw != null) {
       final map = jsonDecode(raw) as Map<String, dynamic>;
+      localeCode = GlowL10n.normalize(map['localeCode'] as String?);
       skinType = map['skinType'] as String?;
       mainGoal = map['mainGoal'] as String?;
       spendBand = map['spendBand'] as String?;
@@ -63,6 +66,8 @@ class GlowStore extends ChangeNotifier {
           ((map['pinned'] as List?) ?? []).whereType<num>().map((item) => item.toInt()),
         );
     }
+    GlowL10n.currentCode = localeCode;
+    GlowL10n.persistLocale = setLocale;
     ready = true;
     notifyListeners();
   }
@@ -72,6 +77,7 @@ class GlowStore extends ChangeNotifier {
     await prefs.setString(
       _key,
       jsonEncode({
+        'localeCode': localeCode,
         'skinType': skinType,
         'mainGoal': mainGoal,
         'spendBand': spendBand,
@@ -87,6 +93,13 @@ class GlowStore extends ChangeNotifier {
         'history': history.map((item) => item.toJson()).toList(),
       }),
     );
+  }
+
+  Future<void> setLocale(String value) async {
+    localeCode = GlowL10n.normalize(value);
+    GlowL10n.currentCode = localeCode;
+    notifyListeners();
+    await _persist();
   }
 
   Future<void> setSkin(String value) async {
@@ -109,7 +122,7 @@ class GlowStore extends ChangeNotifier {
 
   bool get canScan => isPro || freeScansRemaining > 0;
 
-  String get planLabel => isPro ? 'GlowCheck Pro' : 'Free scan';
+  String get planLabel => GlowL10n.t(isPro ? 'plan_pro' : 'plan_free');
 
   bool isPinned(int at) => pinned.contains(at);
 
@@ -177,14 +190,14 @@ class GlowStore extends ChangeNotifier {
   }) async {
     final stored = accountEmail;
     if (stored == null || stored != email.trim().toLowerCase() || accountPassword != password) {
-      throw Exception('Email or password does not match this device.');
+      throw Exception(GlowL10n.t('err_email_pass'));
     }
     notifyListeners();
   }
 
   Future<void> signInSocial(String provider, {String? name, String? email}) async {
     accountProvider = provider;
-    accountName = (name ?? (provider == 'apple' ? 'Apple user' : 'Google user')).trim();
+    accountName = (name ?? GlowL10n.t(provider == 'apple' ? 'apple_user' : 'google_user')).trim();
     accountEmail = (email ?? '$provider@glowcheck.local').toLowerCase();
     accountPassword = null;
     notifyListeners();
@@ -204,13 +217,13 @@ class GlowStore extends ChangeNotifier {
   static String providerLabel(String? id) {
     switch (id) {
       case 'google':
-        return 'Google';
+        return GlowL10n.t('provider_google');
       case 'apple':
-        return 'Apple';
+        return GlowL10n.t('provider_apple');
       case 'email':
-        return 'Email';
+        return GlowL10n.t('provider_email');
       default:
-        return 'This device';
+        return GlowL10n.t('provider_device');
     }
   }
 
@@ -229,13 +242,13 @@ class GlowStore extends ChangeNotifier {
 
   static String? comboNote(String? skin, String? goal) {
     if (skin == 'oily' && goal == 'hydration') {
-      return 'Oily is not dry. Use hydration only if the skin feels tight. We still flag heavy creams first.';
+      return GlowL10n.t('combo_oily_hydration');
     }
     if (skin == 'dry' && goal == 'pores') {
-      return 'Dry skin rarely needs pore first. Hydration is the usual match.';
+      return GlowL10n.t('combo_dry_pores');
     }
     if (skin == 'sensitive' && goal == 'pores') {
-      return 'For sensitive we still watch fragrance and alcohol, not only texture.';
+      return GlowL10n.t('combo_sensitive_pores');
     }
     return null;
   }
@@ -255,52 +268,58 @@ class GlowStore extends ChangeNotifier {
   static String skinLabel(String? id) {
     switch (id) {
       case 'oily':
-        return 'Oily';
+        return GlowL10n.t('skin_oily');
       case 'dry':
-        return 'Dry';
+        return GlowL10n.t('skin_dry');
       case 'combination':
-        return 'Combination';
+        return GlowL10n.t('skin_combination');
       case 'sensitive':
-        return 'Sensitive';
+        return GlowL10n.t('skin_sensitive');
       default:
-        return 'Your skin';
+        return GlowL10n.t('skin_default');
     }
   }
 
   static String goalLabel(String? id) {
     switch (id) {
       case 'pores':
-        return 'Less clogging feel';
+        return GlowL10n.t('goal_pores');
       case 'hydration':
-        return 'Hydration';
+        return GlowL10n.t('goal_hydration');
       case 'budget':
-        return 'Drugstore swaps';
+        return GlowL10n.t('goal_budget');
       default:
-        return 'Your goal';
+        return GlowL10n.t('goal_default');
     }
   }
 
   static String spendLabel(String? id) {
     switch (id) {
       case 'low':
-        return 'Under \$20 / month';
+        return GlowL10n.t('spend_low_full');
       case 'mid':
-        return '\$20 to \$50 / month';
+        return GlowL10n.t('spend_mid_full');
       case 'high':
-        return '\$50+ / month';
+        return GlowL10n.t('spend_high_full');
       default:
-        return 'Budget unset';
+        return GlowL10n.t('spend_unset');
     }
   }
 
   static String occlusionLabel(String? level) {
     switch (level) {
       case 'high':
-        return 'Heavy / occlusive feel vs your profile';
+        return GlowL10n.t('occ_high');
       case 'medium':
-        return 'Some occlusive textures on the list';
+        return GlowL10n.t('occ_mid');
       default:
-        return 'Light occlusion signal';
+        return GlowL10n.t('occ_low');
     }
+  }
+
+  static String badgeLabel(String? badge) {
+    final key = 'badge_${(badge ?? '').replaceAll(' ', '_')}';
+    final translated = GlowL10n.t(key);
+    return translated == key ? (badge ?? '').replaceAll('_', ' ') : translated;
   }
 }

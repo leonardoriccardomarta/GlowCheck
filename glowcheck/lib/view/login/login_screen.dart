@@ -1,4 +1,5 @@
 import 'package:fitnessapp/common_widgets/glow_ui.dart';
+import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/services/glow_auth.dart';
 import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
@@ -45,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       if (register) {
         if (name.text.trim().isEmpty || email.text.trim().isEmpty || password.text.length < 6) {
-          setState(() => error = 'Name, email and a password of at least 6 characters.');
+          setState(() => error = GlowL10n.t('login_fields'));
           return;
         }
         await GlowAuth.register(
@@ -70,64 +71,72 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AnimatedBuilder(
+      animation: GlowStore.instance,
+      builder: (context, _) => Scaffold(
       backgroundColor: AppColors.canvas,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(22, 18, 22, 24),
           children: [
-            const Text(
-              "GlowCheck",
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted, letterSpacing: 0.6),
+            Row(
+              children: [
+                const Text(
+                  "GlowCheck",
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted, letterSpacing: 0.6),
+                ),
+                const Spacer(),
+                const GlowLanguageButton(),
+              ],
             ),
             const SizedBox(height: 18),
             Text(
-              register ? "Create your account" : "Welcome back",
+              register ? GlowL10n.t('login_create') : GlowL10n.t('login_welcome'),
               style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700, height: 1.1),
             ),
             const SizedBox(height: 8),
-            const Text(
-              "Google, Apple and email use a local session until AUTH_API_URL and the real client IDs are set.",
-              style: TextStyle(color: AppColors.muted, fontSize: 14, height: 1.4),
+            Text(
+              GlowL10n.t('login_note'),
+              style: const TextStyle(color: AppColors.muted, fontSize: 14, height: 1.4),
             ),
             const SizedBox(height: 24),
             _SocialButton(
-              label: "Continue with Google",
+              label: GlowL10n.t('login_google'),
               icon: Icons.g_mobiledata,
               onTap: () => _social('google'),
             ),
             const SizedBox(height: 10),
             _SocialButton(
-              label: "Continue with Apple",
+              label: GlowL10n.t('login_apple'),
               icon: Icons.apple,
               onTap: () => _social('apple'),
             ),
             const SizedBox(height: 22),
-            const Row(
+            Row(
               children: [
-                Expanded(child: Divider(color: AppColors.line)),
+                const Expanded(child: Divider(color: AppColors.line)),
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
-                  child: Text("or email", style: TextStyle(color: AppColors.muted, fontSize: 12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(GlowL10n.t('login_or_email'), style: const TextStyle(color: AppColors.muted, fontSize: 12)),
                 ),
-                Expanded(child: Divider(color: AppColors.line)),
+                const Expanded(child: Divider(color: AppColors.line)),
               ],
             ),
             const SizedBox(height: 18),
             if (register) ...[
-              _Field(controller: name, hint: "Name", icon: Icons.person_outline),
+              _Field(controller: name, hint: GlowL10n.t('login_name'), icon: Icons.person_outline),
               const SizedBox(height: 10),
             ],
-            _Field(controller: email, hint: "Email", icon: Icons.mail_outline, keyboard: TextInputType.emailAddress),
+            _Field(controller: email, hint: GlowL10n.t('login_email'), icon: Icons.mail_outline, keyboard: TextInputType.emailAddress),
             const SizedBox(height: 10),
-            _Field(controller: password, hint: "Password", icon: Icons.lock_outline, obscure: true),
+            _Field(controller: password, hint: GlowL10n.t('login_password'), icon: Icons.lock_outline, obscure: true),
             if (error != null) ...[
               const SizedBox(height: 12),
               Text(error!, style: const TextStyle(color: AppColors.caution, fontSize: 13)),
             ],
             const SizedBox(height: 18),
             GlowPrimaryButton(
-              title: register ? "Create account" : "Log in",
+              title: register ? GlowL10n.t('login_create_btn') : GlowL10n.t('login_btn'),
               onPressed: _email,
             ),
             const SizedBox(height: 14),
@@ -137,13 +146,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 error = null;
               }),
               child: Text(
-                register ? "Already have an account? Log in" : "New here? Create an account",
+                register ? GlowL10n.t('login_have_account') : GlowL10n.t('login_new_here'),
                 style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w600),
               ),
             ),
           ],
         ),
       ),
+    ),
     );
   }
 }

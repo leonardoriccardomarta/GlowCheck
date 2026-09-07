@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { copy } from '../i18n/scoreCopy';
 import { analyzeRequestSchema } from '../schemas/analyze';
 import { analyzeProduct } from '../services/analyzeProduct';
 
@@ -12,7 +13,7 @@ analyzeRouter.post('/', async (req, res) => {
       productName: null,
       compatibilityScore: 0,
       statusBadge: 'CAUTION',
-      headline: 'Invalid scan request',
+      headline: copy((req.body as { profile?: { locale?: string } })?.profile?.locale, 'invalid'),
       whyForYou: '',
       occlusionAlert: 'low',
       flaggedIngredients: [],

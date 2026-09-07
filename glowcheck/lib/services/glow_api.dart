@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config/app_env.dart';
+import '../l10n/glow_l10n.dart';
 import '../models/scan_result.dart';
 import '../state/glow_store.dart';
 
@@ -16,7 +17,7 @@ class GlowApi {
     final skin = store.skinType;
     final goal = store.mainGoal;
     if (skin == null || goal == null) {
-      throw Exception('Finish the skin quiz first.');
+      throw Exception(GlowL10n.t('err_quiz'));
     }
 
     final uri = Uri.parse('$baseUrl/analyze');
@@ -32,6 +33,7 @@ class GlowApi {
               'profile': {
                 'skinType': skin,
                 'mainGoal': goal,
+                'locale': GlowL10n.normalize(store.localeCode),
                 if (store.spendBand != null) 'spendBand': store.spendBand,
               },
             }),
@@ -39,7 +41,7 @@ class GlowApi {
           .timeout(const Duration(seconds: 60));
     } catch (_) {
       throw Exception(
-        'Cannot reach the API at $baseUrl. Backend on, same Wi-Fi, or pass --dart-define=API_URL=http://PC_IP:4000',
+        GlowL10n.t('err_api', {'url': baseUrl}),
       );
     }
 
@@ -74,13 +76,13 @@ class GlowApi {
   static String _errorMessage(String? code) {
     switch (code) {
       case 'NOT_COSMETIC':
-        return 'That photo does not look like a skincare label. Shoot the INCI list on the back.';
+        return GlowL10n.t('err_not_cosmetic');
       case 'UNREADABLE':
-        return 'Could not read the INCI list. Fill the frame, avoid glare, try again. Unreadable stays free.';
+        return GlowL10n.t('err_unreadable');
       case 'INTERNAL':
-        return 'Scan failed on our side. Try again in a moment.';
+        return GlowL10n.t('err_internal');
       default:
-        return 'Could not read the INCI list. Fill the frame, avoid glare, try again.';
+        return GlowL10n.t('err_read');
     }
   }
 }

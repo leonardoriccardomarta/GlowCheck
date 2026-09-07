@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config/app_env.dart';
+import '../l10n/glow_l10n.dart';
 import '../state/glow_store.dart';
 
 class GlowAuth {
@@ -62,7 +63,7 @@ class GlowAuth {
         'clientId': provider == 'google' ? AppEnv.googleClientId : AppEnv.appleServiceId,
       });
       await GlowStore.instance.applySession(
-        name: user['name'] as String? ?? (provider == 'apple' ? 'Apple user' : 'Google user'),
+        name: user['name'] as String? ?? GlowL10n.t(provider == 'apple' ? 'apple_user' : 'google_user'),
         email: user['email'] as String? ?? '$provider@glowcheck.local',
         provider: provider,
         token: user['token'] as String?,
@@ -84,11 +85,11 @@ class GlowAuth {
           )
           .timeout(const Duration(seconds: 20));
     } catch (_) {
-      throw Exception('Auth API is not reachable at ${AppEnv.authBase}. Check AUTH_API_URL.');
+      throw Exception(GlowL10n.t('auth_unreachable', {'url': AppEnv.authBase}));
     }
     final json = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode >= 400 || json['ok'] != true) {
-      throw Exception(json['error'] as String? ?? 'Auth failed.');
+      throw Exception(json['error'] as String? ?? GlowL10n.t('auth_failed'));
     }
     final user = json['user'];
     if (user is Map<String, dynamic>) {
@@ -97,6 +98,5 @@ class GlowAuth {
         'token': json['token'],
       };
     }
-    throw Exception('Auth response was missing a user.');
-  }
+    throw Exception(GlowL10n.t('auth_missing'));  }
 }

@@ -1,3 +1,5 @@
+import { copy } from '../i18n/scoreCopy';
+
 export type SkinType = 'oily' | 'dry' | 'combination' | 'sensitive';
 export type MainGoal = 'pores' | 'hydration' | 'budget';
 export type StatusBadge = 'COMPATIBLE' | 'CAUTION' | 'NOT_IDEAL';
@@ -14,6 +16,7 @@ export type ScoreInput = {
   ingredients: string[];
   skinType: SkinType;
   mainGoal: MainGoal;
+  locale?: string;
 };
 
 export type IngredientLine = {
@@ -115,19 +118,6 @@ const FRAGRANCE = [
 
 const HARSH_ALCOHOL = ['alcohol denat', 'alcohol denatured', 'sd alcohol', 'isopropyl alcohol'];
 
-const GOAL_LABEL: Record<MainGoal, string> = {
-  pores: 'less clogging feel',
-  hydration: 'hydration',
-  budget: 'drugstore swaps',
-};
-
-const SKIN_LABEL: Record<SkinType, string> = {
-  oily: 'oily',
-  dry: 'dry',
-  combination: 'combination',
-  sensitive: 'sensitive',
-};
-
 function normalizeList(ingredients: string[]) {
   const seen = new Set<string>();
   const out: string[] = [];
@@ -187,6 +177,7 @@ export function scoreFormula(input: ScoreInput): ScoreResult {
   const blob = ingredients.join(' | ').toLowerCase();
   const skin = input.skinType;
   const goal = input.mainGoal;
+  const locale = input.locale ?? 'en';
 
   const occlusiveHits = includesAny(blob, OCCLUSIVE);
   const humectantHits = includesAny(blob, HUMECTANTS);
@@ -238,58 +229,58 @@ export function scoreFormula(input: ScoreInput): ScoreResult {
     if (hitsName(n, OCCLUSIVE)) {
       const note =
         skin === 'oily'
-          ? 'Often noted as potentially occlusive on oily, congestion-prone skin'
+          ? copy(locale, 'note_occ_oily')
           : skin === 'combination'
-            ? 'Richer texture. Can feel heavy on an oily T-zone'
+            ? copy(locale, 'note_occ_combo')
             : skin === 'dry'
-              ? 'Richer texture. Usually acceptable on dry skin unless it feels greasy'
-              : 'Richer texture. Watch if the skin is easily reactive';
+              ? copy(locale, 'note_occ_dry')
+              : copy(locale, 'note_occ_sensitive');
       flagged.push({ name, kind: 'warning', note });
       return { name, tag: 'watch' as const, note };
     }
 
     if (hitsName(n, HARSH_ALCOHOL) && (skin === 'dry' || skin === 'sensitive')) {
-      const note = 'Drying alcohol on the label. Often a miss for dry or easily reactive skin';
+      const note = copy(locale, 'note_alcohol');
       flagged.push({ name, kind: 'warning', note });
       return { name, tag: 'watch' as const, note };
     }
 
     if (hitsName(n, FRAGRANCE)) {
       if (skin === 'sensitive') {
-        const note = 'Fragrance or essential-oil related INCI. Often noted on easily reactive skin';
+        const note = copy(locale, 'note_fragrance_watch');
         flagged.push({ name, kind: 'warning', note });
         return { name, tag: 'watch' as const, note };
       }
-      return { name, tag: 'listed' as const, note: 'Fragrance material. Watched only on a sensitive profile' };
+      return { name, tag: 'listed' as const, note: copy(locale, 'note_fragrance_listed') };
     }
 
     if (hitsName(n, RETINOIDS)) {
       if (skin === 'sensitive') {
-        const note = 'Retinoid on the label. Often a lot for easily reactive skin';
+        const note = copy(locale, 'note_retinoid_watch');
         flagged.push({ name, kind: 'warning', note });
         return { name, tag: 'watch' as const, note };
       }
-      const note = 'Retinoid on the label. Cosmetic use only, not a prescription read';
+      const note = copy(locale, 'note_retinoid_fit');
       flagged.push({ name, kind: 'good', note });
       return { name, tag: 'fit' as const, note };
     }
 
     if (hitsName(n, ACIDS)) {
       if (skin === 'sensitive') {
-        const note = 'Exfoliating acid. Can feel sharp on easily reactive skin';
+        const note = copy(locale, 'note_acid_watch');
         flagged.push({ name, kind: 'warning', note });
         return { name, tag: 'watch' as const, note };
       }
       if (skin === 'oily' || goal === 'pores') {
-        const note = 'Exfoliating acid on the label. Often used for a cleaner feel on oily skin';
+        const note = copy(locale, 'note_acid_fit');
         flagged.push({ name, kind: 'good', note });
         return { name, tag: 'fit' as const, note };
       }
-      return { name, tag: 'listed' as const, note: 'Exfoliating acid. Fine if the skin already tolerates acids' };
+      return { name, tag: 'listed' as const, note: copy(locale, 'note_acid_listed') };
     }
 
     if (hitsName(n, CICA)) {
-      const note = 'Centella / cica on the label. Often used to support easily reactive skin';
+      const note = copy(locale, 'note_cica');
       flagged.push({ name, kind: 'good', note });
       return { name, tag: 'fit' as const, note };
     }
@@ -297,8 +288,8 @@ export function scoreFormula(input: ScoreInput): ScoreResult {
     if (hitsName(n, PORE_ACTIVES) || n.includes('niacinamide')) {
       const note =
         skin === 'oily' || goal === 'pores'
-          ? 'Niacinamide on the label. Often used for oil-control feel'
-          : 'Niacinamide on the label. Common supporting active';
+          ? copy(locale, 'note_nia_oily')
+          : copy(locale, 'note_nia');
       flagged.push({ name, kind: 'good', note });
       return { name, tag: 'fit' as const, note };
     }
@@ -308,10 +299,10 @@ export function scoreFormula(input: ScoreInput): ScoreResult {
         return {
           name,
           tag: 'listed' as const,
-          note: 'Light emollient. Fine in a lotion, not a reason to pick a heavy cream',
+          note: copy(locale, 'note_emollient_oily'),
         };
       }
-      const note = 'Barrier / slip ingredient that usually supports dry or easily reactive skin';
+      const note = copy(locale, 'note_emollient');
       flagged.push({ name, kind: 'good', note });
       return { name, tag: 'fit' as const, note };
     }
@@ -319,8 +310,8 @@ export function scoreFormula(input: ScoreInput): ScoreResult {
     if (hitsName(n, HUMECTANTS)) {
       const note =
         skin === 'oily'
-          ? 'Light hydrator on the label. Still useful on oily skin'
-          : 'Functional hydrating ingredient on the label';
+          ? copy(locale, 'note_humectant_oily')
+          : copy(locale, 'note_humectant');
       flagged.push({ name, kind: 'good', note });
       return { name, tag: 'fit' as const, note };
     }
@@ -328,30 +319,33 @@ export function scoreFormula(input: ScoreInput): ScoreResult {
     return { name, tag: 'listed' as const, note: null };
   });
 
-  const whyForYou = `This is not a public Yuka score. It reads the INCI vs your ${SKIN_LABEL[skin]} skin and ${GOAL_LABEL[goal]}, any brand.${
+  const whyForYou = `${copy(locale, 'why', {
+    skin: copy(locale, `skin_${skin}`),
+    goal: copy(locale, `goal_${goal}`),
+  })}${
     skin === 'oily' && goal === 'hydration'
-      ? ' Heavy creams stay flagged first, even if you asked for hydration.'
+      ? copy(locale, 'why_oily_hydration')
       : skin === 'dry' && goal === 'pores'
-        ? ' Occlusives are lighter flags here than on oily skin.'
+        ? copy(locale, 'why_dry_pores')
         : ''
   }`;
 
-  let headline = 'Mostly compatible with your profile';
+  let headline = copy(locale, 'hl_compat');
   if (statusBadge === 'COMPATIBLE') {
-    if (skin === 'dry' || goal === 'hydration') headline = 'Looks aligned with hydration on your skin';
-    else if (skin === 'oily' || goal === 'pores') headline = 'Looks aligned with an oily profile';
-    else headline = 'Mostly compatible with your profile';
+    if (skin === 'dry' || goal === 'hydration') headline = copy(locale, 'hl_hydration');
+    else if (skin === 'oily' || goal === 'pores') headline = copy(locale, 'hl_oily');
+    else headline = copy(locale, 'hl_compat');
   } else if (statusBadge === 'CAUTION') {
-    if (skin === 'oily' && occlusiveHits.length > 0) headline = 'Potentially occlusive for oily skin';
+    if (skin === 'oily' && occlusiveHits.length > 0) headline = copy(locale, 'hl_occlusive');
     else if (skin === 'sensitive' && (fragranceHits.length > 0 || acidHits.length > 0)) {
-      headline = 'Mixed match vs a sensitive profile';
-    } else headline = 'Mixed match vs your profile';
+      headline = copy(locale, 'hl_sensitive_mixed');
+    } else headline = copy(locale, 'hl_mixed');
   } else if (skin === 'oily' && occlusiveHits.length > 0) {
-    headline = 'Heavy feel vs oily skin profile';
+    headline = copy(locale, 'hl_heavy_oily');
   } else if (skin === 'sensitive') {
-    headline = 'Not the closest match for sensitive skin';
+    headline = copy(locale, 'hl_sensitive_miss');
   } else {
-    headline = 'Not the closest match for you';
+    headline = copy(locale, 'hl_miss');
   }
 
   return {

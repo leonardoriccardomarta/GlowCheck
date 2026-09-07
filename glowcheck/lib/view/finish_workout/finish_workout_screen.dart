@@ -1,5 +1,6 @@
 import 'package:fitnessapp/common_widgets/glow_ui.dart';
 import 'package:fitnessapp/data/dupe_catalog.dart';
+import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/models/scan_result.dart';
 import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
@@ -43,7 +44,7 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
         backgroundColor: AppColors.canvas,
         body: Center(
           child: GlowPrimaryButton(
-            title: "Back",
+            title: GlowL10n.t('back'),
             compact: true,
             onPressed: () => Navigator.pop(context),
           ),
@@ -157,7 +158,7 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                                           ),
                                         ),
                                         Text(
-                                          "vs your skin",
+                                          GlowL10n.t('result_vs_skin'),
                                           style: TextStyle(
                                             color: AppColors.card.withValues(alpha: 0.72),
                                             fontSize: 12,
@@ -183,7 +184,7 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            scan.badge.replaceAll('_', ' '),
+                            GlowStore.badgeLabel(scan.badge),
                             style: TextStyle(
                               color: AppColors.card.withValues(alpha: 0.75),
                               fontWeight: FontWeight.w600,
@@ -201,23 +202,23 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                     children: [
                       Row(
                         children: [
-                          _CountCard(label: "Watch", value: scan.watchCount, color: AppColors.caution),
+                          _CountCard(label: GlowL10n.t('watch'), value: scan.watchCount, color: AppColors.caution),
                           const SizedBox(width: 8),
-                          _CountCard(label: "Fit", value: scan.fitCount, color: AppColors.good),
+                          _CountCard(label: GlowL10n.t('fit'), value: scan.fitCount, color: AppColors.good),
                           const SizedBox(width: 8),
-                          _CountCard(label: "Listed", value: scan.listedCount, color: AppColors.muted),
+                          _CountCard(label: GlowL10n.t('listed'), value: scan.listedCount, color: AppColors.muted),
                         ],
                       ),
                       const SizedBox(height: 12),
                       _InfoCard(
-                        title: "Why this number",
+                        title: GlowL10n.t('why_number'),
                         body: scan.why.isNotEmpty
                             ? scan.why
-                            : "This score is only vs the skin profile you set. Not a public Yuka rating.",
+                            : GlowL10n.t('why_fallback'),
                       ),
                       const SizedBox(height: 12),
                       _InfoCard(
-                        title: "Occlusion",
+                        title: GlowL10n.t('occlusion'),
                         body: GlowStore.occlusionLabel(scan.occlusionAlert),
                       ),
                       if (dupe != null) ...[
@@ -233,7 +234,7 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Cheaper drugstore option",
+                                GlowL10n.t('cheaper'),
                                 style: TextStyle(
                                   color: AppColors.card.withValues(alpha: 0.7),
                                   fontSize: 12,
@@ -277,12 +278,12 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                       Row(
                         children: [
                           Text(
-                            "Full INCI",
+                            GlowL10n.t('full_inci'),
                             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            "${scan.lines.length} ingredients",
+                            GlowL10n.t('n_ingredients', {'n': '${scan.lines.length}'}),
                             style: const TextStyle(color: AppColors.muted, fontSize: 13),
                           ),
                         ],
@@ -292,18 +293,18 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                         scrollDirection: Axis.horizontal,
                         child: Row(
                           children: [
-                            GlowChip(label: "All", selected: _inciFilter == 'all', onTap: () => setState(() => _inciFilter = 'all')),
-                            GlowChip(label: "Watch", selected: _inciFilter == 'watch', onTap: () => setState(() => _inciFilter = 'watch')),
-                            GlowChip(label: "Fit", selected: _inciFilter == 'fit', onTap: () => setState(() => _inciFilter = 'fit')),
-                            GlowChip(label: "Listed", selected: _inciFilter == 'listed', onTap: () => setState(() => _inciFilter = 'listed')),
+                            GlowChip(label: GlowL10n.t('filter_all'), selected: _inciFilter == 'all', onTap: () => setState(() => _inciFilter = 'all')),
+                            GlowChip(label: GlowL10n.t('watch'), selected: _inciFilter == 'watch', onTap: () => setState(() => _inciFilter = 'watch')),
+                            GlowChip(label: GlowL10n.t('fit'), selected: _inciFilter == 'fit', onTap: () => setState(() => _inciFilter = 'fit')),
+                            GlowChip(label: GlowL10n.t('listed'), selected: _inciFilter == 'listed', onTap: () => setState(() => _inciFilter = 'listed')),
                           ],
                         ),
                       ),
                       const SizedBox(height: 12),
                       if (scan.lines.isEmpty)
-                        const _InfoCard(
-                          title: "No INCI on this save",
-                          body: "Older scans stored only the score. Photograph the list again to see Watch / Fit / Listed.",
+                        _InfoCard(
+                          title: GlowL10n.t('no_inci_title'),
+                          body: GlowL10n.t('no_inci_body'),
                         )
                       else
                         Container(
@@ -318,11 +319,11 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                             children: [
                               for (final item in lines) _IngredientRow(item: item),
                               if (lines.isEmpty)
-                                const Padding(
-                                  padding: EdgeInsets.all(16),
+                                Padding(
+                                  padding: const EdgeInsets.all(16),
                                   child: Text(
-                                    "Nothing in this filter.",
-                                    style: TextStyle(color: AppColors.muted),
+                                    GlowL10n.t('nothing_filter'),
+                                    style: const TextStyle(color: AppColors.muted),
                                   ),
                                 ),
                             ],
@@ -340,18 +341,18 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                "Free scan used",
-                                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                              Text(
+                                GlowL10n.t('free_scan_used'),
+                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                               ),
                               const SizedBox(height: 6),
-                              const Text(
-                                "Unlock Pro to keep scoring every bottle vs this skin profile.",
-                                style: TextStyle(color: AppColors.muted, fontSize: 13, height: 1.4),
+                              Text(
+                                GlowL10n.t('free_scan_used_body'),
+                                style: const TextStyle(color: AppColors.muted, fontSize: 13, height: 1.4),
                               ),
                               const SizedBox(height: 12),
                               GlowPrimaryButton(
-                                title: "Unlock Pro",
+                                title: GlowL10n.t('paywall_unlock'),
                                 compact: true,
                                 onPressed: () => Navigator.pushNamed(context, PaywallScreen.routeName),
                               ),
@@ -360,9 +361,9 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                         ),
                         const SizedBox(height: 16),
                       ],
-                      const Text(
-                        "GlowCheck is not medical advice, a diagnosis, or a safety certificate. It reads a label against the profile you typed.",
-                        style: TextStyle(color: AppColors.muted, fontSize: 12, height: 1.45),
+                      Text(
+                        GlowL10n.t('legal_footer'),
+                        style: const TextStyle(color: AppColors.muted, fontSize: 12, height: 1.45),
                       ),
                       const SizedBox(height: 24),
                     ],
@@ -376,7 +377,7 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(22, 8, 22, 16),
               child: GlowPrimaryButton(
-                title: GlowStore.instance.canScan ? "Scan another bottle" : "Unlock Pro",
+                title: GlowStore.instance.canScan ? GlowL10n.t('scan_another') : GlowL10n.t('paywall_unlock'),
                 onPressed: () {
                   if (GlowStore.instance.canScan) {
                     Navigator.pop(context);
@@ -393,12 +394,15 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
   }
 
   Future<void> _share(ScanResult scan) async {
-    final text =
-        "${scan.score}/100 vs my skin · ${scan.productName}\n${scan.headline}\n\nGlowCheck, personal INCI match, not a public Yuka score.";
+    final text = GlowL10n.t('share_text', {
+      'score': '${scan.score}',
+      'name': scan.productName,
+      'headline': scan.headline,
+    });
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Score copied. Paste it anywhere.')),
+      SnackBar(content: Text(GlowL10n.t('score_copied'))),
     );
   }
 }
@@ -465,7 +469,11 @@ class _IngredientRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = AppColors.tagColor(item.tag);
-    final label = item.tag == 'watch' ? 'WATCH' : item.tag == 'fit' ? 'FIT' : 'LISTED';
+    final label = item.tag == 'watch'
+        ? GlowL10n.t('tag_watch')
+        : item.tag == 'fit'
+            ? GlowL10n.t('tag_fit')
+            : GlowL10n.t('tag_listed');
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(

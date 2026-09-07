@@ -1,4 +1,5 @@
 import 'package:fitnessapp/common_widgets/glow_ui.dart';
+import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/models/scan_result.dart';
 import 'package:fitnessapp/services/glow_api.dart';
 import 'package:fitnessapp/state/glow_store.dart';
@@ -40,7 +41,7 @@ class _CameraScreenState extends State<CameraScreen> {
     if (!GlowStore.instance.canScan) {
       await Navigator.pushNamed(context, PaywallScreen.routeName);
       if (!GlowStore.instance.canScan) {
-        setState(() => error = 'Free scan used. Unlock Pro to keep scoring bottles.');
+        setState(() => error = GlowL10n.t('free_used_err'));
       }
       return;
     }
@@ -77,14 +78,14 @@ class _CameraScreenState extends State<CameraScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(22, 16, 22, 120),
               children: [
-                const Text(
-                  "Scan INCI",
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
+                Text(
+                  GlowL10n.t('scan_inci'),
+                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 6),
-                const Text(
-                  "Fill the frame with Aqua / Glycerin. Glare or cropped lists stay free.",
-                  style: TextStyle(color: AppColors.muted, fontSize: 13, height: 1.4),
+                Text(
+                  GlowL10n.t('scan_hint'),
+                  style: const TextStyle(color: AppColors.muted, fontSize: 13, height: 1.4),
                 ),
                 const SizedBox(height: 20),
                 Container(
@@ -98,7 +99,7 @@ class _CameraScreenState extends State<CameraScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Photograph the ingredient list",
+                        GlowL10n.t('photo_list'),
                         style: const TextStyle(
                           color: AppColors.card,
                           fontSize: 24,
@@ -113,7 +114,7 @@ class _CameraScreenState extends State<CameraScreen> {
                       ),
                       const Spacer(),
                       GlowPrimaryButton(
-                        title: "Take photo",
+                        title: GlowL10n.t('take_photo'),
                         light: true,
                         onPressed: () {
                           if (!busy) _scan(ImageSource.camera);
@@ -131,10 +132,10 @@ class _CameraScreenState extends State<CameraScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          "Or pick a label from the library",
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                          GlowL10n.t('pick_library'),
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                         ),
                       ),
                       GlowCircleButton(
@@ -162,23 +163,23 @@ class _CameraScreenState extends State<CameraScreen> {
                 const SizedBox(height: 24),
                 Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        "Recent bottles",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                        GlowL10n.t('recent_bottles'),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                       ),
                     ),
                     Text(
-                      "${history.length} saved",
+                      GlowL10n.t('n_saved', {'n': '${history.length}'}),
                       style: const TextStyle(color: AppColors.muted, fontSize: 12),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 if (history.isEmpty)
-                  const Text(
-                    "No scans yet. The first readable INCI is free.",
-                    style: TextStyle(color: AppColors.muted, fontSize: 13),
+                  Text(
+                    GlowL10n.t('no_scans_yet'),
+                    style: const TextStyle(color: AppColors.muted, fontSize: 13),
                   )
                 else
                   SizedBox(
@@ -219,7 +220,7 @@ class _CameraScreenState extends State<CameraScreen> {
                                         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
                                       ),
                                       Text(
-                                        "${scan.score}  ·  ${scan.watchCount} watch",
+                                        GlowL10n.t('score_watch', {'score': '${scan.score}', 'watch': '${scan.watchCount}'}),
                                         style: const TextStyle(color: AppColors.muted, fontSize: 11),
                                       ),
                                     ],
@@ -251,13 +252,13 @@ class _CameraScreenState extends State<CameraScreen> {
                           child: CircularProgressIndicator(color: AppColors.card, strokeWidth: 3),
                         ),
                         const SizedBox(height: 22),
-                        const Text(
-                          "Reading the label",
-                          style: TextStyle(color: AppColors.card, fontSize: 24, fontWeight: FontWeight.w700),
+                        Text(
+                          GlowL10n.t('reading_label'),
+                          style: const TextStyle(color: AppColors.card, fontSize: 24, fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          "Matching INCI vs ${GlowStore.skinLabel(store.skinType).toLowerCase()} skin",
+                          GlowL10n.t('matching_skin', {'skin': GlowStore.skinLabel(store.skinType).toLowerCase()}),
                           textAlign: TextAlign.center,
                           style: TextStyle(color: AppColors.card.withValues(alpha: 0.7), fontSize: 14),
                         ),

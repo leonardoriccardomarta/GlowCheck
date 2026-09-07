@@ -1,3 +1,4 @@
+import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:fitnessapp/view/dashboard/dashboard_screen.dart';
@@ -43,13 +44,13 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: AppColors.ink,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
+            const Text(
               "GlowCheck",
               style: TextStyle(
                 color: AppColors.card,
@@ -58,17 +59,17 @@ class _SplashScreenState extends State<SplashScreen> {
                 letterSpacing: -0.6,
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
-              "INCI vs your skin",
-              style: TextStyle(
+              GlowL10n.t('splash_tag'),
+              style: const TextStyle(
                 color: Color(0xFFB8B4AE),
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
             ),
-            SizedBox(height: 28),
-            SizedBox(
+            const SizedBox(height: 28),
+            const SizedBox(
               width: 22,
               height: 22,
               child: CircularProgressIndicator(

@@ -1,4 +1,5 @@
 import 'package:fitnessapp/common_widgets/glow_ui.dart';
+import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/models/scan_result.dart';
 import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
@@ -51,11 +52,11 @@ class _ActivityScreenState extends State<ActivityScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(22, 16, 22, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 16, 22, 8),
               child: Text(
-                "Your shelf",
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
+                GlowL10n.t('your_shelf'),
+                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
               ),
             ),
             Padding(
@@ -64,10 +65,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    GlowChip(label: "All bottles", selected: _tab == 'all', onTap: () => setState(() => _tab = 'all')),
-                    GlowChip(label: "Good match", selected: _tab == 'match', onTap: () => setState(() => _tab = 'match')),
-                    GlowChip(label: "Caution", selected: _tab == 'caution', onTap: () => setState(() => _tab = 'caution')),
-                    GlowChip(label: "Saved", selected: _tab == 'saved', onTap: () => setState(() => _tab = 'saved')),
+                    GlowChip(label: GlowL10n.t('all_bottles'), selected: _tab == 'all', onTap: () => setState(() => _tab = 'all')),
+                    GlowChip(label: GlowL10n.t('filter_match'), selected: _tab == 'match', onTap: () => setState(() => _tab = 'match')),
+                    GlowChip(label: GlowL10n.t('filter_caution'), selected: _tab == 'caution', onTap: () => setState(() => _tab = 'caution')),
+                    GlowChip(label: GlowL10n.t('filter_saved'), selected: _tab == 'saved', onTap: () => setState(() => _tab = 'saved')),
                   ],
                 ),
               ),
@@ -81,19 +82,19 @@ class _ActivityScreenState extends State<ActivityScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text(
-                              "Shelf is empty",
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                            Text(
+                              GlowL10n.t('shelf_empty'),
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                             ),
                             const SizedBox(height: 8),
-                            const Text(
-                              "Photograph an ingredient list.\nUnreadable photos stay free.",
+                            Text(
+                              GlowL10n.t('shelf_empty_body'),
                               textAlign: TextAlign.center,
-                              style: TextStyle(color: AppColors.muted, fontSize: 13),
+                              style: const TextStyle(color: AppColors.muted, fontSize: 13),
                             ),
                             const SizedBox(height: 18),
                             GlowPrimaryButton(
-                              title: "Scan a label",
+                              title: GlowL10n.t('scan_a_label'),
                               compact: true,
                               onPressed: () => DashboardScope.of(context)?.goTab(2),
                             ),
@@ -166,7 +167,7 @@ class _ShelfTile extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Bottle $index",
+                          GlowL10n.t('bottle_n', {'n': '$index'}),
                           style: const TextStyle(color: AppColors.muted, fontSize: 12),
                         ),
                         Text(
@@ -177,8 +178,12 @@ class _ShelfTile extends StatelessWidget {
                         ),
                         Text(
                           scan.lines.isEmpty
-                              ? scan.badge.replaceAll('_', ' ')
-                              : "${scan.watchCount} watch · ${scan.fitCount} fit · ${scan.listedCount} listed",
+                              ? GlowStore.badgeLabel(scan.badge)
+                              : GlowL10n.t('watch_fit_listed', {
+                                  'watch': '${scan.watchCount}',
+                                  'fit': '${scan.fitCount}',
+                                  'listed': '${scan.listedCount}',
+                                }),
                           style: const TextStyle(color: AppColors.muted, fontSize: 12),
                         ),
                       ],
@@ -196,7 +201,7 @@ class _ShelfTile extends StatelessWidget {
               if (expanded) ...[
                 const SizedBox(height: 14),
                 Text(
-                  scan.headline.isEmpty ? "No headline for this scan." : scan.headline,
+                  scan.headline.isEmpty ? GlowL10n.t('no_headline') : scan.headline,
                   style: const TextStyle(fontSize: 13, height: 1.4),
                 ),
                 if (scan.why.isNotEmpty) ...[
@@ -209,7 +214,7 @@ class _ShelfTile extends StatelessWidget {
                   style: const TextStyle(color: AppColors.muted, fontSize: 12),
                 ),
                 const SizedBox(height: 14),
-                GlowPrimaryButton(title: "Open analysis", compact: true, onPressed: onOpen),
+                GlowPrimaryButton(title: GlowL10n.t('open_analysis'), compact: true, onPressed: onOpen),
               ],
             ],
           ),

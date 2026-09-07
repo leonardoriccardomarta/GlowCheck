@@ -12,6 +12,7 @@ export const analyzeRequestSchema = z
       skinType: skinTypeSchema,
       mainGoal: mainGoalSchema,
       spendBand: z.enum(['low', 'mid', 'high']).optional(),
+      locale: z.enum(['it', 'en', 'es', 'fr', 'de']).optional(),
     }),
   })
   .refine((value) => Boolean(value.imageBase64) || Boolean(value.barcode && value.barcode.replace(/\D/g, '').length >= 8), {

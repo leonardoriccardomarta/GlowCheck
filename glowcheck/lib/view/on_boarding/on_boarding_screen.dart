@@ -1,4 +1,6 @@
 import 'package:fitnessapp/common_widgets/glow_ui.dart';
+import 'package:fitnessapp/l10n/glow_l10n.dart';
+import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:fitnessapp/view/on_boarding/widgets/pager_widget.dart';
 import 'package:fitnessapp/view/profile/complete_profile_screen.dart';
@@ -16,38 +18,34 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
   final pageController = PageController();
   int selectedIndex = 0;
 
-  final pages = const [
+  List<OnboardPage> get pages => [
     OnboardPage(
-      kicker: "01  Scan",
-      title: "Photograph the INCI list",
-      subtitle:
-          "Shoot the back of the bottle. We read Aqua, Glycerin and the full formula. No barcode catalog required.",
+      kicker: GlowL10n.t('onb1_kicker'),
+      title: GlowL10n.t('onb1_title'),
+      subtitle: GlowL10n.t('onb1_sub'),
       icon: Icons.document_scanner_outlined,
-      chips: ["Full INCI", "No barcode needed", "Unreadable stays free"],
+      chips: [GlowL10n.t('onb1_c1'), GlowL10n.t('onb1_c2'), GlowL10n.t('onb1_c3')],
     ),
     OnboardPage(
-      kicker: "02  Score",
-      title: "A match vs your skin",
-      subtitle:
-          "Same formula can score differently on oily and dry skin. The number is only vs the profile you set.",
+      kicker: GlowL10n.t('onb2_kicker'),
+      title: GlowL10n.t('onb2_title'),
+      subtitle: GlowL10n.t('onb2_sub'),
       icon: Icons.radio_button_checked,
-      chips: ["0 to 100", "Your skin type", "Your goal first"],
+      chips: [GlowL10n.t('onb2_c1'), GlowL10n.t('onb2_c2'), GlowL10n.t('onb2_c3')],
     ),
     OnboardPage(
-      kicker: "03  Ingredients",
-      title: "Watch, Fit, Listed",
-      subtitle:
-          "Every readable ingredient is tagged for your goal. First successful scan is free.",
+      kicker: GlowL10n.t('onb3_kicker'),
+      title: GlowL10n.t('onb3_title'),
+      subtitle: GlowL10n.t('onb3_sub'),
       icon: Icons.science_outlined,
-      chips: ["Watch", "Fit", "Listed"],
+      chips: [GlowL10n.t('onb3_c1'), GlowL10n.t('onb3_c2'), GlowL10n.t('onb3_c3')],
     ),
     OnboardPage(
-      kicker: "04  Shelf",
-      title: "Keep every bottle",
-      subtitle:
-          "Save scans, pin the ones you like, come back when you buy something new.",
+      kicker: GlowL10n.t('onb4_kicker'),
+      title: GlowL10n.t('onb4_title'),
+      subtitle: GlowL10n.t('onb4_sub'),
       icon: Icons.grid_view_rounded,
-      chips: ["History", "Pin favorites", "Drugstore swap if we have one"],
+      chips: [GlowL10n.t('onb4_c1'), GlowL10n.t('onb4_c2'), GlowL10n.t('onb4_c3')],
     ),
   ];
 
@@ -73,7 +71,9 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
   Widget build(BuildContext context) {
     final last = selectedIndex == pages.length - 1;
 
-    return Scaffold(
+    return AnimatedBuilder(
+      animation: GlowStore.instance,
+      builder: (context, _) => Scaffold(
       backgroundColor: AppColors.canvas,
       body: SafeArea(
         child: Column(
@@ -95,9 +95,9 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
                     onPressed: () {
                       Navigator.pushNamed(context, CompleteProfileScreen.routeName);
                     },
-                    child: const Text(
-                      "Skip",
-                      style: TextStyle(color: AppColors.muted, fontWeight: FontWeight.w600),
+                    child: Text(
+                      GlowL10n.t('onb_skip'),
+                      style: const TextStyle(color: AppColors.muted, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -133,7 +133,7 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
                   ),
                   const SizedBox(height: 16),
                   GlowPrimaryButton(
-                    title: last ? "Set your skin" : "Continue",
+                    title: last ? GlowL10n.t('onb_set_skin') : GlowL10n.t('onb_continue'),
                     onPressed: _next,
                   ),
                 ],
@@ -142,6 +142,7 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 }

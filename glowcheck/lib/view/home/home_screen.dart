@@ -1,4 +1,5 @@
 import 'package:fitnessapp/common_widgets/glow_ui.dart';
+import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/models/scan_result.dart';
 import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
@@ -78,12 +79,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        "Hello,",
-                        style: TextStyle(color: AppColors.muted, fontSize: 14),
+                      Text(
+                        GlowL10n.t('hello'),
+                        style: const TextStyle(color: AppColors.muted, fontSize: 14),
                       ),
                       Text(
-                        "${GlowStore.skinLabel(store.skinType)} skin",
+                        GlowL10n.t('skin_line', {'skin': GlowStore.skinLabel(store.skinType)}),
                         style: const TextStyle(
                           color: AppColors.ink,
                           fontSize: 26,
@@ -104,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 22),
             GlowSearchBar(
               controller: _search,
-              hint: "Search a bottle or INCI name",
+              hint: GlowL10n.t('search_hint'),
               onChanged: (_) => setState(() {}),
               onFilter: _cycleFilter,
             ),
@@ -113,12 +114,12 @@ class _HomeScreenState extends State<HomeScreen> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  GlowChip(label: "All", selected: _filter == 'all', onTap: () => setState(() => _filter = 'all')),
-                  GlowChip(label: "Good match", selected: _filter == 'match', onTap: () => setState(() => _filter = 'match')),
-                  GlowChip(label: "Caution", selected: _filter == 'caution', onTap: () => setState(() => _filter = 'caution')),
-                  GlowChip(label: "Saved", selected: _filter == 'saved', onTap: () => setState(() => _filter = 'saved')),
+                  GlowChip(label: GlowL10n.t('filter_all'), selected: _filter == 'all', onTap: () => setState(() => _filter = 'all')),
+                  GlowChip(label: GlowL10n.t('filter_match'), selected: _filter == 'match', onTap: () => setState(() => _filter = 'match')),
+                  GlowChip(label: GlowL10n.t('filter_caution'), selected: _filter == 'caution', onTap: () => setState(() => _filter = 'caution')),
+                  GlowChip(label: GlowL10n.t('filter_saved'), selected: _filter == 'saved', onTap: () => setState(() => _filter = 'saved')),
                   GlowChip(
-                    label: "Scan label",
+                    label: GlowL10n.t('filter_scan'),
                     selected: false,
                     onTap: () => DashboardScope.of(context)?.goTab(2),
                   ),
@@ -139,17 +140,17 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 28),
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    "Your shelf",
-                    style: TextStyle(color: AppColors.ink, fontSize: 18, fontWeight: FontWeight.w700),
+                    GlowL10n.t('your_shelf'),
+                    style: const TextStyle(color: AppColors.ink, fontSize: 18, fontWeight: FontWeight.w700),
                   ),
                 ),
                 GestureDetector(
                   onTap: () => DashboardScope.of(context)?.goTab(1),
-                  child: const Text(
-                    "See all",
-                    style: TextStyle(color: AppColors.muted, fontSize: 13, fontWeight: FontWeight.w600),
+                  child: Text(
+                    GlowL10n.t('see_all'),
+                    style: const TextStyle(color: AppColors.muted, fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -192,23 +193,23 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          store.isPro ? "Pro unlocked" : "Free scans left",
+                          store.isPro ? GlowL10n.t('pro_unlocked') : GlowL10n.t('free_scans_left'),
                           style: const TextStyle(color: AppColors.muted, fontSize: 12),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          store.isPro ? "Unlimited" : "${store.freeScansRemaining}",
+                          store.isPro ? GlowL10n.t('unlimited') : "${store.freeScansRemaining}",
                           style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
                         ),
                         Text(
-                          "${store.history.length} bottles saved",
+                          GlowL10n.t('bottles_saved', {'n': '${store.history.length}'}),
                           style: const TextStyle(color: AppColors.muted, fontSize: 12),
                         ),
                       ],
                     ),
                   ),
                   GlowPrimaryButton(
-                    title: store.canScan ? "Scan" : "Unlock",
+                    title: store.canScan ? GlowL10n.t('scan') : GlowL10n.t('unlock'),
                     compact: true,
                     onPressed: () {
                       if (store.canScan) {
@@ -277,12 +278,12 @@ class _FeaturedCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  latest == null ? "First bottle" : "Last match",
+                  latest == null ? GlowL10n.t('first_bottle') : GlowL10n.t('last_match'),
                   style: TextStyle(color: AppColors.card.withOpacity(0.7), fontSize: 13),
                 ),
                 const Spacer(),
                 Text(
-                  latest?.productName ?? "Photograph an INCI list",
+                  latest?.productName ?? GlowL10n.t('photo_inci'),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -304,10 +305,14 @@ class _FeaturedCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       latest == null
-                          ? "vs your skin"
+                          ? GlowL10n.t('vs_your_skin')
                           : latest!.lines.isEmpty
-                              ? latest!.badge.replaceAll('_', ' ')
-                              : "${latest!.lines.length} INCI · ${latest!.watchCount} watch · ${latest!.fitCount} fit",
+                              ? GlowStore.badgeLabel(latest!.badge)
+                              : GlowL10n.t('inci_summary', {
+                                  'n': '${latest!.lines.length}',
+                                  'watch': '${latest!.watchCount}',
+                                  'fit': '${latest!.fitCount}',
+                                }),
                       style: TextStyle(color: AppColors.card.withOpacity(0.7), fontSize: 12),
                     ),
                   ],
@@ -327,7 +332,7 @@ class _FeaturedCard extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              latest == null ? "Scan now" : "See more",
+                              latest == null ? GlowL10n.t('scan_now') : GlowL10n.t('see_more'),
                               style: const TextStyle(color: AppColors.card, fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(width: 8),
@@ -421,17 +426,17 @@ class _EmptyShelf extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Nothing saved yet",
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+          Text(
+            GlowL10n.t('nothing_saved'),
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
           ),
           const SizedBox(height: 6),
-          const Text(
-            "Scan an ingredient list. Unreadable photos stay free.",
-            style: TextStyle(color: AppColors.muted, fontSize: 13),
+          Text(
+            GlowL10n.t('empty_shelf_body'),
+            style: const TextStyle(color: AppColors.muted, fontSize: 13),
           ),
           const Spacer(),
-          GlowPrimaryButton(title: "Scan a label", compact: true, onPressed: onScan),
+          GlowPrimaryButton(title: GlowL10n.t('scan_a_label'), compact: true, onPressed: onScan),
         ],
       ),
     );

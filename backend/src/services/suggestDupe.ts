@@ -1,4 +1,5 @@
 import { catalogPromptBlock, DUPE_CATALOG, type DupeEntry } from '../data/dupeCatalog';
+import { copy } from '../i18n/scoreCopy';
 import { env } from '../config/env';
 import type { MainGoal, SkinType } from './score';
 
@@ -19,6 +20,7 @@ type SuggestInput = {
   skinType: SkinType;
   mainGoal: MainGoal;
   spendBand?: SpendBand;
+  locale?: string;
 };
 
 function priceOf(item: DupeEntry) {
@@ -121,8 +123,15 @@ function toSuggestion(item: DupeEntry, actives: string[], input: SuggestInput): 
   const hit = actives.filter((active) => item.actives.some((entry) => active.includes(entry) || entry.includes(active)));
   const why =
     hit.length > 0
-      ? `Same job on the label: ${hit.join(', ')} vs your ${input.skinType} / ${input.mainGoal} profile.`
-      : `Cheaper drugstore option for ${input.skinType} skin and ${input.mainGoal}.`;
+      ? copy(input.locale, 'dupe_same', {
+          hit: hit.join(', '),
+          skin: copy(input.locale, `skin_${input.skinType}`),
+          goal: copy(input.locale, `goal_${input.mainGoal}`),
+        })
+      : copy(input.locale, 'dupe_generic', {
+          skin: copy(input.locale, `skin_${input.skinType}`),
+          goal: copy(input.locale, `goal_${input.mainGoal}`),
+        });
   return {
     id: item.id,
     brand: item.brand,

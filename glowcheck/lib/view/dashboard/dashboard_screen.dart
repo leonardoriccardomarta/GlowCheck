@@ -2,6 +2,7 @@ import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:fitnessapp/view/activity/activity_screen.dart';
 import 'package:fitnessapp/view/camera/camera_screen.dart';
 import 'package:fitnessapp/view/profile/user_profile.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../home/home_screen.dart';
@@ -49,6 +50,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.paddingOf(context).bottom;
+    final dockBottom = kIsWeb ? 16.0 : 12 + (bottom > 0 ? bottom : 8);
 
     return DashboardScope(
       goTab: goTab,
@@ -64,7 +66,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Positioned(
               left: 22,
               right: 22,
-              bottom: 12 + (bottom > 0 ? bottom : 8),
+              bottom: dockBottom,
               child: _GlowDock(
                 selected: selectTab,
                 onSelect: goTab,

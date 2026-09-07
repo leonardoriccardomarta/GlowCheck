@@ -1,4 +1,5 @@
 import { isDupeId } from '../data/dupeCatalog';
+import { copy } from '../i18n/scoreCopy';
 import type { AnalyzeRequest, AnalyzeResponse } from '../schemas/analyze';
 import { env } from '../config/env';
 import { lookupBarcode } from './beautyFacts';
@@ -25,23 +26,24 @@ function empty(errorCode: AnalyzeResponse['errorCode'], headline: string): Analy
 
 function mockResponse(req: AnalyzeRequest): AnalyzeResponse {
   const oily = req.profile.skinType === 'oily';
+  const locale = req.profile.locale;
   return {
     readable: true,
     productName: req.barcode ? `Barcode ${req.barcode}` : 'Label sample (mock vision)',
     compatibilityScore: oily ? 41 : 78,
     statusBadge: oily ? 'NOT_IDEAL' : 'CAUTION',
-    headline: oily ? 'Potentially occlusive for oily skin' : 'Mostly compatible hydrating formula',
+    headline: oily ? copy(locale, 'mock_oily') : copy(locale, 'mock_hydrating'),
     occlusionAlert: oily ? 'high' : 'low',
     flaggedIngredients: [
       {
         name: 'Isopropyl Myristate',
         kind: 'warning',
-        note: 'Often flagged as potentially occlusive on oily skin',
+        note: copy(locale, 'mock_occ'),
       },
       {
         name: 'Glycerin',
         kind: 'good',
-        note: 'Humectant commonly used for hydration',
+        note: copy(locale, 'mock_glyc'),
       },
     ],
     dupeId: oily ? 'to-niacinamide-10' : 'to-ha-2',
@@ -52,7 +54,7 @@ function mockResponse(req: AnalyzeRequest): AnalyzeResponse {
           name: 'Niacinamide 10% + Zinc 1%',
           estimatedPrice: '~$7',
           blurb: 'Drugstore niacinamide serum',
-          whyThis: 'Mock swap for oily / pores.',
+          whyThis: copy(locale, 'mock_why_oily'),
         }
       : {
           id: 'to-ha-2',
@@ -60,12 +62,12 @@ function mockResponse(req: AnalyzeRequest): AnalyzeResponse {
           name: 'Hyaluronic Acid 2% + B5',
           estimatedPrice: '~$8',
           blurb: 'Simple hydrating serum',
-          whyThis: 'Mock swap for hydration.',
+          whyThis: copy(locale, 'mock_why_hydration'),
         },
-    whyForYou: 'Demo score vs the skin profile you picked. Not a public Yuka rating.',
+    whyForYou: copy(locale, 'mock_why'),
     ingredients: [
-      { name: 'Isopropyl Myristate', tag: 'watch', note: 'Often noted as potentially occlusive on oily skin' },
-      { name: 'Glycerin', tag: 'fit', note: 'Humectant commonly used for hydration' },
+      { name: 'Isopropyl Myristate', tag: 'watch', note: copy(locale, 'note_occ_oily') },
+      { name: 'Glycerin', tag: 'fit', note: copy(locale, 'note_humectant') },
     ],
     errorCode: null,
   };
@@ -136,6 +138,7 @@ export async function analyzeProduct(req: AnalyzeRequest): Promise<AnalyzeRespon
       ingredients,
       skinType: req.profile.skinType,
       mainGoal: req.profile.mainGoal,
+      locale: req.profile.locale,
     });
     const dupe = await suggestDupe({
       productName,
@@ -143,6 +146,7 @@ export async function analyzeProduct(req: AnalyzeRequest): Promise<AnalyzeRespon
       skinType: req.profile.skinType,
       mainGoal: req.profile.mainGoal,
       spendBand: req.profile.spendBand,
+      locale: req.profile.locale,
     });
     return {
       ...scored,
@@ -157,6 +161,7 @@ export async function analyzeProduct(req: AnalyzeRequest): Promise<AnalyzeRespon
       ingredients: ['Aqua'],
       skinType: req.profile.skinType,
       mainGoal: req.profile.mainGoal,
+      locale: req.profile.locale,
     });
     const dupe = await suggestDupe({
       productName,
@@ -164,11 +169,12 @@ export async function analyzeProduct(req: AnalyzeRequest): Promise<AnalyzeRespon
       skinType: req.profile.skinType,
       mainGoal: req.profile.mainGoal,
       spendBand: req.profile.spendBand,
+      locale: req.profile.locale,
     });
     return {
       ...scored,
-      headline: 'Product found, limited INCI on the label',
-      whyForYou: 'Name matched, but the full ingredient list was not readable. Photograph the INCI block for a complete score.',
+      headline: copy(req.profile.locale, 'limited_headline'),
+      whyForYou: copy(req.profile.locale, 'limited_why'),
       flaggedIngredients: [],
       ingredients: [],
       dupe,
@@ -177,7 +183,7 @@ export async function analyzeProduct(req: AnalyzeRequest): Promise<AnalyzeRespon
   }
 
   if (barcode && !req.imageBase64) {
-    return empty('UNREADABLE', 'Barcode found, no formula in catalog');
+    return empty('UNREADABLE', copy(req.profile.locale, 'barcode_none'));
   }
-  return empty('UNREADABLE', 'Could not read barcode or INCI');
+  return empty('UNREADABLE', copy(req.profile.locale, 'unreadable'));
 }

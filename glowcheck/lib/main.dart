@@ -1,9 +1,9 @@
 import 'package:fitnessapp/config/app_env.dart';
+import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/routes.dart';
 import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:fitnessapp/view/splash/splash_screen.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 void main() async {
@@ -18,8 +18,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return AnimatedBuilder(
+      animation: GlowStore.instance,
+      builder: (context, _) {
+        final locale = Locale(GlowL10n.normalize(GlowStore.instance.localeCode));
+        return MaterialApp(
       title: 'GlowCheck',
+      locale: locale,
+      supportedLocales: GlowL10n.supportedLocales,
       debugShowCheckedModeBanner: false,
       routes: routes,
       theme: ThemeData(
@@ -38,18 +44,9 @@ class MyApp extends StatelessWidget {
           elevation: 0,
         ),
       ),
-      builder: (context, child) {
-        if (!kIsWeb || child == null) return child ?? const SizedBox.shrink();
-        final mq = MediaQuery.of(context);
-        return MediaQuery(
-          data: mq.copyWith(
-            padding: mq.padding.copyWith(top: 0),
-            viewPadding: mq.viewPadding.copyWith(top: 0),
-          ),
-          child: child,
-        );
-      },
       home: const SplashScreen(),
+    );
+      },
     );
   }
 }

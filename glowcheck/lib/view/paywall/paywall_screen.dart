@@ -1,5 +1,7 @@
 import 'package:fitnessapp/common_widgets/glow_ui.dart';
+import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/services/glow_billing.dart';
+import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:flutter/material.dart';
 
@@ -44,8 +46,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
       if (!mounted) return;
       if (outcome == PurchaseOutcome.needsStore) {
         setState(() {
-          error =
-              'Store checkout is wired. Add REVENUECAT_API_KEY on iOS/Android, or STRIPE_CHECKOUT_URL on web, then rebuild.';
+          error = GlowL10n.t('paywall_store_err');
         });
         return;
       }
@@ -67,12 +68,12 @@ class _PaywallScreenState extends State<PaywallScreen> {
       if (!mounted) return;
       if (outcome == PurchaseOutcome.needsStore) {
         setState(() {
-          error = 'Restore pulls an existing Pro entitlement after App Store products are connected.';
+          error = GlowL10n.t('paywall_restore_err');
         });
         return;
       }
       if (outcome == PurchaseOutcome.nothingToRestore) {
-        setState(() => error = 'Nothing to restore on this device yet.');
+        setState(() => error = GlowL10n.t('paywall_nothing'));
         return;
       }
       Navigator.pop(context, true);
@@ -83,9 +84,21 @@ class _PaywallScreenState extends State<PaywallScreen> {
     }
   }
 
+  String _planLabel(BillingPackage pkg) {
+    if (pkg.id.contains('year')) return GlowL10n.t('paywall_yearly');
+    return GlowL10n.t('paywall_weekly');
+  }
+
+  String _planPrice(BillingPackage pkg) {
+    if (pkg.id.contains('year')) return GlowL10n.t('paywall_price_year');
+    return GlowL10n.t('paywall_price_week');
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AnimatedBuilder(
+      animation: GlowStore.instance,
+      builder: (context, _) => Scaffold(
       backgroundColor: AppColors.canvas,
       body: SafeArea(
         child: ListView(
@@ -100,22 +113,22 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 const Spacer(),
                 TextButton(
                   onPressed: busy ? null : _restore,
-                  child: const Text(
-                    "Restore",
-                    style: TextStyle(color: AppColors.ink, fontWeight: FontWeight.w700),
+                  child: Text(
+                    GlowL10n.t('paywall_restore'),
+                    style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w700),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 18),
-            const Text(
-              "GlowCheck Pro",
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, height: 1.1),
+            Text(
+              GlowL10n.t('paywall_title'),
+              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700, height: 1.1),
             ),
             const SizedBox(height: 8),
-            const Text(
-              "First readable INCI is free. Pro keeps scoring every bottle vs your skin.",
-              style: TextStyle(color: AppColors.muted, fontSize: 14, height: 1.4),
+            Text(
+              GlowL10n.t('paywall_sub'),
+              style: const TextStyle(color: AppColors.muted, fontSize: 14, height: 1.4),
             ),
             const SizedBox(height: 22),
             Container(
@@ -124,13 +137,13 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 color: AppColors.ink,
                 borderRadius: BorderRadius.circular(28),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _Feature(text: "Score vs your skin, not a public Yuka number"),
-                  _Feature(text: "Full INCI tagged Watch / Fit / Listed"),
-                  _Feature(text: "Drugstore swap from the readable formula"),
-                  _Feature(text: "Unlimited shelf after the free scan"),
+                  _Feature(text: GlowL10n.t('paywall_f1')),
+                  _Feature(text: GlowL10n.t('paywall_f2')),
+                  _Feature(text: GlowL10n.t('paywall_f3')),
+                  _Feature(text: GlowL10n.t('paywall_f4')),
                 ],
               ),
             ),
@@ -138,6 +151,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
             for (final pkg in packages) ...[
               _PlanTile(
                 pkg: pkg,
+                label: _planLabel(pkg),
+                price: _planPrice(pkg),
+                bestValueLabel: GlowL10n.t('paywall_best'),
                 selected: selected == pkg.id,
                 onTap: () => setState(() => selected = pkg.id),
               ),
@@ -149,20 +165,19 @@ class _PaywallScreenState extends State<PaywallScreen> {
             ],
             const SizedBox(height: 16),
             GlowPrimaryButton(
-              title: busy ? "Working..." : "Unlock Pro",
+              title: busy ? GlowL10n.t('paywall_working') : GlowL10n.t('paywall_unlock'),
               onPressed: busy ? () {} : _buy,
             ),
             const SizedBox(height: 12),
             Text(
-              GlowBilling.live
-                  ? "Live store keys are set. Checkout completes on the native or Stripe path."
-                  : "Sandbox on this device until you add REVENUECAT_API_KEY or STRIPE_CHECKOUT_URL.",
+              GlowBilling.live ? GlowL10n.t('paywall_live') : GlowL10n.t('paywall_sandbox'),
               textAlign: TextAlign.center,
               style: const TextStyle(color: AppColors.muted, fontSize: 12, height: 1.4),
             ),
           ],
         ),
       ),
+    ),
     );
   }
 }
@@ -193,9 +208,19 @@ class _Feature extends StatelessWidget {
 }
 
 class _PlanTile extends StatelessWidget {
-  const _PlanTile({required this.pkg, required this.selected, required this.onTap});
+  const _PlanTile({
+    required this.pkg,
+    required this.label,
+    required this.price,
+    required this.bestValueLabel,
+    required this.selected,
+    required this.onTap,
+  });
 
   final BillingPackage pkg;
+  final String label;
+  final String price;
+  final String bestValueLabel;
   final bool selected;
   final VoidCallback onTap;
 
@@ -218,7 +243,7 @@ class _PlanTile extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          pkg.label,
+                          label,
                           style: TextStyle(
                             color: selected ? AppColors.card : AppColors.ink,
                             fontWeight: FontWeight.w700,
@@ -234,7 +259,7 @@ class _PlanTile extends StatelessWidget {
                               borderRadius: BorderRadius.circular(99),
                             ),
                             child: Text(
-                              "Best value",
+                              bestValueLabel,
                               style: TextStyle(
                                 color: selected ? AppColors.ink : AppColors.card,
                                 fontSize: 10,
@@ -247,7 +272,7 @@ class _PlanTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      pkg.priceString,
+                      price,
                       style: TextStyle(
                         color: selected ? AppColors.card.withValues(alpha: 0.7) : AppColors.muted,
                         fontSize: 13,

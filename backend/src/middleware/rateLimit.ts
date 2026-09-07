@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
+import { copy } from '../i18n/scoreCopy';
 
 const WINDOW_MS = 60 * 60 * 1000;
 const MAX = 60;
@@ -23,7 +24,7 @@ export function rateLimit(req: Request, res: Response, next: NextFunction) {
       productName: null,
       compatibilityScore: 0,
       statusBadge: 'CAUTION',
-      headline: 'Too many scans',
+      headline: copy((req.body as { profile?: { locale?: string } })?.profile?.locale, 'too_many'),
       whyForYou: '',
       occlusionAlert: 'low',
       flaggedIngredients: [],

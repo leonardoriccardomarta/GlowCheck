@@ -1,4 +1,5 @@
 import 'package:fitnessapp/common_widgets/glow_ui.dart';
+import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:fitnessapp/view/dashboard/dashboard_screen.dart';
@@ -41,11 +42,45 @@ class _UserProfileState extends State<UserProfile> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(22, 16, 22, 120),
           children: [
-            const Text(
-              "Profile",
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
+            Text(
+              GlowL10n.t('profile_title'),
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 14),
+            Material(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(24),
+              child: InkWell(
+                onTap: () => GlowL10n.pick(context),
+                borderRadius: BorderRadius.circular(24),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.language_rounded, color: AppColors.ink),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              GlowL10n.t('language'),
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                            ),
+                            Text(
+                              GlowL10n.currentLang().nativeName,
+                              style: const TextStyle(color: AppColors.muted, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: AppColors.muted),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -65,15 +100,15 @@ class _UserProfileState extends State<UserProfile> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          store.accountName ?? "Your account",
+                          store.accountName ?? GlowL10n.t('your_account'),
                           style: const TextStyle(color: AppColors.card, fontWeight: FontWeight.w700, fontSize: 16),
                         ),
                         Text(
-                          store.accountEmail ?? "Not signed in",
+                          store.accountEmail ?? GlowL10n.t('not_signed_in'),
                           style: TextStyle(color: AppColors.card.withValues(alpha: 0.65), fontSize: 12),
                         ),
                         Text(
-                          "Signed in with ${GlowStore.providerLabel(store.accountProvider)}",
+                          GlowL10n.t('signed_in_with', {'provider': GlowStore.providerLabel(store.accountProvider)}),
                           style: TextStyle(color: AppColors.card.withValues(alpha: 0.55), fontSize: 12),
                         ),
                       ],
@@ -114,7 +149,7 @@ class _UserProfileState extends State<UserProfile> {
                     ),
                   ),
                   GlowPrimaryButton(
-                    title: "Edit",
+                    title: GlowL10n.t('edit'),
                     compact: true,
                     onPressed: () async {
                       await GlowStore.instance.resetQuiz();
@@ -131,28 +166,33 @@ class _UserProfileState extends State<UserProfile> {
             const SizedBox(height: 16),
             Row(
               children: [
-                _Stat(title: store.planLabel, label: "Plan"),
+                _Stat(title: store.planLabel, label: GlowL10n.t('plan')),
                 const SizedBox(width: 10),
-                _Stat(title: "${store.history.length}", label: "Scans"),
+                _Stat(title: "${store.history.length}", label: GlowL10n.t('scans')),
                 const SizedBox(width: 10),
                 _Stat(
-                  title: store.isPro ? "Unlimited" : "${store.freeScansRemaining}",
-                  label: store.isPro ? "Scans" : "Free left",
+                  title: store.isPro ? GlowL10n.t('unlimited') : "${store.freeScansRemaining}",
+                  label: store.isPro ? GlowL10n.t('scans') : GlowL10n.t('free_left'),
                 ),
               ],
             ),
             const SizedBox(height: 22),
             _MenuCard(
               children: [
+                _MenuRow(
+                  icon: Icons.language_rounded,
+                  title: "${GlowL10n.t('language')} · ${GlowL10n.currentLang().nativeName}",
+                  onTap: () => GlowL10n.pick(context),
+                ),
                 if (!store.isPro)
                   _MenuRow(
                     icon: Icons.workspace_premium_outlined,
-                    title: "Unlock GlowCheck Pro",
+                    title: GlowL10n.t('unlock_pro'),
                     onTap: () => Navigator.pushNamed(context, PaywallScreen.routeName),
                   ),
                 _MenuRow(
                   icon: Icons.replay_rounded,
-                  title: "Retake skin quiz",
+                  title: GlowL10n.t('retake_quiz'),
                   onTap: () async {
                     await GlowStore.instance.resetQuiz();
                     if (!mounted) return;
@@ -164,12 +204,12 @@ class _UserProfileState extends State<UserProfile> {
                 ),
                 _MenuRow(
                   icon: Icons.grid_view_rounded,
-                  title: "Saved bottles",
+                  title: GlowL10n.t('saved_bottles'),
                   onTap: () => DashboardScope.of(context)?.goTab(1),
                 ),
                 _MenuRow(
                   icon: Icons.photo_camera_outlined,
-                  title: "New scan",
+                  title: GlowL10n.t('new_scan'),
                   onTap: () => DashboardScope.of(context)?.goTab(2),
                 ),
               ],
@@ -179,7 +219,7 @@ class _UserProfileState extends State<UserProfile> {
               children: [
                 _MenuRow(
                   icon: Icons.logout_rounded,
-                  title: "Sign out",
+                  title: GlowL10n.t('sign_out'),
                   onTap: () async {
                     await GlowStore.instance.signOut();
                     if (!mounted) return;
@@ -191,11 +231,11 @@ class _UserProfileState extends State<UserProfile> {
                 ),
                 _MenuRow(
                   icon: Icons.info_outline,
-                  title: "Not medical advice",
+                  title: GlowL10n.t('not_medical'),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('GlowCheck matches INCI to the profile you set. It is not a diagnosis.'),
+                      SnackBar(
+                        content: Text(GlowL10n.t('not_medical_snack')),
                       ),
                     );
                   },
