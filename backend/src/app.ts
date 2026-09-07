@@ -25,11 +25,12 @@ export function createApp() {
     helmet({
       contentSecurityPolicy: false,
       crossOriginEmbedderPolicy: false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
     })
   );
   app.use(
     cors({
-      origin: env.FRONTEND_ORIGIN || true,
+      origin: true,
     })
   );
   app.use(morgan('dev'));
