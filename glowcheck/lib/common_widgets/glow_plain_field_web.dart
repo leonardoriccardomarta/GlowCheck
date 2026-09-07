@@ -29,6 +29,7 @@ class _GlowPlainFieldImplState extends State<GlowPlainFieldImpl>
   final GlobalKey _boxKey = GlobalKey();
   late final String _id;
   late final web.HTMLInputElement _input;
+  bool _shown = false;
 
   @override
   void initState() {
@@ -36,7 +37,7 @@ class _GlowPlainFieldImplState extends State<GlowPlainFieldImpl>
     _id = 'glow-field-${identityHashCode(this)}';
     _input = web.HTMLInputElement()
       ..id = _id
-      ..className = 'glow-html-input';
+      ..className = 'glow-html-input is-hidden';
     _applyAttrs();
     _input.value = widget.controller.text;
     _input.style
@@ -52,12 +53,10 @@ class _GlowPlainFieldImplState extends State<GlowPlainFieldImpl>
       ..lineHeight = '20px'
       ..fontFamily = 'Poppins, sans-serif'
       ..fontWeight = '400'
-      ..boxSizing = 'border-box'
-      ..visibility = 'hidden';
+      ..boxSizing = 'border-box';
     _input.style.setProperty('-webkit-appearance', 'none');
     _input.style.setProperty('appearance', 'none');
-    _input.style.setProperty('pointer-events', 'auto');
-    _input.style.setProperty('transform', 'translateZ(0)');
+    _input.style.setProperty('touch-action', 'manipulation');
     _input.onInput.listen((_) {
       final value = _input.value;
       if (widget.controller.text != value) {
@@ -76,14 +75,17 @@ class _GlowPlainFieldImplState extends State<GlowPlainFieldImpl>
   }
 
   void _applyAttrs() {
+    // Keep type=text so iOS Chrome actually opens the keyboard.
+    // Mask password in CSS; hint the email keyboard via inputMode.
     _input
-      ..type = widget.obscure ? 'password' : (widget.email ? 'email' : 'text')
+      ..type = 'text'
       ..placeholder = widget.hint
-      ..autocomplete = widget.obscure
-          ? 'current-password'
-          : (widget.email ? 'email' : 'off')
-      ..spellcheck = false;
-    _input.inputMode = widget.email ? 'email' : 'text';
+      ..autocomplete = 'off'
+      ..spellcheck = false
+      ..inputMode = widget.email ? 'email' : 'text';
+    _input.className = _shown
+        ? (widget.obscure ? 'glow-html-input is-secret' : 'glow-html-input')
+        : (widget.obscure ? 'glow-html-input is-secret is-hidden' : 'glow-html-input is-hidden');
   }
 
   void _syncFromController() {
@@ -109,31 +111,50 @@ class _GlowPlainFieldImplState extends State<GlowPlainFieldImpl>
     _applyAttrs();
   }
 
-  void _hide() {
-    _input.style.visibility = 'hidden';
-    _input.style.left = '-4000px';
+  bool _onStage(BuildContext context) {
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) return false;
+    var hidden = false;
+    context.visitAncestorElements((el) {
+      final widget = el.widget;
+      if (widget is Offstage && widget.offstage) {
+        hidden = true;
+        return false;
+      }
+      if (widget is Visibility && !widget.visible) {
+        hidden = true;
+        return false;
+      }
+      return true;
+    });
+    return !hidden;
+  }
+
+  void _hide({required bool blur}) {
+    if (_shown || blur) {
+      _shown = false;
+      _input.classList.add('is-hidden');
+      if (blur) {
+        _input.blur();
+      }
+    }
   }
 
   void _syncPosition() {
     final ctx = _boxKey.currentContext;
-    if (ctx == null || !ctx.mounted) {
-      _hide();
-      return;
-    }
-    final route = ModalRoute.of(ctx);
-    if (route != null && !route.isCurrent) {
-      _hide();
+    if (ctx == null || !ctx.mounted || !_onStage(ctx)) {
+      _hide(blur: true);
       return;
     }
     final box = ctx.findRenderObject() as RenderBox?;
     if (box == null || !box.hasSize || !box.attached) {
-      _hide();
+      _hide(blur: true);
       return;
     }
     final offset = box.localToGlobal(Offset.zero);
     final size = box.size;
     if (size.width < 8 || size.height < 8) {
-      _hide();
+      _hide(blur: true);
       return;
     }
     final view = View.of(ctx);
@@ -142,32 +163,35 @@ class _GlowPlainFieldImplState extends State<GlowPlainFieldImpl>
         offset.dy + size.height < 0 ||
         offset.dx > logical.width ||
         offset.dy > logical.height) {
-      _hide();
+      _hide(blur: true);
       return;
     }
+    _shown = true;
+    _input.classList.remove('is-hidden');
     _input.style
       ..left = '${offset.dx}px'
       ..top = '${offset.dy}px'
       ..width = '${size.width}px'
-      ..height = '${size.height}px'
-      ..visibility = 'visible';
+      ..height = '${size.height}px';
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     widget.controller.removeListener(_syncFromController);
+    _input.blur();
     _input.remove();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final hole = SizedBox(key: _boxKey, height: 24, width: double.infinity);
+    final hole = SizedBox.expand(key: _boxKey);
     if (widget.icon == null) return hole;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Icon(widget.icon, color: AppColors.muted),
+        Center(child: Icon(widget.icon, color: AppColors.muted)),
         const SizedBox(width: 10),
         Expanded(child: hole),
       ],

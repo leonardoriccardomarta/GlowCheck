@@ -27,8 +27,9 @@ class GlowSearchBar extends StatelessWidget {
       ),
       padding: const EdgeInsets.only(left: 18, right: 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(Icons.search, color: AppColors.muted, size: 22),
+          const Center(child: Icon(Icons.search, color: AppColors.muted, size: 22)),
           const SizedBox(width: 10),
           Expanded(
             child: GlowPlainField(

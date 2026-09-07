@@ -84,8 +84,17 @@
       outline: none !important;
       -webkit-appearance: none !important;
       appearance: none !important;
-      pointer-events: auto !important;
-      opacity: 1 !important;
+      pointer-events: auto;
+      opacity: 1;
+    }
+    input.glow-html-input.is-secret {
+      -webkit-text-security: disc;
+    }
+    input.glow-html-input.is-hidden {
+      opacity: 0 !important;
+      pointer-events: none !important;
+      visibility: hidden !important;
+      left: -4000px !important;
     }
     input.glow-html-input::placeholder {
       color: #9A9590 !important;
@@ -113,7 +122,12 @@
         }
         return Math.round(Math.min.apply(null, heights.filter(Boolean)));
       }
+      function typing() {
+        var el = document.activeElement;
+        return el && el.classList && el.classList.contains('glow-html-input');
+      }
       function fit() {
+        if (typing()) return;
         var root = document.getElementById('glow-root');
         if (!root) return;
         root.style.height = visibleHeight() + 'px';
