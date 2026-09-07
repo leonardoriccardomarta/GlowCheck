@@ -1,0 +1,230 @@
+import { z } from 'zod';
+import { env } from '../config/env';
+
+export const visionExtractSchema = z.object({
+  productName: z.string().nullable().optional(),
+  barcode: z.string().nullable().optional(),
+  ingredients: z.array(z.string()).optional().default([]),
+  looksLikeCosmetic: z.boolean().optional(),
+});
+
+export type VisionExtract = {
+  productName: string | null;
+  barcode: string | null;
+  ingredients: string[];
+};
+
+const USER_INSTRUCTIONS = `Look at this product photo. It may be a barcode, a front label, or the INCI ingredient list on the back.
+Brand fame does not matter. Korean, pharmacy, supermarket, indie, luxury, or unknown labels are all valid if an INCI list is visible.
+Extract:
+- productName: brand + product if visible, else null. Never invent a famous brand.
+- barcode: digits only if an EAN/UPC barcode is visible, else null
+- ingredients: EVERY readable INCI name, in label order if possible (Aqua, Glycerin, oils, silicones, fragrance, fillers). Do not stop after a few actives. Empty array if none are readable.
+- looksLikeCosmetic: true if this looks like skincare/makeup/hair/body packaging OR an ingredient list
+JSON only, no markdown.`;
+
+function stripDataUrl(raw: string) {
+  const comma = raw.indexOf(',');
+  if (raw.startsWith('data:') && comma !== -1) {
+    return raw.slice(comma + 1);
+  }
+  return raw;
+}
+
+function cleanBase64(raw: string) {
+  let value = stripDataUrl(raw).replace(/\s/g, '');
+  value = value.replace(/-/g, '+').replace(/_/g, '/');
+  while (value.length % 4 !== 0) value += '=';
+  return value;
+}
+
+function extractJson(text: string) {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const body = fenced ? fenced[1].trim() : trimmed;
+  const start = body.indexOf('{');
+  const end = body.lastIndexOf('}');
+  if (start !== -1 && end > start) return body.slice(start, end + 1);
+  return body;
+}
+
+function looksLikeGroqKey(key?: string) {
+  return Boolean(key?.startsWith('gsk_'));
+}
+
+function isJpeg(buf: Buffer) {
+  return buf.length > 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
+}
+
+function isPng(buf: Buffer) {
+  return buf.length > 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+}
+
+async function prepareImageForVision(raw: string): Promise<{ base64: string; mimeType: 'image/jpeg' }> {
+  const b64 = cleanBase64(raw);
+  const input = Buffer.from(b64, 'base64');
+  if (input.length < 80) {
+    throw new Error('empty image');
+  }
+
+  const sharp = (await import('sharp')).default;
+  const jpeg = await sharp(input, { failOn: 'none' })
+    .rotate()
+    .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
+    .flatten({ background: '#ffffff' })
+    .jpeg({ quality: 70, mozjpeg: true })
+    .toBuffer();
+
+  if (!isJpeg(jpeg) || jpeg.length < 200) {
+    throw new Error('jpeg convert produced invalid bytes');
+  }
+
+  console.log(`Vision image prepared ${jpeg.length} bytes (source ${input.length}, jpeg=${isJpeg(input)} png=${isPng(input)})`);
+  return { base64: jpeg.toString('base64'), mimeType: 'image/jpeg' };
+}
+
+async function callChatCompletions(params: {
+  endpoint: string;
+  apiKey: string;
+  model: string;
+  imageBase64: string;
+  mimeType: string;
+  label: string;
+}) {
+  const dataUrl = `data:${params.mimeType};base64,${params.imageBase64}`;
+  const response = await fetch(params.endpoint, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${params.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: params.model,
+      temperature: 0.1,
+      max_completion_tokens: 2000,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: USER_INSTRUCTIONS },
+            { type: 'image_url', image_url: { url: dataUrl } },
+          ],
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`${params.label} ${response.status}: ${body.slice(0, 400)}`);
+  }
+
+  const json = (await response.json()) as {
+    choices?: { message?: { content?: string } }[];
+  };
+  return json.choices?.[0]?.message?.content ?? '';
+}
+
+async function callGroq(imageBase64: string, mimeType: string) {
+  const key = env.GROQ_API_KEY || env.OPENAI_API_KEY;
+  if (!key) throw new Error('Missing Groq API key');
+  const model =
+    env.VISION_MODEL.startsWith('qwen/') || env.VISION_MODEL.includes('llama')
+      ? env.VISION_MODEL
+      : 'qwen/qwen3.6-27b';
+  return callChatCompletions({
+    endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+    apiKey: key,
+    model,
+    imageBase64,
+    mimeType,
+    label: 'Groq',
+  });
+}
+
+async function callGemini(imageBase64: string, mimeType: string) {
+  const model = env.VISION_MODEL.includes('gemini') ? env.VISION_MODEL : 'gemini-2.0-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: USER_INSTRUCTIONS },
+            { inlineData: { mimeType, data: imageBase64 } },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.1,
+        responseMimeType: 'application/json',
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Gemini ${response.status}: ${body.slice(0, 400)}`);
+  }
+
+  const json = (await response.json()) as {
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+  };
+  return json.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('') ?? '';
+}
+
+async function callOpenAi(imageBase64: string, mimeType: string) {
+  if (!env.OPENAI_API_KEY) throw new Error('Missing OpenAI API key');
+  return callChatCompletions({
+    endpoint: 'https://api.openai.com/v1/chat/completions',
+    apiKey: env.OPENAI_API_KEY,
+    model: env.VISION_MODEL.includes('gpt') ? env.VISION_MODEL : 'gpt-4o',
+    imageBase64,
+    mimeType,
+    label: 'OpenAI',
+  });
+}
+
+function sanitizeExtract(parsed: z.infer<typeof visionExtractSchema>): VisionExtract {
+  const barcodeDigits = parsed.barcode?.replace(/\D/g, '') ?? '';
+  return {
+    productName: parsed.productName?.slice(0, 80) ?? null,
+    barcode: barcodeDigits.length >= 8 && barcodeDigits.length <= 14 ? barcodeDigits : null,
+    ingredients: (parsed.ingredients ?? []).map((item) => item.trim()).filter((item) => item.length >= 3).slice(0, 120),
+  };
+}
+
+export async function extractFromPhoto(imageBase64: string): Promise<VisionExtract | null> {
+  try {
+    const prepared = await prepareImageForVision(imageBase64);
+    let raw = '';
+    const groqKey = env.GROQ_API_KEY || (looksLikeGroqKey(env.OPENAI_API_KEY) ? env.OPENAI_API_KEY : undefined);
+    if (groqKey) {
+      raw = await callGroq(prepared.base64, prepared.mimeType);
+    } else if (env.GEMINI_API_KEY) {
+      raw = await callGemini(prepared.base64, prepared.mimeType);
+    } else if (env.OPENAI_API_KEY) {
+      raw = await callOpenAi(prepared.base64, prepared.mimeType);
+    } else {
+      console.error('No GROQ_API_KEY, GEMINI_API_KEY, or OPENAI_API_KEY');
+      return null;
+    }
+
+    console.log('Vision raw', raw.slice(0, 280));
+    const parsedJson = JSON.parse(extractJson(raw)) as unknown;
+    const parsed = visionExtractSchema.safeParse(parsedJson);
+    if (!parsed.success) {
+      console.error('Vision JSON failed Zod', parsed.error.flatten(), raw.slice(0, 300));
+      return null;
+    }
+    const clean = sanitizeExtract(parsed.data);
+    console.log('Vision extract', clean);
+    return clean;
+  } catch (error) {
+    console.error('Vision extract failed', error);
+    return null;
+  }
+}

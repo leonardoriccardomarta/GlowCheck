@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: glowcheck
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: AUTH_JWT_SECRET
+        sync: false
+      - key: VISION_MODEL
+        value: qwen/qwen3.6-27b
+      - key: MOCK_VISION
+        value: "false"

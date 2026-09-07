@@ -1,0 +1,102 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+
+import '../config/app_env.dart';
+import '../state/glow_store.dart';
+
+class GlowAuth {
+  GlowAuth._();
+
+  static bool get emailReady => AppEnv.authApiReady;
+  static bool get googleReady => AppEnv.authApiReady && AppEnv.googleReady;
+  static bool get appleReady => AppEnv.authApiReady && AppEnv.appleReady;
+
+  static Future<void> register({
+    required String name,
+    required String email,
+    required String password,
+  }) async {
+    if (AppEnv.authApiReady) {
+      final user = await _post('/auth/register', {
+        'name': name.trim(),
+        'email': email.trim().toLowerCase(),
+        'password': password,
+      });
+      await GlowStore.instance.applySession(
+        name: user['name'] as String? ?? name,
+        email: user['email'] as String? ?? email,
+        provider: 'email',
+        token: user['token'] as String?,
+      );
+      return;
+    }
+    await GlowStore.instance.signUp(name: name, email: email, password: password);
+  }
+
+  static Future<void> loginEmail({
+    required String email,
+    required String password,
+  }) async {
+    if (AppEnv.authApiReady) {
+      final user = await _post('/auth/login', {
+        'email': email.trim().toLowerCase(),
+        'password': password,
+      });
+      await GlowStore.instance.applySession(
+        name: user['name'] as String? ?? 'GlowCheck',
+        email: user['email'] as String? ?? email,
+        provider: 'email',
+        token: user['token'] as String?,
+      );
+      return;
+    }
+    await GlowStore.instance.signInEmail(email: email, password: password);
+  }
+
+  static Future<void> social(String provider) async {
+    if (AppEnv.authApiReady &&
+        ((provider == 'google' && AppEnv.googleReady) || (provider == 'apple' && AppEnv.appleReady))) {
+      final user = await _post('/auth/social', {
+        'provider': provider,
+        'clientId': provider == 'google' ? AppEnv.googleClientId : AppEnv.appleServiceId,
+      });
+      await GlowStore.instance.applySession(
+        name: user['name'] as String? ?? (provider == 'apple' ? 'Apple user' : 'Google user'),
+        email: user['email'] as String? ?? '$provider@glowcheck.local',
+        provider: provider,
+        token: user['token'] as String?,
+      );
+      return;
+    }
+    await GlowStore.instance.signInSocial(provider);
+  }
+
+  static Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) async {
+    final uri = Uri.parse('${AppEnv.authBase}$path');
+    late http.Response response;
+    try {
+      response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 20));
+    } catch (_) {
+      throw Exception('Auth API is not reachable at ${AppEnv.authBase}. Check AUTH_API_URL.');
+    }
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode >= 400 || json['ok'] != true) {
+      throw Exception(json['error'] as String? ?? 'Auth failed.');
+    }
+    final user = json['user'];
+    if (user is Map<String, dynamic>) {
+      return {
+        ...user,
+        'token': json['token'],
+      };
+    }
+    throw Exception('Auth response was missing a user.');
+  }
+}

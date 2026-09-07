@@ -1,0 +1,215 @@
+import { catalogPromptBlock, DUPE_CATALOG, type DupeEntry } from '../data/dupeCatalog';
+import { env } from '../config/env';
+import type { MainGoal, SkinType } from './score';
+
+export type SpendBand = 'low' | 'mid' | 'high';
+
+export type DupeSuggestion = {
+  id: string | null;
+  brand: string;
+  name: string;
+  estimatedPrice: string;
+  blurb: string;
+  whyThis: string;
+};
+
+type SuggestInput = {
+  productName: string | null;
+  ingredients: string[];
+  skinType: SkinType;
+  mainGoal: MainGoal;
+  spendBand?: SpendBand;
+};
+
+function priceOf(item: DupeEntry) {
+  const n = Number(String(item.estimatedPrice).replace(/[^\d]/g, ''));
+  return Number.isFinite(n) ? n : 15;
+}
+
+function extractJson(text: string) {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const body = fenced ? fenced[1].trim() : trimmed;
+  const start = body.indexOf('{');
+  const end = body.lastIndexOf('}');
+  if (start !== -1 && end > start) return body.slice(start, end + 1);
+  return body;
+}
+
+function blobOf(ingredients: string[], productName: string | null) {
+  return `${productName ?? ''} ${ingredients.join(' ')}`.toLowerCase();
+}
+
+function detectKind(blob: string): string {
+  if (/(cleans|wash|micellar|foam|gel nettoy|syndet)/.test(blob) || blob.includes('sodium laureth') || blob.includes('coco-glucoside')) {
+    return 'cleanser';
+  }
+  if (/(spf|sunscreen|uvinul|tinosorb|zinc oxide|titanium dioxide|octinoxate|avobenzone)/.test(blob)) return 'sunscreen';
+  if (/(cream|moistur|baume|balm|butter)/.test(blob)) return 'cream';
+  if (/(toner|essence|lotion)/.test(blob)) return 'toner';
+  if (/(serum|ampoule|concentrate)/.test(blob) || ingredientsLookLikeSerum(blob)) return 'serum';
+  return 'cream';
+}
+
+function ingredientsLookLikeSerum(blob: string) {
+  const actives = ['niacinamide', 'hyaluron', 'retinol', 'ascorbic', 'azelaic', 'salicylic'];
+  return actives.filter((item) => blob.includes(item)).length >= 1 && !blob.includes('cera alba');
+}
+
+function detectActives(blob: string) {
+  const keys = [
+    'niacinamide',
+    'hyaluron',
+    'ceramide',
+    'squalane',
+    'panthenol',
+    'zinc',
+    'glycerin',
+    'salicylic',
+    'retinol',
+    'centella',
+    'azelaic',
+    'ascorbic',
+    'urea',
+    'snail',
+  ];
+  return keys.filter((item) => blob.includes(item));
+}
+
+export function catalogFallback(input: SuggestInput): DupeSuggestion | null {
+  const blob = blobOf(input.ingredients, input.productName);
+  const kind = detectKind(blob);
+  const actives = detectActives(blob);
+
+  const ranked = DUPE_CATALOG.map((item) => {
+    let score = 0;
+    if (item.kinds.includes(kind)) score += 5;
+    if (kind === 'toner' && item.kinds.includes('serum')) score += 3;
+    if (item.matchesGoals.includes(input.mainGoal)) score += 3;
+    for (const active of actives) {
+      if (item.actives.some((entry) => active.includes(entry) || entry.includes(active))) score += 4;
+    }
+    if (input.skinType === 'oily') {
+      if (item.actives.includes('niacinamide') || item.actives.includes('zinc')) score += 3;
+      if (item.id === 'cerave-moisturizing-cream' || item.id === 'lrp-toleriane') score -= 6;
+      if (kind !== 'cream' && item.kinds.includes('cream') && !item.actives.includes('niacinamide')) score -= 3;
+    }
+    if (input.skinType === 'dry') {
+      if (item.id === 'cerave-foaming' || item.id === 'lrp-effaclar-gel') score -= 8;
+      if (item.actives.includes('ceramide') || item.actives.includes('hyaluron')) score += 3;
+    }
+    if (input.skinType === 'sensitive') {
+      if (item.id === 'lrp-toleriane' || item.id === 'simple-micellar' || item.id === 'cetaphil-gentle') score += 3;
+    }
+    const price = priceOf(item);
+    if (input.spendBand === 'low' && price <= 12) score += 2;
+    if (input.spendBand === 'low' && price >= 18) score -= 2;
+    if (input.spendBand === 'high' && price >= 16) score += 1;
+    const sameName = `${item.brand} ${item.name}`.toLowerCase();
+    if (input.productName && sameName.includes(input.productName.toLowerCase().slice(0, 12))) score -= 8;
+    return { item, score };
+  })
+    .filter((row) => row.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  const best = ranked[0]?.item;
+  if (!best) return null;
+  return toSuggestion(best, actives, input);
+}
+
+function toSuggestion(item: DupeEntry, actives: string[], input: SuggestInput): DupeSuggestion {
+  const hit = actives.filter((active) => item.actives.some((entry) => active.includes(entry) || entry.includes(active)));
+  const why =
+    hit.length > 0
+      ? `Same job on the label: ${hit.join(', ')} vs your ${input.skinType} / ${input.mainGoal} profile.`
+      : `Cheaper drugstore option for ${input.skinType} skin and ${input.mainGoal}.`;
+  return {
+    id: item.id,
+    brand: item.brand,
+    name: item.name,
+    estimatedPrice: item.estimatedPrice,
+    blurb: item.blurb,
+    whyThis: why,
+  };
+}
+
+async function askModel(input: SuggestInput): Promise<DupeSuggestion | null> {
+  const key = env.GROQ_API_KEY || env.OPENAI_API_KEY;
+  if (!key) return null;
+
+  const ingredients = input.ingredients.slice(0, 50).join(', ');
+  const prompt = `Suggest ONE cheaper, widely sold alternative for this scanned cosmetic.
+The scanned item can be any brand: Korean, pharmacy, supermarket, indie, luxury, or unknown. Fame does not matter. Match the FORMULA.
+Scanned product: ${input.productName ?? 'unknown brand'}
+Skin: ${input.skinType}
+Goal: ${input.mainGoal}
+Spend band: ${input.spendBand ?? 'mid'}
+INCI (readable): ${ingredients || 'none'}
+
+Rules:
+- Pick a real cheaper product sold in drugstores / pharmacies / Olive Young / Stylevana / ordinary EU or US shops
+- Match product type (cleanser, toner, serum, cream, sunscreen, oil)
+- Match useful INCI jobs (niacinamide, hyaluronic, ceramide, BHA, cica, urea, etc.)
+- Skin first, then goal. Oily: no heavy cream. Dry: no foaming cleanser. Sensitive: fragrance-light.
+- Low spend: cheaper option
+- Do not repeat the scanned product
+- If a swap is pointless, return {"skip":true}
+- JSON only, no markdown: {"brand":"","name":"","estimatedPrice":"~$12","blurb":"","whyThis":"one sentence on which INCI this swaps"}
+
+Known examples:
+${catalogPromptBlock()}`;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        temperature: 0.2,
+        max_completion_tokens: 220,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    if (!response.ok) {
+      console.warn('Dupe model HTTP', response.status);
+      return null;
+    }
+    const json = (await response.json()) as { choices?: { message?: { content?: string } }[] };
+    const raw = json.choices?.[0]?.message?.content ?? '';
+    const parsed = JSON.parse(extractJson(raw)) as {
+      skip?: boolean;
+      brand?: string;
+      name?: string;
+      estimatedPrice?: string;
+      blurb?: string;
+      whyThis?: string;
+    };
+    if (parsed.skip || !parsed.brand || !parsed.name) return null;
+    return {
+      id: null,
+      brand: String(parsed.brand).slice(0, 40),
+      name: String(parsed.name).slice(0, 80),
+      estimatedPrice: String(parsed.estimatedPrice || 'drugstore').slice(0, 16),
+      blurb: String(parsed.blurb || 'Drugstore alternative').slice(0, 140),
+      whyThis: String(parsed.whyThis || 'Matched from the readable INCI.').slice(0, 180),
+    };
+  } catch (error) {
+    console.warn('Dupe model failed', error);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function suggestDupe(input: SuggestInput): Promise<DupeSuggestion | null> {
+  if (input.ingredients.length < 1 && !input.productName) return null;
+  const fromModel = await askModel(input);
+  if (fromModel) return fromModel;
+  return catalogFallback(input);
+}
