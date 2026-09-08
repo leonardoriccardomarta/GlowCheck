@@ -1,3 +1,4 @@
+import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:fitnessapp/view/activity/activity_screen.dart';
 import 'package:fitnessapp/view/camera/camera_screen.dart';
@@ -27,16 +28,27 @@ class DashboardScope extends InheritedWidget {
 class DashboardScreen extends StatefulWidget {
   static String routeName = "/DashboardScreen";
 
-  const DashboardScreen({Key? key}) : super(key: key);
+  const DashboardScreen({Key? key, this.initialTab = 0}) : super(key: key);
+
+  final int initialTab;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  int selectTab = 0;
+  late int selectTab;
+
+  @override
+  void initState() {
+    super.initState();
+    selectTab = widget.initialTab;
+  }
 
   void goTab(int index) {
+    if (selectTab == 2 && index != 2) {
+      GlowStore.instance.clearFirstScanBadge();
+    }
     if (mounted) setState(() => selectTab = index);
   }
 

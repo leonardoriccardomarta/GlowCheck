@@ -74,6 +74,9 @@ class _CameraScreenState extends State<CameraScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: GlowStore.instance,
+      builder: (context, _) {
     return Scaffold(
       backgroundColor: AppColors.ink,
       body: Column(
@@ -83,6 +86,31 @@ class _CameraScreenState extends State<CameraScreen> {
               fit: StackFit.expand,
               children: [
                 GlowLivePreview(controller: _live, obscured: busy),
+                if (GlowStore.instance.highlightFirstScan && error == null && !busy)
+                  Positioned(
+                    left: 24,
+                    right: 24,
+                    top: 16,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppColors.neon,
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Text(
+                          GlowL10n.t('cam_free_ready'),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: AppColors.ink,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (error != null)
                   Positioned(
                     left: 24,
@@ -169,6 +197,8 @@ class _CameraScreenState extends State<CameraScreen> {
           ),
         ],
       ),
+    );
+      },
     );
   }
 }

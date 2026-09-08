@@ -5,7 +5,7 @@ import 'package:fitnessapp/services/glow_auth.dart';
 import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:fitnessapp/view/dashboard/dashboard_screen.dart';
-import 'package:fitnessapp/view/on_boarding/start_screen.dart';
+import 'package:fitnessapp/view/on_boarding/on_boarding_screen.dart';
 import 'package:flutter/material.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -35,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     final next = GlowStore.instance.hasProfile
         ? const DashboardScreen()
-        : const StartScreen();
+        : const OnBoardingScreen();
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => next),
       (route) => false,

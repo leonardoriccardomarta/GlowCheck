@@ -28,8 +28,9 @@ class GlowStore extends ChangeNotifier {
   final List<ScanResult> history = [];
   final Set<int> pinned = {};
 
-  bool get hasProfile =>
-      skinType != null && mainGoal != null && spendBand != null;
+  bool highlightFirstScan = false;
+
+  bool get hasProfile => skinType != null && mainGoal != null;
 
   bool get hasAccount =>
       accountEmail != null && accountEmail!.isNotEmpty;
@@ -112,6 +113,21 @@ class GlowStore extends ChangeNotifier {
     mainGoal = value;
     notifyListeners();
     await _persist();
+  }
+
+  Future<void> finishQuiz({required String skin, required String goal}) async {
+    skinType = skin;
+    mainGoal = goal;
+    spendBand ??= 'mid';
+    highlightFirstScan = true;
+    notifyListeners();
+    await _persist();
+  }
+
+  void clearFirstScanBadge() {
+    if (!highlightFirstScan) return;
+    highlightFirstScan = false;
+    notifyListeners();
   }
 
   Future<void> setSpend(String value) async {

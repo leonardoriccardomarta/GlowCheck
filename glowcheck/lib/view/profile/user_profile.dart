@@ -4,7 +4,7 @@ import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:fitnessapp/view/dashboard/dashboard_screen.dart';
 import 'package:fitnessapp/view/login/login_screen.dart';
-import 'package:fitnessapp/view/on_boarding/start_screen.dart';
+import 'package:fitnessapp/view/on_boarding/on_boarding_screen.dart';
 import 'package:fitnessapp/view/paywall/paywall_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -121,7 +121,7 @@ class _UserProfileState extends State<UserProfile> {
                       await GlowStore.instance.resetQuiz();
                       if (!mounted) return;
                       Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const StartScreen()),
+                        MaterialPageRoute(builder: (_) => const OnBoardingScreen()),
                         (route) => false,
                       );
                     },
@@ -166,7 +166,7 @@ class _UserProfileState extends State<UserProfile> {
                     await GlowStore.instance.resetQuiz();
                     if (!mounted) return;
                     Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (_) => const StartScreen()),
+                      MaterialPageRoute(builder: (_) => const OnBoardingScreen()),
                       (route) => false,
                     );
                   },

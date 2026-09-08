@@ -3,7 +3,7 @@ import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:fitnessapp/view/dashboard/dashboard_screen.dart';
 import 'package:fitnessapp/view/login/login_screen.dart';
-import 'package:fitnessapp/view/on_boarding/start_screen.dart';
+import 'package:fitnessapp/view/on_boarding/on_boarding_screen.dart';
 import 'package:flutter/material.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -28,7 +28,7 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!store.hasAccount) {
       next = const LoginScreen();
     } else if (!store.hasProfile) {
-      next = const StartScreen();
+      next = const OnBoardingScreen();
     } else {
       next = const DashboardScreen();
     }
