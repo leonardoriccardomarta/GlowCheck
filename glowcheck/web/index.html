@@ -137,6 +137,9 @@
   <div id="glow-html-layer"></div>
   <script>
     (function () {
+      var lastH = -1;
+      var lastTop = -1;
+      var fitting = false;
       function visibleHeight() {
         var heights = [window.innerHeight];
         if (window.visualViewport && window.visualViewport.height) {
@@ -152,18 +155,24 @@
         return el && el.classList && el.classList.contains('glow-html-input');
       }
       function fit() {
-        if (typing()) return;
+        if (fitting || typing()) return;
         var root = document.getElementById('glow-root');
         if (!root) return;
         var vv = window.visualViewport;
+        var top = vv && vv.offsetTop ? Math.round(vv.offsetTop) : 0;
+        var h = visibleHeight();
+        if (h === lastH && top === lastTop) return;
+        lastH = h;
+        lastTop = top;
+        fitting = true;
         root.style.position = 'fixed';
         root.style.left = '0';
         root.style.right = '0';
-        root.style.top = (vv && vv.offsetTop ? Math.round(vv.offsetTop) : 0) + 'px';
-        root.style.height = visibleHeight() + 'px';
+        root.style.top = top + 'px';
+        root.style.height = h + 'px';
         root.style.paddingTop = 'env(safe-area-inset-top, 0px)';
         root.style.boxSizing = 'border-box';
-        window.dispatchEvent(new Event('resize'));
+        fitting = false;
       }
       fit();
       window.addEventListener('resize', fit);
@@ -187,6 +196,7 @@
   </script>
   <script src="glow_cam.js"></script>
   <script>
+    {{flutter_js}}
     {{flutter_build_config}}
     _flutter.loader.load({
       onEntrypointLoaded: async function (engineInitializer) {
