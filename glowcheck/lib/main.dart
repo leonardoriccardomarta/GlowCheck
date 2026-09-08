@@ -29,12 +29,13 @@ class MyApp extends StatelessWidget {
       supportedLocales: GlowL10n.supportedLocales,
       debugShowCheckedModeBanner: false,
       builder: (context, child) {
-        if (child == null || !kIsWeb) return child;
+        final page = child ?? const SizedBox.shrink();
+        if (!kIsWeb) return page;
         final mq = MediaQuery.of(context);
-        if (mq.padding.top >= 16) return child;
+        if (mq.padding.top >= 16) return page;
         return MediaQuery(
           data: mq.copyWith(padding: mq.padding.copyWith(top: 16)),
-          child: child,
+          child: page,
         );
       },
       routes: routes,
