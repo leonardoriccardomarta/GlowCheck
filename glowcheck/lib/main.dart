@@ -4,6 +4,7 @@ import 'package:fitnessapp/routes.dart';
 import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:fitnessapp/view/splash/splash_screen.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 void main() async {
@@ -27,6 +28,15 @@ class MyApp extends StatelessWidget {
       locale: locale,
       supportedLocales: GlowL10n.supportedLocales,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        if (child == null || !kIsWeb) return child;
+        final mq = MediaQuery.of(context);
+        if (mq.padding.top >= 16) return child;
+        return MediaQuery(
+          data: mq.copyWith(padding: mq.padding.copyWith(top: 16)),
+          child: child,
+        );
+      },
       routes: routes,
       theme: ThemeData(
         useMaterial3: true,

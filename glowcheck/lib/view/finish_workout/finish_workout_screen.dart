@@ -1,5 +1,6 @@
 import 'package:fitnessapp/common_widgets/glow_ui.dart';
 import 'package:fitnessapp/data/dupe_catalog.dart';
+import 'package:fitnessapp/l10n/dupe_blurbs.dart';
 import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/models/scan_result.dart';
 import 'package:fitnessapp/state/glow_store.dart';
@@ -56,8 +57,9 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
       if (_inciFilter == 'all') return true;
       return item.tag == _inciFilter;
     }).toList();
-    final catalog = getDupeById(scan.dupeId);
-    final dupe = scan.dupe ??
+    final catalog = getDupeById(scan.dupeId) ??
+        getDupeByName(scan.dupe?.brand, scan.dupe?.name);
+    final rawDupe = scan.dupe ??
         (catalog == null
             ? null
             : DupeSuggestion(
@@ -67,6 +69,17 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                 blurb: catalog.blurb,
                 id: catalog.id,
               ));
+    final dupeId = rawDupe?.id ?? catalog?.id;
+    final dupe = rawDupe == null
+        ? null
+        : DupeSuggestion(
+            brand: rawDupe.brand,
+            name: rawDupe.name,
+            estimatedPrice: localizedDupePrice(rawDupe.estimatedPrice),
+            blurb: localizedDupeBlurb(dupeId, rawDupe.blurb),
+            id: dupeId,
+            whyThis: rawDupe.whyThis,
+          );
     final pinned = GlowStore.instance.isPinned(scan.at);
     final scoreColor = AppColors.scoreColor(scan.score);
 
@@ -93,7 +106,7 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                   child: SafeArea(
                     bottom: false,
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
                       child: Column(
                         children: [
                           Row(

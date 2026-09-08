@@ -1,5 +1,6 @@
 import { catalogPromptBlock, DUPE_CATALOG, type DupeEntry } from '../data/dupeCatalog';
-import { copy } from '../i18n/scoreCopy';
+import { dupeBlurb, dupePrice } from '../i18n/dupeBlurbs';
+import { copy, normalizeLocale } from '../i18n/scoreCopy';
 import { env } from '../config/env';
 import type { MainGoal, SkinType } from './score';
 
@@ -136,8 +137,8 @@ function toSuggestion(item: DupeEntry, actives: string[], input: SuggestInput): 
     id: item.id,
     brand: item.brand,
     name: item.name,
-    estimatedPrice: item.estimatedPrice,
-    blurb: item.blurb,
+    estimatedPrice: dupePrice(item.estimatedPrice, input.locale),
+    blurb: dupeBlurb(input.locale, item.id, item.blurb),
     whyThis: why,
   };
 }
@@ -147,7 +148,10 @@ async function askModel(input: SuggestInput): Promise<DupeSuggestion | null> {
   if (!key) return null;
 
   const ingredients = input.ingredients.slice(0, 50).join(', ');
+  const lang = ({ it: 'Italian', en: 'English', es: 'Spanish', fr: 'French', de: 'German' } as const)[normalizeLocale(input.locale)];
+  const priceHint = normalizeLocale(input.locale) === 'en' ? '~$12' : '~12 €';
   const prompt = `Suggest ONE cheaper, widely sold alternative for this scanned cosmetic.
+Write blurb and whyThis in ${lang}. Use prices like ${priceHint}.
 The scanned item can be any brand: Korean, pharmacy, supermarket, indie, luxury, or unknown. Fame does not matter. Match the FORMULA.
 Scanned product: ${input.productName ?? 'unknown brand'}
 Skin: ${input.skinType}
@@ -163,7 +167,7 @@ Rules:
 - Low spend: cheaper option
 - Do not repeat the scanned product
 - If a swap is pointless, return {"skip":true}
-- JSON only, no markdown: {"brand":"","name":"","estimatedPrice":"~$12","blurb":"","whyThis":"one sentence on which INCI this swaps"}
+- JSON only, no markdown: {"brand":"","name":"","estimatedPrice":"${priceHint}","blurb":"","whyThis":"one sentence on which INCI this swaps"}
 
 Known examples:
 ${catalogPromptBlock()}`;
@@ -200,13 +204,27 @@ ${catalogPromptBlock()}`;
       whyThis?: string;
     };
     if (parsed.skip || !parsed.brand || !parsed.name) return null;
+    const brand = String(parsed.brand).slice(0, 40);
+    const name = String(parsed.name).slice(0, 80);
+    const known = DUPE_CATALOG.find(
+      (item) =>
+        `${item.brand} ${item.name}`.toLowerCase() === `${brand} ${name}`.toLowerCase() ||
+        item.name.toLowerCase() === name.toLowerCase()
+    );
+    if (known) return toSuggestion(known, detectActives(blobOf(input.ingredients, input.productName)), input);
     return {
       id: null,
-      brand: String(parsed.brand).slice(0, 40),
-      name: String(parsed.name).slice(0, 80),
-      estimatedPrice: String(parsed.estimatedPrice || 'drugstore').slice(0, 16),
-      blurb: String(parsed.blurb || 'Drugstore alternative').slice(0, 140),
-      whyThis: String(parsed.whyThis || 'Matched from the readable INCI.').slice(0, 180),
+      brand,
+      name,
+      estimatedPrice: dupePrice(String(parsed.estimatedPrice || '12'), input.locale),
+      blurb: String(parsed.blurb || copy(input.locale, 'dupe_generic', {
+        skin: copy(input.locale, `skin_${input.skinType}`),
+        goal: copy(input.locale, `goal_${input.mainGoal}`),
+      })).slice(0, 140),
+      whyThis: String(parsed.whyThis || copy(input.locale, 'dupe_generic', {
+        skin: copy(input.locale, `skin_${input.skinType}`),
+        goal: copy(input.locale, `goal_${input.mainGoal}`),
+      })).slice(0, 180),
     };
   } catch (error) {
     console.warn('Dupe model failed', error);

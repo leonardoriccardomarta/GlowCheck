@@ -80,3 +80,16 @@ DupeProduct? getDupeById(String? id) {
   }
   return null;
 }
+
+DupeProduct? getDupeByName(String? brand, String? name) {
+  final brandKey = (brand ?? '').trim().toLowerCase();
+  final nameKey = (name ?? '').trim().toLowerCase();
+  if (nameKey.isEmpty) return null;
+  for (final item in dupeCatalog) {
+    if (item.name.toLowerCase() == nameKey &&
+        (brandKey.isEmpty || item.brand.toLowerCase() == brandKey)) {
+      return item;
+    }
+  }
+  return null;
+}
