@@ -7,9 +7,12 @@ class AppColors {
   static const card = Color(0xFFFFFFFF);
   static const muted = Color(0xFF6F6A67);
   static const line = Color(0xFFE6E2DC);
-  static const star = Color(0xFFD4A017);
-  static const good = Color(0xFF2F6A4A);
-  static const caution = Color(0xFFB4533C);
+  static const neon = Color(0xFF00E676);
+  static const amberHot = Color(0xFFFF9100);
+  static const vividRed = Color(0xFFFF1744);
+  static const star = amberHot;
+  static const good = Color(0xFF00C853);
+  static const caution = vividRed;
 
   static const primaryColor1 = ink;
   static const primaryColor2 = Color(0xFF2A2A2A);
@@ -26,17 +29,17 @@ class AppColors {
   static List<Color> get secondaryG => const [inkSoft, Color(0xFF333333)];
 
   static Color scoreColor(int score) {
-    if (score >= 70) return good;
-    if (score >= 48) return star;
-    return caution;
+    if (score >= 80) return neon;
+    if (score >= 60) return amberHot;
+    return vividRed;
   }
 
   static Color tagColor(String tag) {
     switch (tag) {
       case 'watch':
-        return caution;
+        return vividRed;
       case 'fit':
-        return good;
+        return neon;
       default:
         return muted;
     }

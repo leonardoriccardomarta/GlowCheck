@@ -218,18 +218,18 @@ class _FeaturedCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          GlowVerdict.title(latest!).toUpperCase(),
+                          GlowVerdict.punchTitle(latest!),
                           style: const TextStyle(
                             color: AppColors.card,
-                            fontSize: 22,
+                            fontSize: 20,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: 0.4,
+                            letterSpacing: 0.2,
                             height: 1.1,
                           ),
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          GlowVerdict.subtitle(latest!),
+                          GlowVerdict.punchSub(latest!),
                           style: TextStyle(color: AppColors.card.withValues(alpha: 0.75), fontSize: 13, height: 1.3),
                         ),
                       ],

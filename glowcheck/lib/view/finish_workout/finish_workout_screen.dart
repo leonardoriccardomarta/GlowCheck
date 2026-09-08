@@ -3,10 +3,12 @@ import 'package:fitnessapp/data/dupe_catalog.dart';
 import 'package:fitnessapp/l10n/dupe_blurbs.dart';
 import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/models/scan_result.dart';
+import 'package:fitnessapp/services/glow_link.dart';
+import 'package:fitnessapp/services/glow_share.dart';
 import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
+import 'package:fitnessapp/utils/glow_inci.dart';
 import 'package:fitnessapp/utils/glow_verdict.dart';
-import 'package:fitnessapp/services/glow_share.dart';
 import 'package:fitnessapp/view/paywall/paywall_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -97,7 +99,7 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [AppColors.ink, scoreColor.withValues(alpha: 0.55)],
+                      colors: [AppColors.ink, scoreColor],
                     ),
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(36),
@@ -107,7 +109,7 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                   child: SafeArea(
                     bottom: false,
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 22),
                       child: Column(
                         children: [
                           Row(
@@ -128,79 +130,45 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 18),
-                          Text(
-                            GlowVerdict.title(scan).toUpperCase(),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: AppColors.card,
-                              fontSize: 34,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.6,
-                              height: 1.05,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            GlowVerdict.subtitle(scan),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: AppColors.card.withValues(alpha: 0.78),
-                              fontSize: 15,
-                              height: 1.3,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 10),
                           Text(
                             scan.productName.toUpperCase(),
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: AppColors.card.withValues(alpha: 0.55),
-                              fontSize: 12,
+                              color: AppColors.card.withValues(alpha: 0.62),
+                              fontSize: 11,
                               fontWeight: FontWeight.w700,
-                              letterSpacing: 1.1,
+                              letterSpacing: 1.2,
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 14),
                           TweenAnimationBuilder<double>(
                             tween: Tween(begin: 0, end: scan.score / 100),
                             duration: const Duration(milliseconds: 900),
                             curve: Curves.easeOutCubic,
                             builder: (context, value, _) {
                               return SizedBox(
-                                width: 168,
-                                height: 168,
+                                width: 156,
+                                height: 156,
                                 child: Stack(
                                   alignment: Alignment.center,
                                   children: [
                                     SizedBox.expand(
                                       child: CircularProgressIndicator(
                                         value: value,
-                                        strokeWidth: 9,
-                                        backgroundColor: AppColors.card.withValues(alpha: 0.16),
+                                        strokeWidth: 11,
+                                        backgroundColor: AppColors.card.withValues(alpha: 0.18),
                                         color: AppColors.card,
                                       ),
                                     ),
-                                    Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          "${(value * 100).round()}",
-                                          style: const TextStyle(
-                                            color: AppColors.card,
-                                            fontSize: 52,
-                                            fontWeight: FontWeight.w700,
-                                            height: 1,
-                                          ),
-                                        ),
-                                        Text(
-                                          GlowL10n.t('result_vs_skin'),
-                                          style: TextStyle(
-                                            color: AppColors.card.withValues(alpha: 0.72),
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
+                                    Text(
+                                      "${(value * 100).round()}",
+                                      style: const TextStyle(
+                                        color: AppColors.card,
+                                        fontSize: 56,
+                                        fontWeight: FontWeight.w800,
+                                        height: 1,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -209,13 +177,24 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            scan.headline,
+                            GlowVerdict.punchTitle(scan),
                             textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: AppColors.card.withValues(alpha: 0.85),
+                            style: const TextStyle(
+                              color: AppColors.card,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.4,
+                              height: 1.05,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            GlowVerdict.punchSub(scan),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: AppColors.card,
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              height: 1.25,
                             ),
                           ),
                         ],
@@ -228,65 +207,28 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                   child: Column(
                     children: [
                       if (dupe != null) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: AppColors.ink,
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                GlowL10n.t('cheaper'),
-                                style: TextStyle(
-                                  color: AppColors.card.withValues(alpha: 0.7),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                "${dupe.brand} ${dupe.name}",
-                                style: const TextStyle(
-                                  color: AppColors.card,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                "${dupe.estimatedPrice}  ·  ${dupe.blurb}",
-                                style: TextStyle(
-                                  color: AppColors.card.withValues(alpha: 0.7),
-                                  fontSize: 13,
-                                  height: 1.4,
-                                ),
-                              ),
-                              if (dupe.whyThis.isNotEmpty) ...[
-                                const SizedBox(height: 8),
-                                Text(
-                                  dupe.whyThis,
-                                  style: TextStyle(
-                                    color: AppColors.card.withValues(alpha: 0.78),
-                                    fontSize: 13,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
+                        _DupeCard(scan: scan, dupe: dupe),
                         const SizedBox(height: 12),
                       ],
                       Row(
                         children: [
-                          _CountCard(label: GlowL10n.t('watch'), value: scan.watchCount, color: AppColors.caution),
+                          _CountCard(
+                            label: GlowL10n.t('watch'),
+                            value: scan.watchCount,
+                            color: AppColors.vividRed,
+                          ),
                           const SizedBox(width: 8),
-                          _CountCard(label: GlowL10n.t('fit'), value: scan.fitCount, color: AppColors.good),
+                          _CountCard(
+                            label: GlowL10n.t('fit'),
+                            value: scan.fitCount,
+                            color: AppColors.neon,
+                          ),
                           const SizedBox(width: 8),
-                          _CountCard(label: GlowL10n.t('listed'), value: scan.listedCount, color: AppColors.muted),
+                          _CountCard(
+                            label: GlowL10n.t('listed'),
+                            value: scan.listedCount,
+                            color: AppColors.muted,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -344,7 +286,7 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                           ),
                           child: Column(
                             children: [
-                              for (final item in lines) _IngredientRow(item: item),
+                              ..._inciRows(lines),
                               if (lines.isEmpty)
                                 Padding(
                                   padding: const EdgeInsets.all(16),
@@ -379,7 +321,7 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                               ),
                               const SizedBox(height: 12),
                               GlowPrimaryButton(
-                                title: GlowL10n.t('paywall_unlock'),
+                                title: GlowL10n.t('unlock_unlimited'),
                                 compact: true,
                                 onPressed: () => Navigator.pushNamed(context, PaywallScreen.routeName),
                               ),
@@ -404,7 +346,9 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(22, 8, 22, 16),
               child: GlowPrimaryButton(
-                title: GlowStore.instance.canScan ? GlowL10n.t('scan_another') : GlowL10n.t('paywall_unlock'),
+                title: GlowStore.instance.canScan
+                    ? GlowL10n.t('scan_another')
+                    : GlowL10n.t('unlock_unlimited'),
                 onPressed: () {
                   if (GlowStore.instance.canScan) {
                     Navigator.pop(context);
@@ -418,6 +362,26 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
         ],
       ),
     );
+  }
+
+  List<Widget> _inciRows(List<IngredientLine> lines) {
+    final scents = lines.where((item) => GlowInci.isFragrance(item.name, item.note)).toList();
+    if (scents.length < 2) {
+      return [for (final item in lines) _IngredientRow(item: item)];
+    }
+    final rows = <Widget>[];
+    var grouped = false;
+    for (final item in lines) {
+      if (GlowInci.isFragrance(item.name, item.note)) {
+        if (!grouped) {
+          rows.add(_FragranceGroup(items: scents));
+          grouped = true;
+        }
+        continue;
+      }
+      rows.add(_IngredientRow(item: item));
+    }
+    return rows;
   }
 
   Future<void> _share(ScanResult scan) async {
@@ -445,15 +409,24 @@ class _CountCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
         decoration: BoxDecoration(
           color: AppColors.card,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
           children: [
-            Text("$value", style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w700)),
-            Text(label, style: const TextStyle(color: AppColors.muted, fontSize: 12, fontWeight: FontWeight.w600)),
+            Text(
+              "$value",
+              style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              style: const TextStyle(color: AppColors.muted, fontSize: 11, fontWeight: FontWeight.w700, height: 1.15),
+            ),
           ],
         ),
       ),
@@ -510,12 +483,12 @@ class _IngredientRow extends StatelessWidget {
             margin: const EdgeInsets.only(top: 2),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: color.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               label,
-              style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.4),
+              style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.3),
             ),
           ),
           const SizedBox(width: 10),
@@ -529,6 +502,174 @@ class _IngredientRow extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DupeCard extends StatelessWidget {
+  const _DupeCard({required this.scan, required this.dupe});
+
+  final ScanResult scan;
+  final DupeSuggestion dupe;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.ink,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.neon, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: AppColors.neon,
+              borderRadius: BorderRadius.circular(99),
+            ),
+            child: Text(
+              GlowL10n.t('dupe_tag'),
+              style: const TextStyle(
+                color: AppColors.ink,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.4,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '${dupe.brand} ${dupe.name}',
+            style: const TextStyle(
+              color: AppColors.card,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              height: 1.15,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            dupe.estimatedPrice,
+            style: const TextStyle(
+              color: AppColors.neon,
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              height: 1,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            GlowL10n.t('dupe_vs', {'name': scan.productName}),
+            style: TextStyle(
+              color: AppColors.card.withValues(alpha: 0.7),
+              fontSize: 13,
+              height: 1.3,
+            ),
+          ),
+          if (dupe.blurb.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              dupe.blurb,
+              style: TextStyle(
+                color: AppColors.card.withValues(alpha: 0.72),
+                fontSize: 13,
+                height: 1.35,
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          GlowPrimaryButton(
+            title: GlowL10n.t('dupe_find'),
+            compact: true,
+            light: true,
+            onPressed: () => GlowLink.search('${dupe.brand} ${dupe.name}'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FragranceGroup extends StatefulWidget {
+  const _FragranceGroup({required this.items});
+
+  final List<IngredientLine> items;
+
+  @override
+  State<_FragranceGroup> createState() => _FragranceGroupState();
+}
+
+class _FragranceGroupState extends State<_FragranceGroup> {
+  bool open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final note = widget.items
+        .map((item) => item.note)
+        .firstWhere((value) => value != null && value.isNotEmpty, orElse: () => GlowL10n.t('scent_note'));
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () => setState(() => open = !open),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.muted.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    GlowL10n.t('tag_listed'),
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    GlowL10n.t('scent_group', {'n': '${widget.items.length}'}),
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  ),
+                ),
+                Icon(
+                  open ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                  color: AppColors.muted,
+                ),
+              ],
+            ),
+          ),
+          if (open) ...[
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.only(left: 62),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(note!, style: const TextStyle(color: AppColors.muted, fontSize: 12, height: 1.35)),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.items.map((item) => item.name).join(' · '),
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

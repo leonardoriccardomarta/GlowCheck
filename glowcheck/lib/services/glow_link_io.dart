@@ -1,0 +1,1 @@
+void openUrlImpl(String url) {}

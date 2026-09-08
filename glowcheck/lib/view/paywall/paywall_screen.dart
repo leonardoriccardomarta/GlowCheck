@@ -174,6 +174,12 @@ class _PaywallScreenState extends State<PaywallScreen> {
               textAlign: TextAlign.center,
               style: const TextStyle(color: AppColors.muted, fontSize: 12, height: 1.4),
             ),
+            const SizedBox(height: 8),
+            Text(
+              GlowL10n.t('paywall_trial'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.muted, fontSize: 12, height: 1.4),
+            ),
           ],
         ),
       ),
