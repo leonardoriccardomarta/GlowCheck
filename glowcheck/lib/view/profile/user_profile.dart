@@ -133,15 +133,15 @@ class _UserProfileState extends State<UserProfile> {
             Row(
               children: [
                 _Stat(
-                  title: store.isPro ? GlowL10n.t('plan_short_pro') : GlowL10n.t('plan_short_free'),
+                  title: store.isPro
+                      ? GlowL10n.t('plan_pro_active')
+                      : GlowL10n.t('plan_free_status', {'n': '${store.freeScansRemaining}'}),
                   label: GlowL10n.t('plan'),
                 ),
                 const SizedBox(width: 10),
-                _Stat(title: "${store.history.length}", label: GlowL10n.t('scans')),
-                const SizedBox(width: 10),
                 _Stat(
-                  title: store.isPro ? GlowL10n.t('unlimited') : "${store.freeScansRemaining}",
-                  label: store.isPro ? GlowL10n.t('scans') : GlowL10n.t('free_left'),
+                  title: '${store.history.length}',
+                  label: GlowL10n.t('bottles_analyzed'),
                 ),
               ],
             ),
@@ -237,12 +237,17 @@ class _Stat extends StatelessWidget {
           children: [
             Text(
               title,
-              maxLines: 1,
+              maxLines: 2,
+              textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, height: 1.2),
             ),
             const SizedBox(height: 4),
-            Text(label, style: const TextStyle(color: AppColors.muted, fontSize: 12)),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.muted, fontSize: 12),
+            ),
           ],
         ),
       ),

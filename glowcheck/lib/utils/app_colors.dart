@@ -26,8 +26,8 @@ class AppColors {
   static List<Color> get secondaryG => const [inkSoft, Color(0xFF333333)];
 
   static Color scoreColor(int score) {
-    if (score >= 75) return good;
-    if (score >= 50) return star;
+    if (score >= 70) return good;
+    if (score >= 48) return star;
     return caution;
   }
 

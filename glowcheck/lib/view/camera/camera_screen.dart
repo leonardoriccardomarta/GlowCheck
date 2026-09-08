@@ -1,4 +1,4 @@
-import 'package:fitnessapp/common_widgets/glow_ui.dart';
+import 'package:fitnessapp/common_widgets/glow_live_preview.dart';
 import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/models/scan_result.dart';
 import 'package:fitnessapp/services/glow_api.dart';
@@ -17,43 +17,22 @@ class CameraScreen extends StatefulWidget {
 }
 
 class _CameraScreenState extends State<CameraScreen> {
+  final _live = GlowLiveController();
   bool busy = false;
+  bool torch = false;
   String? error;
 
-  @override
-  void initState() {
-    super.initState();
-    GlowStore.instance.addListener(_refresh);
+  Future<void> _ensureQuota() async {
+    if (GlowStore.instance.canScan) return;
+    await Navigator.pushNamed(context, PaywallScreen.routeName);
   }
 
-  @override
-  void dispose() {
-    GlowStore.instance.removeListener(_refresh);
-    super.dispose();
-  }
-
-  void _refresh() {
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _scan(ImageSource source) async {
-    if (busy) return;
-    if (!GlowStore.instance.canScan) {
-      await Navigator.pushNamed(context, PaywallScreen.routeName);
-      if (!GlowStore.instance.canScan) {
-        setState(() => error = GlowL10n.t('free_used_err'));
-      }
-      return;
-    }
-    final picker = ImagePicker();
-    final file = await picker.pickImage(source: source, imageQuality: 70, maxWidth: 1600);
-    if (file == null) return;
+  Future<void> _analyze(List<int> bytes) async {
     setState(() {
       busy = true;
       error = null;
     });
     try {
-      final bytes = await file.readAsBytes();
       final ScanResult result = await GlowApi.analyzeJpeg(bytes);
       await GlowStore.instance.addScan(result);
       if (!mounted) return;
@@ -65,210 +44,154 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
+  Future<void> _shutter() async {
+    if (busy) return;
+    await _ensureQuota();
+    if (!GlowStore.instance.canScan) return;
+    final bytes = await _live.capture?.call();
+    if (bytes == null || bytes.isEmpty) return;
+    await _analyze(bytes);
+  }
+
+  Future<void> _gallery() async {
+    if (busy) return;
+    await _ensureQuota();
+    if (!GlowStore.instance.canScan) return;
+    final file = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+      maxWidth: 1600,
+    );
+    if (file == null) return;
+    await _analyze(await file.readAsBytes());
+  }
+
+  Future<void> _toggleTorch() async {
+    final next = !torch;
+    final ok = await _live.torch?.call(next) ?? false;
+    if (mounted) setState(() => torch = ok ? next : false);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final store = GlowStore.instance;
-    final history = store.history;
-
     return Scaffold(
-      backgroundColor: AppColors.canvas,
-      body: Stack(
+      backgroundColor: AppColors.ink,
+      body: Column(
         children: [
-          SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(22, 16, 22, 120),
+          Expanded(
+            child: Stack(
+              fit: StackFit.expand,
               children: [
-                Text(
-                  GlowL10n.t('scan_inci'),
-                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  GlowL10n.t('scan_hint'),
-                  style: const TextStyle(color: AppColors.muted, fontSize: 13, height: 1.4),
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  height: 280,
-                  decoration: BoxDecoration(
-                    color: AppColors.ink,
-                    borderRadius: BorderRadius.circular(32),
-                  ),
-                  padding: const EdgeInsets.all(22),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        GlowL10n.t('photo_list'),
-                        style: const TextStyle(
-                          color: AppColors.card,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          height: 1.15,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "${GlowStore.skinLabel(store.skinType)}  ·  ${GlowStore.goalLabel(store.mainGoal)}",
-                        style: TextStyle(color: AppColors.card.withValues(alpha: 0.65), fontSize: 13),
-                      ),
-                      const Spacer(),
-                      GlowPrimaryButton(
-                        title: GlowL10n.t('take_photo'),
-                        light: true,
-                        onPressed: () {
-                          if (!busy) _scan(ImageSource.camera);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.card,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          GlowL10n.t('pick_library'),
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                        ),
-                      ),
-                      GlowCircleButton(
-                        icon: Icons.photo_library_outlined,
-                        dark: true,
-                        onTap: () {
-                          if (!busy) _scan(ImageSource.gallery);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                if (error != null) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.caution.withValues(alpha: 0.1),
+                GlowLivePreview(controller: _live, obscured: busy),
+                if (error != null)
+                  Positioned(
+                    left: 24,
+                    right: 24,
+                    top: 24,
+                    child: Material(
+                      color: AppColors.caution.withValues(alpha: 0.92),
                       borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(error!, style: const TextStyle(color: AppColors.caution, fontSize: 13, height: 1.4)),
-                  ),
-                ],
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        GlowL10n.t('recent_bottles'),
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Text(
+                          error!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.3),
+                        ),
                       ),
                     ),
-                    Text(
-                      GlowL10n.t('n_saved', {'n': '${history.length}'}),
-                      style: const TextStyle(color: AppColors.muted, fontSize: 12),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                if (history.isEmpty)
-                  Text(
-                    GlowL10n.t('no_scans_yet'),
-                    style: const TextStyle(color: AppColors.muted, fontSize: 13),
-                  )
-                else
-                  SizedBox(
-                    height: 96,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: history.length.clamp(0, 10),
-                      separatorBuilder: (_, __) => const SizedBox(width: 10),
-                      itemBuilder: (context, i) {
-                        final scan = history[i];
-                        return InkWell(
-                          onTap: () => Navigator.pushNamed(
-                            context,
-                            FinishWorkoutScreen.routeName,
-                            arguments: scan,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          child: Ink(
-                            width: 168,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppColors.card,
-                              borderRadius: BorderRadius.circular(20),
+                  ),
+                if (busy)
+                  ColoredBox(
+                    color: AppColors.ink.withValues(alpha: 0.92),
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(
+                              width: 42,
+                              height: 42,
+                              child: CircularProgressIndicator(color: AppColors.card, strokeWidth: 3),
                             ),
-                            child: Row(
-                              children: [
-                                GlowInitials(label: scan.productName, size: 44),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        scan.productName,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                                      ),
-                                      Text(
-                                        GlowL10n.t('score_watch', {'score': '${scan.score}', 'watch': '${scan.watchCount}'}),
-                                        style: const TextStyle(color: AppColors.muted, fontSize: 11),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                            const SizedBox(height: 22),
+                            Text(
+                              GlowL10n.t('reading_label'),
+                              style: const TextStyle(color: AppColors.card, fontSize: 24, fontWeight: FontWeight.w700),
                             ),
-                          ),
-                        );
-                      },
+                            const SizedBox(height: 8),
+                            Text(
+                              GlowL10n.t('matching_skin', {
+                                'skin': GlowStore.skinLabel(GlowStore.instance.skinType).toLowerCase(),
+                              }),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: AppColors.card.withValues(alpha: 0.7), fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
               ],
             ),
           ),
-          if (busy)
-            Positioned.fill(
-              child: ColoredBox(
-                color: AppColors.ink.withValues(alpha: 0.92),
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const SizedBox(
-                          width: 42,
-                          height: 42,
-                          child: CircularProgressIndicator(color: AppColors.card, strokeWidth: 3),
-                        ),
-                        const SizedBox(height: 22),
-                        Text(
-                          GlowL10n.t('reading_label'),
-                          style: const TextStyle(color: AppColors.card, fontSize: 24, fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          GlowL10n.t('matching_skin', {'skin': GlowStore.skinLabel(store.skinType).toLowerCase()}),
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: AppColors.card.withValues(alpha: 0.7), fontSize: 14),
-                        ),
-                      ],
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(28, 8, 28, 100),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _CamIcon(icon: Icons.photo_library_rounded, onTap: _gallery),
+                  GestureDetector(
+                    onTap: _shutter,
+                    child: Container(
+                      width: 78,
+                      height: 78,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 4),
+                      ),
+                      padding: const EdgeInsets.all(5),
+                      child: const DecoratedBox(
+                        decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                      ),
                     ),
                   ),
-                ),
+                  _CamIcon(
+                    icon: torch ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                    onTap: _toggleTorch,
+                  ),
+                ],
               ),
             ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _CamIcon extends StatelessWidget {
+  const _CamIcon({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withValues(alpha: 0.35),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Icon(icon, color: Colors.white, size: 22),
+        ),
       ),
     );
   }

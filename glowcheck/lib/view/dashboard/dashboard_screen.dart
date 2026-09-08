@@ -36,13 +36,6 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int selectTab = 0;
 
-  final List<Widget> _widgetOptions = const [
-    HomeScreen(),
-    ActivityScreen(),
-    CameraScreen(),
-    UserProfile(),
-  ];
-
   void goTab(int index) {
     if (mounted) setState(() => selectTab = index);
   }
@@ -59,10 +52,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         extendBody: true,
         body: Stack(
           children: [
-            IndexedStack(
-              index: selectTab,
-              children: _widgetOptions,
+            Offstage(
+              offstage: selectTab == 2,
+              child: IndexedStack(
+                index: selectTab == 3 ? 2 : selectTab,
+                children: const [
+                  HomeScreen(),
+                  ActivityScreen(),
+                  UserProfile(),
+                ],
+              ),
             ),
+            if (selectTab == 2) const CameraScreen(),
             Positioned(
               left: 22,
               right: 22,

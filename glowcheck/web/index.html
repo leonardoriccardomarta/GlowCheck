@@ -111,6 +111,25 @@
       -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
       -webkit-text-fill-color: #111111 !important;
     }
+    video.glow-cam-video {
+      position: fixed !important;
+      object-fit: cover;
+      background: #111111;
+      pointer-events: none;
+      z-index: 2147483645;
+    }
+    video.glow-cam-video.is-hidden,
+    .glow-cam-frame.is-hidden {
+      display: none !important;
+    }
+    .glow-cam-frame {
+      position: fixed;
+      pointer-events: none;
+      box-sizing: border-box;
+      border: 2px solid rgba(255,255,255,0.88);
+      border-radius: 18px;
+      z-index: 2147483646;
+    }
   </style>
 </head>
 <body>
@@ -166,8 +185,8 @@
       });
     }
   </script>
+  <script src="glow_cam.js"></script>
   <script>
-    {{flutter_js}}
     {{flutter_build_config}}
     _flutter.loader.load({
       onEntrypointLoaded: async function (engineInitializer) {

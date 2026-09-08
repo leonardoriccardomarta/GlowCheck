@@ -5,6 +5,7 @@ import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/models/scan_result.dart';
 import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
+import 'package:fitnessapp/utils/glow_verdict.dart';
 import 'package:fitnessapp/services/glow_share.dart';
 import 'package:fitnessapp/view/paywall/paywall_screen.dart';
 import 'package:flutter/material.dart';
@@ -129,10 +130,32 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                           ),
                           const SizedBox(height: 18),
                           Text(
+                            GlowVerdict.title(scan).toUpperCase(),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: AppColors.card,
+                              fontSize: 34,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.6,
+                              height: 1.05,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            GlowVerdict.subtitle(scan),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppColors.card.withValues(alpha: 0.78),
+                              fontSize: 15,
+                              height: 1.3,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
                             scan.productName.toUpperCase(),
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: AppColors.card.withValues(alpha: 0.72),
+                              color: AppColors.card.withValues(alpha: 0.55),
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 1.1,
@@ -188,20 +211,11 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                           Text(
                             scan.headline,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: AppColors.card,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              height: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            GlowStore.badgeLabel(scan.badge),
                             style: TextStyle(
-                              color: AppColors.card.withValues(alpha: 0.75),
+                              color: AppColors.card.withValues(alpha: 0.85),
+                              fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              letterSpacing: 0.6,
+                              height: 1.25,
                             ),
                           ),
                         ],
@@ -213,29 +227,7 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                   padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
                   child: Column(
                     children: [
-                      Row(
-                        children: [
-                          _CountCard(label: GlowL10n.t('watch'), value: scan.watchCount, color: AppColors.caution),
-                          const SizedBox(width: 8),
-                          _CountCard(label: GlowL10n.t('fit'), value: scan.fitCount, color: AppColors.good),
-                          const SizedBox(width: 8),
-                          _CountCard(label: GlowL10n.t('listed'), value: scan.listedCount, color: AppColors.muted),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      _InfoCard(
-                        title: GlowL10n.t('why_number'),
-                        body: scan.why.isNotEmpty
-                            ? scan.why
-                            : GlowL10n.t('why_fallback'),
-                      ),
-                      const SizedBox(height: 12),
-                      _InfoCard(
-                        title: GlowL10n.t('occlusion'),
-                        body: GlowStore.occlusionLabel(scan.occlusionAlert),
-                      ),
                       if (dupe != null) ...[
-                        const SizedBox(height: 12),
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(18),
@@ -259,8 +251,8 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                                 "${dupe.brand} ${dupe.name}",
                                 style: const TextStyle(
                                   color: AppColors.card,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
                               const SizedBox(height: 6),
@@ -286,7 +278,29 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                             ],
                           ),
                         ),
+                        const SizedBox(height: 12),
                       ],
+                      Row(
+                        children: [
+                          _CountCard(label: GlowL10n.t('watch'), value: scan.watchCount, color: AppColors.caution),
+                          const SizedBox(width: 8),
+                          _CountCard(label: GlowL10n.t('fit'), value: scan.fitCount, color: AppColors.good),
+                          const SizedBox(width: 8),
+                          _CountCard(label: GlowL10n.t('listed'), value: scan.listedCount, color: AppColors.muted),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _InfoCard(
+                        title: GlowL10n.t('why_number'),
+                        body: scan.why.isNotEmpty
+                            ? scan.why
+                            : GlowL10n.t('why_fallback'),
+                      ),
+                      const SizedBox(height: 12),
+                      _InfoCard(
+                        title: GlowL10n.t('occlusion'),
+                        body: GlowStore.occlusionLabel(scan.occlusionAlert),
+                      ),
                       const SizedBox(height: 20),
                       Row(
                         children: [
