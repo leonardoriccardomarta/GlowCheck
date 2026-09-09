@@ -1,7 +1,9 @@
 export function extractVisionJson(text: string): string | null {
   let body = text.replace(/<think>[\s\S]*?<\/think>/gi, ' ');
   body = body.replace(/<thinking>[\s\S]*?<\/thinking>/gi, ' ');
-  body = body.trim();
+  // Qwen often never closes the tag; keep from the first JSON object.
+  body = body.replace(/<think(?:ing)?>[\s\S]*?(?=\{)/gi, ' ');
+  body = body.replace(/<\/?think(?:ing)?>/gi, ' ').trim();
   const fenced = body.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (fenced) body = fenced[1].trim();
   const start = body.indexOf('{');

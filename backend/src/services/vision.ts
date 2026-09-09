@@ -105,6 +105,7 @@ async function callChatCompletions(params: {
     ],
   };
   if (params.groq) {
+    payload.reasoning_effort = 'none';
     payload.reasoning_format = 'hidden';
     payload.response_format = { type: 'json_object' };
   }
@@ -148,7 +149,7 @@ async function callGroq(imageBase64: string, mimeType: string) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (!message.includes('Groq 400')) throw error;
-    console.warn('Groq strict JSON rejected, retrying without reasoning_format', message.slice(0, 200));
+    console.warn('Groq strict JSON rejected, retrying without reasoning extras', message.slice(0, 200));
     return callChatCompletions({ ...base, groq: false });
   }
 }

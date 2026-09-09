@@ -200,6 +200,10 @@ The user wants JSON.
 {"kind":"personal_care","extractedIngredients":["Aqua","Glycerin"],"category":"cream","productName":"Garnier","barcode":null}`);
 assert(thinkWrapped?.includes('"Garnier"'), 'strip qwen think tags before JSON');
 assert(extractVisionJson('<think>no json here') === null, 'think-only vision output is empty');
+const unclosedThink = extractVisionJson(`<think>
+The user wants me to extract information from an image of a personal care product.
+{"kind":"personal_care","extractedIngredients":["Aqua"],"category":"body","productName":"Garnier","barcode":null}`);
+assert(unclosedThink?.includes('"Garnier"'), 'strip unclosed qwen think before JSON');
 
 console.log('score + dupe checks passed', {
   oilyPores: oilyPores.compatibilityScore,
