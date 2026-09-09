@@ -45,7 +45,7 @@ class GlowStore extends ChangeNotifier {
       localeCode = GlowL10n.normalize(map['localeCode'] as String?);
       skinType = map['skinType'] as String?;
       mainGoal = map['mainGoal'] as String?;
-      spendBand = map['spendBand'] as String?;
+      spendBand = null;
       accountName = map['accountName'] as String?;
       accountEmail = map['accountEmail'] as String?;
       accountProvider = map['accountProvider'] as String?;
@@ -118,7 +118,7 @@ class GlowStore extends ChangeNotifier {
   Future<void> finishQuiz({required String skin, required String goal}) async {
     skinType = skin;
     mainGoal = goal;
-    spendBand ??= 'mid';
+    spendBand = null;
     highlightFirstScan = true;
     notifyListeners();
     await _persist();

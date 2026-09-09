@@ -107,10 +107,6 @@ class _UserProfileState extends State<UserProfile> {
                           GlowStore.goalLabel(store.mainGoal),
                           style: const TextStyle(color: AppColors.muted, fontSize: 13),
                         ),
-                        Text(
-                          GlowStore.spendLabel(store.spendBand),
-                          style: const TextStyle(color: AppColors.muted, fontSize: 12),
-                        ),
                       ],
                     ),
                   ),
