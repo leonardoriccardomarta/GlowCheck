@@ -83,7 +83,18 @@ class _CameraScreenState extends State<CameraScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          GlowLivePreview(controller: _live, obscured: busy),
+          GlowLivePreview(
+            controller: _live,
+            obscured: busy,
+            torchOn: torch,
+            badge: GlowStore.instance.highlightFirstScan && error == null && !busy
+                ? GlowL10n.t('cam_free_ready')
+                : null,
+            onClose: () => DashboardScope.of(context)?.goTab(0),
+            onGallery: _gallery,
+            onShutter: _shutter,
+            onTorch: _toggleTorch,
+          ),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),

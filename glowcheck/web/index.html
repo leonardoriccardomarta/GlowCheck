@@ -119,7 +119,8 @@
       z-index: 2147483645;
     }
     video.glow-cam-video.is-hidden,
-    .glow-cam-frame.is-hidden {
+    .glow-cam-frame.is-hidden,
+    .glow-cam-chrome.is-hidden {
       display: none !important;
     }
     .glow-cam-frame {
@@ -129,6 +130,75 @@
       border: 2px solid rgba(255,255,255,0.88);
       border-radius: 18px;
       z-index: 2147483646;
+    }
+    .glow-cam-chrome {
+      position: fixed;
+      pointer-events: none;
+      z-index: 2147483647;
+    }
+    .glow-cam-btn,
+    .glow-cam-shutter {
+      pointer-events: auto;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      appearance: none;
+      -webkit-appearance: none;
+      margin: 0;
+      padding: 0;
+      cursor: pointer;
+    }
+    .glow-cam-btn {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.45);
+      color: #fff;
+      font-size: 22px;
+      line-height: 44px;
+      text-align: center;
+    }
+    .glow-cam-close { top: 12px; left: 16px; }
+    .glow-cam-badge {
+      position: absolute;
+      top: 16px;
+      left: 68px;
+      right: 16px;
+      padding: 8px 12px;
+      border-radius: 99px;
+      background: #00E676;
+      color: #111111;
+      font-family: Poppins, sans-serif;
+      font-size: 12px;
+      font-weight: 800;
+      text-align: center;
+      pointer-events: none;
+    }
+    .glow-cam-badge.is-hidden { display: none !important; }
+    .glow-cam-gallery { left: 8px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+    .glow-cam-flash { right: 8px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+    .glow-cam-flash.is-on { background: #00E676; color: #111111; }
+    .glow-cam-shutter {
+      position: absolute;
+      left: 50%;
+      bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+      transform: translateX(-50%);
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      border: 4px solid #fff;
+      background: transparent;
+      box-sizing: border-box;
+      padding: 5px;
+    }
+    .glow-cam-shutter::after {
+      content: '';
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: #fff;
     }
   </style>
 </head>

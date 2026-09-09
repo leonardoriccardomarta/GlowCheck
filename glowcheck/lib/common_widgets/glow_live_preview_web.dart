@@ -24,9 +24,23 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> with WidgetsBindingObse
   final GlobalKey _boxKey = GlobalKey();
   late final web.HTMLVideoElement _video;
   late final web.HTMLDivElement _frame;
+  late final web.HTMLDivElement _chrome;
+  late final web.HTMLButtonElement _close;
+  late final web.HTMLButtonElement _gallery;
+  late final web.HTMLButtonElement _shutter;
+  late final web.HTMLButtonElement _flash;
+  late final web.HTMLDivElement _badge;
   bool _ready = false;
   bool _shown = false;
   String? _error;
+
+  web.HTMLButtonElement _btn(String className, String label) {
+    final btn = web.HTMLButtonElement()
+      ..type = 'button'
+      ..className = className
+      ..textContent = label;
+    return btn;
+  }
 
   @override
   void initState() {
@@ -45,10 +59,31 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> with WidgetsBindingObse
       ..zIndex = '2147483645';
 
     _frame = web.HTMLDivElement()..className = 'glow-cam-frame is-hidden';
+    _chrome = web.HTMLDivElement()..className = 'glow-cam-chrome is-hidden';
+    _close = _btn('glow-cam-btn glow-cam-close', '✕');
+    _gallery = _btn('glow-cam-btn glow-cam-gallery', '▣');
+    _flash = _btn('glow-cam-btn glow-cam-flash', '⚡');
+    _shutter = web.HTMLButtonElement()
+      ..type = 'button'
+      ..className = 'glow-cam-shutter'
+      ..setAttribute('aria-label', 'Shutter');
+    _badge = web.HTMLDivElement()..className = 'glow-cam-badge is-hidden';
+    _chrome.appendChild(_close);
+    _chrome.appendChild(_badge);
+    _chrome.appendChild(_gallery);
+    _chrome.appendChild(_shutter);
+    _chrome.appendChild(_flash);
+
+    _close.onClick.listen((_) => widget.onClose?.call());
+    _gallery.onClick.listen((_) => widget.onGallery?.call());
+    _shutter.onClick.listen((_) => widget.onShutter?.call());
+    _flash.onClick.listen((_) => widget.onTorch?.call());
 
     final layer = web.document.querySelector('#glow-html-layer');
-    (layer ?? web.document.body)?.appendChild(_video);
-    (layer ?? web.document.body)?.appendChild(_frame);
+    final host = layer ?? web.document.body;
+    host?.appendChild(_video);
+    host?.appendChild(_frame);
+    host?.appendChild(_chrome);
 
     widget.controller.capture = _capture;
     widget.controller.torch = _torch;
@@ -56,6 +91,12 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> with WidgetsBindingObse
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback(_onFrame);
     WidgetsBinding.instance.addPostFrameCallback((_) => _start());
+  }
+
+  @override
+  void didUpdateWidget(covariant GlowLivePreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncChrome();
   }
 
   void _onFrame(Duration _) {
@@ -92,6 +133,22 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> with WidgetsBindingObse
     _shown = false;
     _video.classList.add('is-hidden');
     _frame.classList.add('is-hidden');
+    _chrome.classList.add('is-hidden');
+  }
+
+  void _syncChrome() {
+    if (widget.torchOn) {
+      _flash.classList.add('is-on');
+    } else {
+      _flash.classList.remove('is-on');
+    }
+    final badge = widget.badge;
+    if (badge == null || badge.isEmpty) {
+      _badge.classList.add('is-hidden');
+    } else {
+      _badge.classList.remove('is-hidden');
+      _badge.textContent = badge;
+    }
   }
 
   void _syncPosition() {
@@ -112,6 +169,7 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> with WidgetsBindingObse
       return;
     }
     _shown = true;
+    _syncChrome();
     _video.classList.remove('is-hidden');
     _video.style
       ..left = '${offset.dx}px'
@@ -125,6 +183,13 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> with WidgetsBindingObse
       ..top = '${offset.dy + size.height * 0.33}px'
       ..width = '${size.width * 0.78}px'
       ..height = '${size.height * 0.34}px';
+
+    _chrome.classList.remove('is-hidden');
+    _chrome.style
+      ..left = '${offset.dx}px'
+      ..top = '${offset.dy}px'
+      ..width = '${size.width}px'
+      ..height = '${size.height}px';
   }
 
   Future<void> _start() async {
@@ -166,6 +231,7 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> with WidgetsBindingObse
     _glowCam.stop();
     _video.remove();
     _frame.remove();
+    _chrome.remove();
     super.dispose();
   }
 

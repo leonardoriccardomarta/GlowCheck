@@ -14,11 +14,23 @@ class GlowLivePreview extends StatefulWidget {
     required this.controller,
     this.onReady,
     this.obscured = false,
+    this.torchOn = false,
+    this.badge,
+    this.onClose,
+    this.onGallery,
+    this.onShutter,
+    this.onTorch,
   });
 
   final GlowLiveController controller;
   final VoidCallback? onReady;
   final bool obscured;
+  final bool torchOn;
+  final String? badge;
+  final VoidCallback? onClose;
+  final VoidCallback? onGallery;
+  final VoidCallback? onShutter;
+  final VoidCallback? onTorch;
 
   @override
   State<GlowLivePreview> createState() => GlowLivePreviewImpl();
