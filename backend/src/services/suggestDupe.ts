@@ -113,14 +113,15 @@ function resolveKind(input: SuggestInput) {
   return detectKind(blobOf(input.ingredients, input.productName));
 }
 
-function shouldSkipDupe(kind: string | null) {
-  return !kind || SKIP_DUPE_KINDS.has(kind);
+function isDupeKind(kind: string | null): kind is string {
+  if (!kind) return false;
+  return !SKIP_DUPE_KINDS.has(kind);
 }
 
 export function catalogFallback(input: SuggestInput): DupeSuggestion | null {
   const blob = blobOf(input.ingredients, input.productName);
   const kind = resolveKind(input);
-  if (shouldSkipDupe(kind)) return null;
+  if (!isDupeKind(kind)) return null;
   const actives = detectActives(blob);
 
   const ranked = DUPE_CATALOG.map((item) => {
@@ -190,7 +191,7 @@ async function askModel(input: SuggestInput): Promise<DupeSuggestion | null> {
   if (!key) return null;
 
   const scannedKind = resolveKind(input);
-  if (shouldSkipDupe(scannedKind)) {
+  if (!isDupeKind(scannedKind)) {
     return null;
   }
 
@@ -306,7 +307,7 @@ ${catalogPromptBlock()}`;
 export async function suggestDupe(input: SuggestInput): Promise<DupeSuggestion | null> {
   if (input.ingredients.length < 1 && !input.productName) return null;
   const kind = resolveKind(input);
-  if (shouldSkipDupe(kind)) return null;
+  if (!isDupeKind(kind)) return null;
   const fromModel = await askModel(input);
   if (fromModel) return fromModel;
   return catalogFallback(input);
