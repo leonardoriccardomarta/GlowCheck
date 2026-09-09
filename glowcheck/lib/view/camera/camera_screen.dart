@@ -4,6 +4,7 @@ import 'package:fitnessapp/models/scan_result.dart';
 import 'package:fitnessapp/services/glow_api.dart';
 import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
+import 'package:fitnessapp/view/dashboard/dashboard_screen.dart';
 import 'package:fitnessapp/view/finish_workout/finish_workout_screen.dart';
 import 'package:fitnessapp/view/paywall/paywall_screen.dart';
 import 'package:flutter/material.dart';
@@ -79,21 +80,24 @@ class _CameraScreenState extends State<CameraScreen> {
       builder: (context, _) {
     return Scaffold(
       backgroundColor: AppColors.ink,
-      body: Column(
+      body: Stack(
+        fit: StackFit.expand,
         children: [
-          Expanded(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                GlowLivePreview(controller: _live, obscured: busy),
-                if (GlowStore.instance.highlightFirstScan && error == null && !busy)
-                  Positioned(
-                    left: 24,
-                    right: 24,
-                    top: 16,
-                    child: Center(
+          GlowLivePreview(controller: _live, obscured: busy),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Row(
+                children: [
+                  _CamIcon(
+                    icon: Icons.close_rounded,
+                    onTap: () => DashboardScope.of(context)?.goTab(0),
+                  ),
+                  if (GlowStore.instance.highlightFirstScan && error == null && !busy) ...[
+                    const SizedBox(width: 10),
+                    Expanded(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
                           color: AppColors.neon,
                           borderRadius: BorderRadius.circular(99),
@@ -101,100 +105,107 @@ class _CameraScreenState extends State<CameraScreen> {
                         child: Text(
                           GlowL10n.t('cam_free_ready'),
                           textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: AppColors.ink,
                             fontWeight: FontWeight.w800,
-                            fontSize: 13,
-                            letterSpacing: 0.2,
+                            fontSize: 12,
                           ),
                         ),
                       ),
                     ),
-                  ),
-                if (error != null)
-                  Positioned(
-                    left: 24,
-                    right: 24,
-                    top: 24,
-                    child: Material(
-                      color: AppColors.caution.withValues(alpha: 0.92),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(
-                          error!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.3),
-                        ),
-                      ),
-                    ),
-                  ),
-                if (busy)
-                  ColoredBox(
-                    color: AppColors.ink.withValues(alpha: 0.92),
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const SizedBox(
-                              width: 42,
-                              height: 42,
-                              child: CircularProgressIndicator(color: AppColors.card, strokeWidth: 3),
-                            ),
-                            const SizedBox(height: 22),
-                            Text(
-                              GlowL10n.t('reading_label'),
-                              style: const TextStyle(color: AppColors.card, fontSize: 24, fontWeight: FontWeight.w700),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              GlowL10n.t('matching_skin', {
-                                'skin': GlowStore.skinLabel(GlowStore.instance.skinType).toLowerCase(),
-                              }),
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: AppColors.card.withValues(alpha: 0.7), fontSize: 14),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(28, 8, 28, 100),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _CamIcon(icon: Icons.photo_library_rounded, onTap: _gallery),
-                  GestureDetector(
-                    onTap: _shutter,
-                    child: Container(
-                      width: 78,
-                      height: 78,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 4),
-                      ),
-                      padding: const EdgeInsets.all(5),
-                      child: const DecoratedBox(
-                        decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                      ),
-                    ),
-                  ),
-                  _CamIcon(
-                    icon: torch ? Icons.flash_on_rounded : Icons.flash_off_rounded,
-                    onTap: _toggleTorch,
-                  ),
+                  ],
                 ],
               ),
             ),
           ),
+          if (error != null)
+            Positioned(
+              left: 24,
+              right: 24,
+              top: 88,
+              child: Material(
+                color: AppColors.caution.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(16),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    error!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.3),
+                  ),
+                ),
+              ),
+            ),
+          Positioned(
+            left: 28,
+            right: 28,
+            bottom: 0,
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _CamIcon(icon: Icons.photo_library_rounded, onTap: _gallery),
+                    GestureDetector(
+                      onTap: _shutter,
+                      child: Container(
+                        width: 78,
+                        height: 78,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 4),
+                        ),
+                        padding: const EdgeInsets.all(5),
+                        child: const DecoratedBox(
+                          decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                        ),
+                      ),
+                    ),
+                    _CamIcon(
+                      icon: torch ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                      onTap: _toggleTorch,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (busy)
+            ColoredBox(
+              color: AppColors.ink.withValues(alpha: 0.92),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(
+                        width: 42,
+                        height: 42,
+                        child: CircularProgressIndicator(color: AppColors.card, strokeWidth: 3),
+                      ),
+                      const SizedBox(height: 22),
+                      Text(
+                        GlowL10n.t('reading_label'),
+                        style: const TextStyle(color: AppColors.card, fontSize: 24, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        GlowL10n.t('matching_skin', {
+                          'skin': GlowStore.skinLabel(GlowStore.instance.skinType).toLowerCase(),
+                        }),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: AppColors.card.withValues(alpha: 0.7), fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

@@ -64,28 +64,44 @@ class _HomeScreenState extends State<HomeScreen> {
               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
             ),
             const SizedBox(height: 16),
-            GestureDetector(
-              onTap: () {
-                if (store.canScan) {
-                  DashboardScope.of(context)?.goTab(2);
-                } else {
-                  Navigator.pushNamed(context, PaywallScreen.routeName);
-                }
-              },
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(22, 24, 22, 24),
-                decoration: BoxDecoration(
-                  color: AppColors.ink,
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: Text(
-                  GlowL10n.t('home_banner'),
-                  style: const TextStyle(
-                    color: AppColors.card,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    height: 1.2,
+            Material(
+              color: AppColors.ink,
+              borderRadius: BorderRadius.circular(28),
+              child: InkWell(
+                onTap: () {
+                  if (store.canScan) {
+                    DashboardScope.of(context)?.goTab(2);
+                  } else {
+                    Navigator.pushNamed(context, PaywallScreen.routeName);
+                  }
+                },
+                borderRadius: BorderRadius.circular(28),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 22, 18, 22),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          GlowL10n.t('home_banner'),
+                          style: const TextStyle(
+                            color: AppColors.card,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            height: 1.2,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: const BoxDecoration(
+                          color: AppColors.neon,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.photo_camera_rounded, color: AppColors.ink, size: 24),
+                      ),
+                    ],
                   ),
                 ),
               ),

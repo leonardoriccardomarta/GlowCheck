@@ -76,15 +76,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             if (selectTab == 2) const CameraScreen(),
-            Positioned(
-              left: 22,
-              right: 22,
-              bottom: dockBottom,
-              child: _GlowDock(
-                selected: selectTab,
-                onSelect: goTab,
+            if (selectTab != 2)
+              Positioned(
+                left: 22,
+                right: 22,
+                bottom: dockBottom,
+                child: _GlowDock(
+                  selected: selectTab,
+                  onSelect: goTab,
+                ),
               ),
-            ),
           ],
         ),
       ),
