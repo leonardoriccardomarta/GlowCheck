@@ -103,13 +103,13 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 24),
             _SocialButton(
               label: GlowL10n.t('login_google'),
-              icon: Icons.g_mobiledata,
+              leading: const GlowGoogleMark(size: 18),
               onTap: () => _social('google'),
             ),
             const SizedBox(height: 10),
             _SocialButton(
               label: GlowL10n.t('login_apple'),
-              icon: Icons.apple,
+              leading: const Icon(Icons.apple, size: 20),
               onTap: () => _social('apple'),
             ),
             const SizedBox(height: 22),
@@ -197,10 +197,10 @@ class _Field extends StatelessWidget {
 }
 
 class _SocialButton extends StatelessWidget {
-  const _SocialButton({required this.label, required this.icon, required this.onTap});
+  const _SocialButton({required this.label, required this.leading, required this.onTap});
 
   final String label;
-  final IconData icon;
+  final Widget leading;
   final VoidCallback onTap;
 
   @override
@@ -216,8 +216,8 @@ class _SocialButton extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 26),
-              const SizedBox(width: 8),
+              leading,
+              const SizedBox(width: 10),
               Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
             ],
           ),

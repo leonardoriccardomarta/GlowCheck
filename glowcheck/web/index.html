@@ -149,21 +149,42 @@
     }
     .glow-cam-btn {
       position: absolute;
-      width: 44px;
-      height: 44px;
-      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border: 1px solid rgba(255,255,255,0.16);
       border-radius: 50%;
-      background: rgba(0,0,0,0.45);
-      color: #fff;
-      font-size: 22px;
-      line-height: 44px;
-      text-align: center;
+      background: rgba(17,17,17,0.38);
+      box-shadow: 0 10px 28px rgba(0,0,0,0.28);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      color: transparent;
+      font-size: 0;
+      line-height: 0;
+    }
+    .glow-cam-btn::after {
+      content: '';
+      width: 20px;
+      height: 20px;
+      background: #ffffff;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-position: center;
+      mask-position: center;
+      -webkit-mask-size: 20px 20px;
+      mask-size: 20px 20px;
     }
     .glow-cam-close { top: 12px; left: 16px; }
+    .glow-cam-close::after {
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.85' stroke-linecap='round'%3E%3Cpath d='M6.2 6.2l11.6 11.6M17.8 6.2L6.2 17.8'/%3E%3C/svg%3E");
+      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.85' stroke-linecap='round'%3E%3Cpath d='M6.2 6.2l11.6 11.6M17.8 6.2L6.2 17.8'/%3E%3C/svg%3E");
+    }
     .glow-cam-badge {
       position: absolute;
       top: 16px;
-      left: 68px;
+      left: 76px;
       right: 16px;
       padding: 8px 12px;
       border-radius: 99px;
@@ -176,9 +197,25 @@
       pointer-events: none;
     }
     .glow-cam-badge.is-hidden { display: none !important; }
-    .glow-cam-gallery { left: 8px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
-    .glow-cam-flash { right: 8px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
-    .glow-cam-flash.is-on { background: #00E676; color: #111111; }
+    .glow-cam-gallery { left: 16px; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); }
+    .glow-cam-gallery::after {
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.6' y='5.4' width='16.8' height='13.2' rx='2.4'/%3E%3Ccircle cx='8.4' cy='10' r='1.35' fill='black' stroke='none'/%3E%3Cpath d='M4.4 16.6l4.1-4.1 3.1 3.1 3.4-4.3 4.6 5.3'/%3E%3C/svg%3E");
+      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.6' y='5.4' width='16.8' height='13.2' rx='2.4'/%3E%3Ccircle cx='8.4' cy='10' r='1.35' fill='black' stroke='none'/%3E%3Cpath d='M4.4 16.6l4.1-4.1 3.1 3.1 3.4-4.3 4.6 5.3'/%3E%3C/svg%3E");
+    }
+    .glow-cam-flash { right: 16px; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); }
+    .glow-cam-flash::after {
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2.5L5.2 13.4h6.3L10.6 21.5 18.8 10.6h-6.3L13 2.5z'/%3E%3C/svg%3E");
+      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2.5L5.2 13.4h6.3L10.6 21.5 18.8 10.6h-6.3L13 2.5z'/%3E%3C/svg%3E");
+    }
+    .glow-cam-flash.is-on {
+      background: #00E676;
+      border-color: rgba(17,17,17,0.08);
+    }
+    .glow-cam-flash.is-on::after {
+      background: #111111;
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M13 2.5L5.2 13.4h6.3L10.6 21.5 18.8 10.6h-6.3L13 2.5z'/%3E%3C/svg%3E");
+      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M13 2.5L5.2 13.4h6.3L10.6 21.5 18.8 10.6h-6.3L13 2.5z'/%3E%3C/svg%3E");
+    }
     .glow-cam-shutter {
       position: absolute;
       left: 50%;

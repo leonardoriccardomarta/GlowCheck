@@ -35,11 +35,11 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> with WidgetsBindingObse
   bool _shown = false;
   String? _error;
 
-  web.HTMLButtonElement _btn(String className, String label) {
+  web.HTMLButtonElement _btn(String className, String aria) {
     final btn = web.HTMLButtonElement()
       ..type = 'button'
-      ..className = className
-      ..textContent = label;
+      ..className = className;
+    btn.setAttribute('aria-label', aria);
     return btn;
   }
 
@@ -61,9 +61,9 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> with WidgetsBindingObse
 
     _frame = web.HTMLDivElement()..className = 'glow-cam-frame is-hidden';
     _chrome = web.HTMLDivElement()..className = 'glow-cam-chrome is-hidden';
-    _close = _btn('glow-cam-btn glow-cam-close', '✕');
-    _gallery = _btn('glow-cam-btn glow-cam-gallery', '▣');
-    _flash = _btn('glow-cam-btn glow-cam-flash', '⚡');
+    _close = _btn('glow-cam-btn glow-cam-close', 'Close');
+    _gallery = _btn('glow-cam-btn glow-cam-gallery', 'Gallery');
+    _flash = _btn('glow-cam-btn glow-cam-flash', 'Flash');
     _shutter = web.HTMLButtonElement()
       ..type = 'button'
       ..className = 'glow-cam-shutter'
