@@ -7,6 +7,7 @@ import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:fitnessapp/view/dashboard/dashboard_screen.dart';
 import 'package:fitnessapp/view/finish_workout/finish_workout_screen.dart';
 import 'package:fitnessapp/view/paywall/paywall_screen.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -39,7 +40,7 @@ class _CameraScreenState extends State<CameraScreen> {
       if (!mounted) return;
       Navigator.pushNamed(context, FinishWorkoutScreen.routeName, arguments: result);
     } catch (e) {
-      setState(() => error = e.toString().replaceFirst('Exception: ', ''));
+      setState(() => error = _friendlyScanError(e));
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -68,7 +69,23 @@ class _CameraScreenState extends State<CameraScreen> {
     await _analyze(await file.readAsBytes());
   }
 
+  String _friendlyScanError(Object e) {
+    final raw = e.toString().replaceFirst('Exception: ', '');
+    final lower = raw.toLowerCase();
+    if (lower.contains('socket') ||
+        lower.contains('failed host') ||
+        lower.contains('xmlhttprequest') ||
+        lower.contains('clientexception') ||
+        lower.contains('timeout') ||
+        lower.contains('http://') ||
+        lower.contains('https://')) {
+      return GlowL10n.t('err_api');
+    }
+    return raw;
+  }
+
   Future<void> _toggleTorch() async {
+    if (busy) return;
     final next = !torch;
     final ok = await _live.torch?.call(next) ?? false;
     if (mounted) setState(() => torch = ok ? next : false);
@@ -96,42 +113,43 @@ class _CameraScreenState extends State<CameraScreen> {
             onShutter: _shutter,
             onTorch: _toggleTorch,
           ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Row(
-                children: [
-                  _CamIcon(
-                    icon: Icons.close_rounded,
-                    onTap: () => DashboardScope.of(context)?.goTab(0),
-                  ),
-                  if (GlowStore.instance.highlightFirstScan && error == null && !busy) ...[
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.neon,
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                        child: Text(
-                          GlowL10n.t('cam_free_ready'),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AppColors.ink,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 12,
+          if (!kIsWeb && !busy)
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Row(
+                  children: [
+                    _CamIcon(
+                      icon: Icons.close_rounded,
+                      onTap: () => DashboardScope.of(context)?.goTab(0),
+                    ),
+                    if (GlowStore.instance.highlightFirstScan && error == null) ...[
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.neon,
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: Text(
+                            GlowL10n.t('cam_free_ready'),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.ink,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-          ),
           if (error != null)
             Positioned(
               left: 24,
@@ -150,42 +168,43 @@ class _CameraScreenState extends State<CameraScreen> {
                 ),
               ),
             ),
-          Positioned(
-            left: 28,
-            right: 28,
-            bottom: 0,
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _CamIcon(icon: Icons.photo_library_rounded, onTap: _gallery),
-                    GestureDetector(
-                      onTap: _shutter,
-                      child: Container(
-                        width: 78,
-                        height: 78,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 4),
-                        ),
-                        padding: const EdgeInsets.all(5),
-                        child: const DecoratedBox(
-                          decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+          if (!kIsWeb && !busy)
+            Positioned(
+              left: 28,
+              right: 28,
+              bottom: 0,
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _CamIcon(icon: Icons.photo_library_rounded, onTap: _gallery),
+                      GestureDetector(
+                        onTap: _shutter,
+                        child: Container(
+                          width: 78,
+                          height: 78,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 4),
+                          ),
+                          padding: const EdgeInsets.all(5),
+                          child: const DecoratedBox(
+                            decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                          ),
                         ),
                       ),
-                    ),
-                    _CamIcon(
-                      icon: torch ? Icons.flash_on_rounded : Icons.flash_off_rounded,
-                      onTap: _toggleTorch,
-                    ),
-                  ],
+                      _CamIcon(
+                        icon: torch ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                        onTap: _toggleTorch,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
           if (busy)
             ColoredBox(
               color: AppColors.ink.withValues(alpha: 0.92),

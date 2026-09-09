@@ -1,3 +1,4 @@
+import 'package:fitnessapp/common_widgets/glow_ui.dart';
 import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -20,9 +21,9 @@ class LegalScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back_rounded),
+                GlowCircleButton(
+                  icon: Icons.arrow_back_rounded,
+                  onTap: () => Navigator.pop(context),
                 ),
                 const SizedBox(width: 4),
                 Expanded(

@@ -226,6 +226,24 @@ class GlowGoogleMark extends StatelessWidget {
   }
 }
 
+class GlowAppleMark extends StatelessWidget {
+  const GlowAppleMark({super.key, this.size = 18});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Transform.translate(
+        offset: const Offset(0, -0.4),
+        child: CustomPaint(painter: _AppleMarkPainter()),
+      ),
+    );
+  }
+}
+
 class _GoogleMarkPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -288,6 +306,46 @@ class _GoogleMarkPainter extends CustomPainter {
         ..close(),
       red,
     );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _AppleMarkPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.scale(size.width / 24, size.height / 24);
+    final paint = Paint()
+      ..color = const Color(0xFF111111)
+      ..style = PaintingStyle.fill;
+
+    final body = Path()
+      ..moveTo(16.365, 12.23)
+      ..relativeCubicTo(-0.016, -2.764, 2.251, -4.091, 2.351, -4.156)
+      ..relativeCubicTo(-1.281, -1.873, -3.275, -2.131, -3.985, -2.16)
+      ..relativeCubicTo(-1.697, -0.172, -3.313, 1, -4.175, 1)
+      ..relativeCubicTo(-0.862, 0, -2.197, -0.975, -3.614, -0.948)
+      ..relativeCubicTo(-1.86, 0.029, -3.57, 1.08, -4.524, 2.743)
+      ..relativeCubicTo(-1.93, 3.345, -0.494, 8.296, 1.386, 11.01)
+      ..relativeCubicTo(0.917, 1.338, 2.01, 2.84, 3.443, 2.786)
+      ..relativeCubicTo(1.381, -0.056, 1.904, -0.893, 3.576, -0.893)
+      ..relativeCubicTo(1.672, 0, 2.145, 0.893, 3.614, 0.864)
+      ..relativeCubicTo(1.495, -0.025, 2.443, -1.364, 3.358, -2.705)
+      ..relativeCubicTo(1.059, -1.548, 1.495, -3.048, 1.52, -3.126)
+      ..relativeCubicTo(-0.033, -0.015, -2.916, -1.119, -2.95, -4.445)
+      ..close();
+
+    final leaf = Path()
+      ..moveTo(13.597, 4.068)
+      ..relativeCubicTo(0.76, -0.921, 1.272, -2.201, 1.132, -3.475)
+      ..relativeCubicTo(-1.093, 0.044, -2.415, 0.73, -3.2, 1.647)
+      ..relativeCubicTo(-0.704, 0.818, -1.32, 2.124, -1.154, 3.378)
+      ..relativeCubicTo(1.221, 0.095, 2.47, -0.622, 3.222, -1.55)
+      ..close();
+
+    canvas.drawPath(body, paint);
+    canvas.drawPath(leaf, paint);
   }
 
   @override

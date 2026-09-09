@@ -18,6 +18,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool register = false;
+  bool busy = false;
   String? error;
   final name = TextEditingController();
   final email = TextEditingController();
@@ -42,12 +43,23 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  String _friendlyAuthError(Object e) {
+    return e.toString().replaceFirst('Exception: ', '');
+  }
+
   Future<void> _email() async {
-    setState(() => error = null);
+    if (busy) return;
+    setState(() {
+      error = null;
+      busy = true;
+    });
     try {
       if (register) {
         if (name.text.trim().isEmpty || email.text.trim().isEmpty || password.text.length < 6) {
-          setState(() => error = GlowL10n.t('login_fields'));
+          setState(() {
+            error = GlowL10n.t('login_fields');
+            busy = false;
+          });
           return;
         }
         await GlowAuth.register(
@@ -60,14 +72,26 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       await _finish();
     } catch (e) {
-      setState(() => error = e.toString().replaceFirst('Exception: ', ''));
+      if (mounted) setState(() => error = _friendlyAuthError(e));
+    } finally {
+      if (mounted) setState(() => busy = false);
     }
   }
 
   Future<void> _social(String provider) async {
-    setState(() => error = null);
-    await GlowAuth.social(provider);
-    await _finish();
+    if (busy) return;
+    setState(() {
+      error = null;
+      busy = true;
+    });
+    try {
+      await GlowAuth.social(provider);
+      await _finish();
+    } catch (e) {
+      if (mounted) setState(() => error = _friendlyAuthError(e));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
   }
 
   @override
@@ -77,7 +101,18 @@ class _LoginScreenState extends State<LoginScreen> {
       builder: (context, _) => Scaffold(
       backgroundColor: AppColors.canvas,
       body: SafeArea(
-        child: ListView(
+        child: Column(
+          children: [
+            if (busy)
+              const LinearProgressIndicator(
+                minHeight: 2,
+                color: AppColors.ink,
+                backgroundColor: AppColors.line,
+              ),
+            Expanded(
+              child: AbsorbPointer(
+                absorbing: busy,
+                child: ListView(
           padding: const EdgeInsets.fromLTRB(22, 18, 22, 24),
           children: [
             Row(
@@ -109,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 10),
             _SocialButton(
               label: GlowL10n.t('login_apple'),
-              leading: const Icon(Icons.apple, size: 20),
+              leading: const GlowAppleMark(size: 18),
               onTap: () => _social('apple'),
             ),
             const SizedBox(height: 22),
@@ -152,6 +187,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     ),
@@ -180,10 +219,10 @@ class _Field extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(GlowStyle.radiusCard),
       ),
       child: SizedBox(
-        height: 52,
+        height: 54,
         child: GlowPlainField(
           controller: controller,
           hint: hint,

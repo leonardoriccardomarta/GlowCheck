@@ -85,7 +85,7 @@ class GlowAuth {
           )
           .timeout(const Duration(seconds: 20));
     } catch (_) {
-      throw Exception(GlowL10n.t('auth_unreachable', {'url': AppEnv.authBase}));
+      throw Exception(GlowL10n.t('auth_unreachable'));
     }
     final json = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode >= 400 || json['ok'] != true) {

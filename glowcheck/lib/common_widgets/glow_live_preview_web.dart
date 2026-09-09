@@ -75,10 +75,22 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> with WidgetsBindingObse
     _chrome.appendChild(_shutter);
     _chrome.appendChild(_flash);
 
-    _close.onClick.listen((_) => widget.onClose?.call());
-    _gallery.onClick.listen((_) => widget.onGallery?.call());
-    _shutter.onClick.listen((_) => widget.onShutter?.call());
-    _flash.onClick.listen((_) => widget.onTorch?.call());
+    _close.onClick.listen((_) {
+      if (widget.obscured) return;
+      widget.onClose?.call();
+    });
+    _gallery.onClick.listen((_) {
+      if (widget.obscured) return;
+      widget.onGallery?.call();
+    });
+    _shutter.onClick.listen((_) {
+      if (widget.obscured) return;
+      widget.onShutter?.call();
+    });
+    _flash.onClick.listen((_) {
+      if (widget.obscured) return;
+      widget.onTorch?.call();
+    });
 
     final layer = web.document.querySelector('#glow-html-layer');
     final host = layer ?? web.document.body;
