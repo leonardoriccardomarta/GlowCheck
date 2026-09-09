@@ -43,15 +43,39 @@ function blobOf(ingredients: string[], productName: string | null) {
   return `${productName ?? ''} ${ingredients.join(' ')}`.toLowerCase();
 }
 
-function detectKind(blob: string): string {
-  if (/(cleans|wash|micellar|foam|gel nettoy|syndet)/.test(blob) || blob.includes('sodium laureth') || blob.includes('coco-glucoside')) {
+function detectKind(blob: string): string | null {
+  if (
+    /(gilette|gillette|schick|wilkinson|nivea men shave|shave|shaving|aftershave|after-shave|rasoi|rasatur|schiuma da barba|gel à raser|gel da barba|foam for (men|shave)|shaving foam|shaving gel|shaving cream)/.test(
+      blob
+    )
+  ) {
+    return 'shave';
+  }
+  if (/(shampoo|conditioner|hair mask|balsamo capelli)/.test(blob)) return 'hair';
+  if (/(mascara|foundation|lipstick|concealer|eyeshadow|fondotinta)/.test(blob)) return 'makeup';
+  if (/(spf|sunscreen|uvinul|tinosorb|zinc oxide|titanium dioxide|octinoxate|avobenzone)/.test(blob)) {
+    return 'sunscreen';
+  }
+  if (
+    /(cleans|face wash|micellar|syndet|gel nettoy|detergente viso|cleansing foam)/.test(blob) ||
+    blob.includes('sodium laureth') ||
+    blob.includes('coco-glucoside')
+  ) {
     return 'cleanser';
   }
-  if (/(spf|sunscreen|uvinul|tinosorb|zinc oxide|titanium dioxide|octinoxate|avobenzone)/.test(blob)) return 'sunscreen';
-  if (/(cream|moistur|baume|balm|butter)/.test(blob)) return 'cream';
-  if (/(toner|essence|lotion)/.test(blob)) return 'toner';
-  if (/(serum|ampoule|concentrate)/.test(blob) || ingredientsLookLikeSerum(blob)) return 'serum';
-  return 'cream';
+  if (/(cream|moistur|baume|balm|butter|crema|idratante viso|night cream|barrier)/.test(blob)) return 'cream';
+  if (/(serum|ampoule|concentrate|siero)/.test(blob)) return 'serum';
+  if (/(toner|essence)/.test(blob)) return 'toner';
+  if (/(oil|huile|olio viso|squalane)/.test(blob)) return 'oil';
+  if (ingredientsLookLikeSerum(blob)) return 'serum';
+  return null;
+}
+
+function sameKindFamily(scanned: string | null, suggested: string | null) {
+  if (!scanned || !suggested) return false;
+  if (scanned === suggested) return true;
+  if ((scanned === 'toner' && suggested === 'serum') || (scanned === 'serum' && suggested === 'toner')) return true;
+  return false;
 }
 
 function ingredientsLookLikeSerum(blob: string) {
@@ -82,9 +106,13 @@ function detectActives(blob: string) {
 export function catalogFallback(input: SuggestInput): DupeSuggestion | null {
   const blob = blobOf(input.ingredients, input.productName);
   const kind = detectKind(blob);
+  if (!kind || kind === 'shave' || kind === 'hair' || kind === 'makeup') return null;
   const actives = detectActives(blob);
 
   const ranked = DUPE_CATALOG.map((item) => {
+    if (!item.kinds.includes(kind) && !(kind === 'toner' && item.kinds.includes('serum'))) {
+      return { item, score: -99 };
+    }
     let score = 0;
     if (item.kinds.includes(kind)) score += 5;
     if (kind === 'toner' && item.kinds.includes('serum')) score += 3;
@@ -147,26 +175,40 @@ async function askModel(input: SuggestInput): Promise<DupeSuggestion | null> {
   const key = env.GROQ_API_KEY || env.OPENAI_API_KEY;
   if (!key) return null;
 
+  const scannedKind = detectKind(blobOf(input.ingredients, input.productName));
+  if (!scannedKind || scannedKind === 'shave' || scannedKind === 'hair' || scannedKind === 'makeup') {
+    return null;
+  }
+
   const ingredients = input.ingredients.slice(0, 50).join(', ');
   const lang = ({ it: 'Italian', en: 'English', es: 'Spanish', fr: 'French', de: 'German' } as const)[normalizeLocale(input.locale)];
   const priceHint = normalizeLocale(input.locale) === 'en' ? '~$12' : '~12 €';
+  const system = `You recommend one cheaper drugstore dupe for a scanned cosmetic.
+Stay inside the same format only: serum vs serum, face cream vs moisturizer, cleanser vs cleanser, sunscreen vs sunscreen, toner vs toner or serum.
+Never swap a razor, shaving foam, aftershave, shampoo, hair product, or makeup against a face cream or serum.
+Gillette, Schick, Wilkinson and similar shave brands are not daily face moisturizers.
+If the scanned item is not comparable skincare, or the category does not match, return {"skip":true}.
+JSON only, no markdown.`;
   const prompt = `Suggest ONE cheaper, widely sold alternative for this scanned cosmetic.
 Write blurb and whyThis in ${lang}. Use prices like ${priceHint}.
-The scanned item can be any brand: Korean, pharmacy, supermarket, indie, luxury, or unknown. Fame does not matter. Match the FORMULA.
+The scanned item can be any brand: Korean, pharmacy, supermarket, indie, luxury, or unknown. Fame does not matter.
 Scanned product: ${input.productName ?? 'unknown brand'}
 Skin: ${input.skinType}
 Goal: ${input.mainGoal}
 Spend band: ${input.spendBand ?? 'mid'}
 INCI (readable): ${ingredients || 'none'}
+Detected format: ${scannedKind}
 
 Rules:
+- Same format only. Serum vs serum. Face cream vs face moisturizer. Cleanser vs cleanser. Sunscreen vs sunscreen.
+- Never swap a razor, shaving foam, aftershave, shampoo, or makeup against a face cream or serum.
+- Gillette, Schick, Wilkinson and similar shave brands are not daily face moisturizers. If the scan is shave or not comparable skincare, return {"skip":true}.
 - Pick a real cheaper product sold in drugstores / pharmacies / Olive Young / Stylevana / ordinary EU or US shops
-- Match product type (cleanser, toner, serum, cream, sunscreen, oil)
 - Match useful INCI jobs (niacinamide, hyaluronic, ceramide, BHA, cica, urea, etc.)
 - Skin first, then goal. Oily: no heavy cream. Dry: no foaming cleanser. Sensitive: fragrance-light.
 - Low spend: cheaper option
 - Do not repeat the scanned product
-- If a swap is pointless, return {"skip":true}
+- If a swap is pointless or the category does not match, return {"skip":true}
 - JSON only, no markdown: {"brand":"","name":"","estimatedPrice":"${priceHint}","blurb":"","whyThis":"one sentence on which INCI this swaps"}
 
 Known examples:
@@ -186,7 +228,10 @@ ${catalogPromptBlock()}`;
         model: 'llama-3.1-8b-instant',
         temperature: 0.2,
         max_completion_tokens: 220,
-        messages: [{ role: 'user', content: prompt }],
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: prompt },
+        ],
       }),
     });
     if (!response.ok) {
@@ -206,12 +251,20 @@ ${catalogPromptBlock()}`;
     if (parsed.skip || !parsed.brand || !parsed.name) return null;
     const brand = String(parsed.brand).slice(0, 40);
     const name = String(parsed.name).slice(0, 80);
+    const suggestedKind = detectKind(`${brand} ${name} ${parsed.blurb ?? ''}`);
+    if (suggestedKind === 'shave' || suggestedKind === 'hair' || suggestedKind === 'makeup') return null;
+    if (suggestedKind && !sameKindFamily(scannedKind, suggestedKind)) return null;
     const known = DUPE_CATALOG.find(
       (item) =>
         `${item.brand} ${item.name}`.toLowerCase() === `${brand} ${name}`.toLowerCase() ||
         item.name.toLowerCase() === name.toLowerCase()
     );
-    if (known) return toSuggestion(known, detectActives(blobOf(input.ingredients, input.productName)), input);
+    if (known) {
+      if (!known.kinds.includes(scannedKind) && !(scannedKind === 'toner' && known.kinds.includes('serum'))) {
+        return null;
+      }
+      return toSuggestion(known, detectActives(blobOf(input.ingredients, input.productName)), input);
+    }
     return {
       id: null,
       brand,
@@ -236,6 +289,8 @@ ${catalogPromptBlock()}`;
 
 export async function suggestDupe(input: SuggestInput): Promise<DupeSuggestion | null> {
   if (input.ingredients.length < 1 && !input.productName) return null;
+  const kind = detectKind(blobOf(input.ingredients, input.productName));
+  if (!kind || kind === 'shave' || kind === 'hair' || kind === 'makeup') return null;
   const fromModel = await askModel(input);
   if (fromModel) return fromModel;
   return catalogFallback(input);

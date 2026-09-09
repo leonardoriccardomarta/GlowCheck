@@ -107,6 +107,24 @@ assert(
   `dry night cream should stay a cream/HA swap (${dryDupe?.brand} ${dryDupe?.name})`
 );
 
+const gilletteDupe = catalogFallback({
+  productName: 'Gillette',
+  ingredients: ['Aqua', 'Palmitic Acid', 'Stearic Acid', 'Parfum'],
+  skinType: 'dry',
+  mainGoal: 'hydration',
+  spendBand: 'mid',
+});
+assert(!gilletteDupe, `shave brands must not get a face cream dupe (${gilletteDupe?.brand} ${gilletteDupe?.name})`);
+
+const shaveFoam = catalogFallback({
+  productName: 'Gillette Foamy',
+  ingredients: ['Aqua', 'Stearic Acid', 'Isobutane'],
+  skinType: 'oily',
+  mainGoal: 'pores',
+  spendBand: 'low',
+});
+assert(!shaveFoam, `shaving foam must not get a serum or cream (${shaveFoam?.brand} ${shaveFoam?.name})`);
+
 const unknownBrand = scoreFormula({
   productName: 'No-name 수분 세럼',
   ingredients: ['Aqua', 'Glycerin', 'Niacinamide', 'Centella Asiatica Extract', 'Parfum'],

@@ -346,15 +346,15 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(22, 8, 22, 16),
               child: GlowPrimaryButton(
-                title: GlowStore.instance.canScan
-                    ? GlowL10n.t('scan_another')
-                    : GlowL10n.t('unlock_unlimited'),
+                title: !GlowStore.instance.isPro && GlowStore.instance.freeScansRemaining <= 0
+                    ? GlowL10n.t('unlock_unlimited')
+                    : GlowL10n.t('scan_another'),
                 onPressed: () {
-                  if (GlowStore.instance.canScan) {
-                    Navigator.pop(context);
+                  if (!GlowStore.instance.isPro && GlowStore.instance.freeScansRemaining <= 0) {
+                    Navigator.pushNamed(context, PaywallScreen.routeName);
                     return;
                   }
-                  Navigator.pushNamed(context, PaywallScreen.routeName);
+                  Navigator.pop(context);
                 },
               ),
             ),
