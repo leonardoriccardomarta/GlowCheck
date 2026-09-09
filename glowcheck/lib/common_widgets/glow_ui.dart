@@ -173,18 +173,20 @@ class GlowPrimaryButton extends StatelessWidget {
     required this.onPressed,
     this.compact = false,
     this.light = false,
+    this.giant = false,
   });
 
   final String title;
   final VoidCallback onPressed;
   final bool compact;
   final bool light;
+  final bool giant;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: compact ? null : double.infinity,
-      height: compact ? 40 : 56,
+      height: giant ? 72 : compact ? 40 : 56,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
@@ -198,9 +200,10 @@ class GlowPrimaryButton extends StatelessWidget {
         ),
         child: Text(
           title,
+          textAlign: TextAlign.center,
           style: TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: compact ? 13 : 16,
+            fontWeight: FontWeight.w800,
+            fontSize: giant ? 18 : compact ? 13 : 16,
           ),
         ),
       ),

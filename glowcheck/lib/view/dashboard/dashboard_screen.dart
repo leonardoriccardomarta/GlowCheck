@@ -2,6 +2,7 @@ import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:fitnessapp/view/activity/activity_screen.dart';
 import 'package:fitnessapp/view/camera/camera_screen.dart';
+import 'package:fitnessapp/view/paywall/paywall_screen.dart';
 import 'package:fitnessapp/view/profile/user_profile.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -46,6 +47,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void goTab(int index) {
+    if (index == 2 && !GlowStore.instance.canScan) {
+      Navigator.pushNamed(context, PaywallScreen.routeName);
+      return;
+    }
     if (selectTab == 2 && index != 2) {
       GlowStore.instance.clearFirstScanBadge();
     }
