@@ -1,23 +1,9 @@
 import '../config/app_env.dart';
 import '../state/glow_store.dart';
+import 'glow_billing_types.dart';
+import 'glow_purchases.dart';
 
-class BillingPackage {
-  const BillingPackage({
-    required this.id,
-    required this.label,
-    required this.priceString,
-    required this.bestValue,
-    required this.productId,
-  });
-
-  final String id;
-  final String label;
-  final String priceString;
-  final bool bestValue;
-  final String productId;
-}
-
-enum PurchaseOutcome { unlocked, needsStore, nothingToRestore }
+export 'glow_billing_types.dart';
 
 class GlowBilling {
   GlowBilling._();
@@ -43,11 +29,20 @@ class GlowBilling {
 
   static bool get live => AppEnv.billingLive;
 
+  static Future<void> configure() async {
+    await GlowPurchases.configure();
+  }
+
   static Future<List<BillingPackage>> packages() async {
+    final store = await GlowPurchases.packages();
+    if (store.isNotEmpty) return store;
     return fallbackPackages;
   }
 
   static Future<PurchaseOutcome> purchase(String packageId) async {
+    if (GlowPurchases.enabled) {
+      return GlowPurchases.purchase(packageId);
+    }
     if (live) {
       return PurchaseOutcome.needsStore;
     }
@@ -57,6 +52,9 @@ class GlowBilling {
   }
 
   static Future<PurchaseOutcome> restore() async {
+    if (GlowPurchases.enabled) {
+      return GlowPurchases.restore();
+    }
     if (live) {
       return PurchaseOutcome.needsStore;
     }

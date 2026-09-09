@@ -200,6 +200,14 @@ class GlowStore extends ChangeNotifier {
     await _persist();
   }
 
+  Future<void> applyStoreEntitlement({required bool active, String? plan}) async {
+    if (active == isPro && (plan == null || plan == proPlan)) return;
+    isPro = active;
+    proPlan = active ? (plan ?? proPlan) : null;
+    notifyListeners();
+    await _persist();
+  }
+
   Future<void> signInEmail({
     required String email,
     required String password,

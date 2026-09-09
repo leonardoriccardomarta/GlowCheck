@@ -1,4 +1,4 @@
-package com.hypeteq.fitnessapp
+package com.glowcheck.app
 
 import io.flutter.embedding.android.FlutterActivity
 

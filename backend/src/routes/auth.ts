@@ -19,7 +19,7 @@ const socialSchema = z.object({
   provider: z.enum(['google', 'apple']),
   email: z.string().email().max(120).optional(),
   name: z.string().max(80).optional(),
-  idToken: z.string().max(4000).optional(),
+  idToken: z.string().max(8000).optional(),
   clientId: z.string().max(200).optional(),
 });
 

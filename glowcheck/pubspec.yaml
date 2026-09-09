@@ -47,6 +47,8 @@ dependencies:
   image_picker: ^1.1.2
   shared_preferences: ^2.3.2
   web: ^1.1.1
+  sign_in_with_apple: ^6.1.4
+  purchases_flutter: ^8.10.1
   calendar_agenda:
     path: dev_lib/calendar_agenda/
 

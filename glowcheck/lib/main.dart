@@ -1,6 +1,7 @@
 import 'package:fitnessapp/config/app_env.dart';
 import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/routes.dart';
+import 'package:fitnessapp/services/glow_billing.dart';
 import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:fitnessapp/view/splash/splash_screen.dart';
@@ -11,6 +12,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppEnv.loadRuntime();
   await GlowStore.instance.load();
+  await GlowBilling.configure();
   runApp(const MyApp());
 }
 

@@ -1,0 +1,32 @@
+{
+  "bundleId": "com.glowcheck.app",
+  "displayName": "GlowCheck",
+  "capabilities": ["Sign in with Apple", "In-App Purchase"],
+  "entitlement": "pro",
+  "products": [
+    {
+      "id": "glowcheck_weekly",
+      "reference": "weekly",
+      "price": "4.99 EUR",
+      "freeTrialDays": 3
+    },
+    {
+      "id": "glowcheck_yearly",
+      "reference": "yearly",
+      "price": "39.99 EUR"
+    }
+  ],
+  "githubSecrets": [
+    "BUILD_CERTIFICATE_BASE64",
+    "P12_PASSWORD",
+    "PROVISIONING_PROFILE_BASE64",
+    "APPLE_TEAM_ID",
+    "PROVISIONING_PROFILE_NAME",
+    "APPSTORE_ISSUER_ID",
+    "APPSTORE_API_KEY_ID",
+    "APPSTORE_API_PRIVATE_KEY",
+    "REVENUECAT_API_KEY",
+    "API_URL",
+    "AUTH_API_URL"
+  ]
+}

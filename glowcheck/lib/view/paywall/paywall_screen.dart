@@ -54,6 +54,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
     try {
       final outcome = await GlowBilling.purchase(selected);
       if (!mounted) return;
+      if (outcome == PurchaseOutcome.cancelled) return;
       if (outcome == PurchaseOutcome.needsStore) {
         setState(() {
           error = GlowL10n.t('paywall_store_err');
