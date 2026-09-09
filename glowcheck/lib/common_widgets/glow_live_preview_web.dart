@@ -15,6 +15,7 @@ extension JSGlowCamMethods on JSGlowCam {
   external JSPromise<JSAny?> capture(web.HTMLVideoElement video);
   external JSPromise<JSAny?> readBarcode(web.HTMLVideoElement video);
   external String getBarcode();
+  external void setMode(String mode);
   external void stop();
   external JSPromise<JSBoolean> torch(JSBoolean on);
 }
@@ -115,6 +116,9 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> with WidgetsBindingObse
   void didUpdateWidget(covariant GlowLivePreview oldWidget) {
     super.didUpdateWidget(oldWidget);
     _syncChrome();
+    try {
+      _glowCam.setMode(widget.inciMode ? 'inci' : 'barcode');
+    } catch (_) {}
   }
 
   void _onFrame(Duration _) {
@@ -213,11 +217,15 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> with WidgetsBindingObse
     } else {
       _frame.classList.remove('is-lock');
     }
+    final fx = widget.inciMode ? 0.06 : 0.08;
+    final fy = widget.inciMode ? 0.18 : 0.38;
+    final fw = widget.inciMode ? 0.88 : 0.84;
+    final fh = widget.inciMode ? 0.52 : 0.22;
     _frame.style
-      ..left = '${offset.dx + size.width * 0.08}px'
-      ..top = '${offset.dy + size.height * 0.38}px'
-      ..width = '${size.width * 0.84}px'
-      ..height = '${size.height * 0.22}px';
+      ..left = '${offset.dx + size.width * fx}px'
+      ..top = '${offset.dy + size.height * fy}px'
+      ..width = '${size.width * fw}px'
+      ..height = '${size.height * fh}px';
     _huntTick += 1;
     if (_ready && _huntTick % 16 == 0) {
       _pullBarcode();
@@ -235,6 +243,9 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> with WidgetsBindingObse
     setState(() => _error = null);
     try {
       await _glowCam.start(_video).toDart;
+      try {
+        _glowCam.setMode(widget.inciMode ? 'inci' : 'barcode');
+      } catch (_) {}
       if (!mounted) return;
       setState(() => _ready = true);
       widget.onReady?.call();

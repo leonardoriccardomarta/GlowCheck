@@ -17,6 +17,7 @@ class GlowLivePreview extends StatefulWidget {
     this.obscured = false,
     this.torchOn = false,
     this.barcodeLocked = false,
+    this.inciMode = false,
     this.badge,
     this.hint,
     this.onBarcode,
@@ -31,6 +32,7 @@ class GlowLivePreview extends StatefulWidget {
   final bool obscured;
   final bool torchOn;
   final bool barcodeLocked;
+  final bool inciMode;
   final String? badge;
   final String? hint;
   final ValueChanged<String?>? onBarcode;

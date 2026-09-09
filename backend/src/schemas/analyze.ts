@@ -8,6 +8,7 @@ export const analyzeRequestSchema = z
     imageBase64: z.string().min(80).max(8_000_000).optional(),
     mimeType: z.enum(['image/jpeg', 'image/png']).optional(),
     barcode: z.string().max(32).optional(),
+    readInci: z.boolean().optional(),
     profile: z.object({
       skinType: skinTypeSchema,
       mainGoal: mainGoalSchema,
@@ -59,7 +60,7 @@ export const analyzeResponseSchema = z.object({
     })
     .nullable()
     .optional(),
-  errorCode: z.enum(['UNREADABLE', 'NOT_COSMETIC', 'INTERNAL']).nullable().optional(),
+  errorCode: z.enum(['UNREADABLE', 'NOT_COSMETIC', 'INTERNAL', 'NEED_INCI']).nullable().optional(),
 });
 
 export type AnalyzeRequest = z.infer<typeof analyzeRequestSchema>;
@@ -82,5 +83,5 @@ export type AnalyzeResponse = {
     blurb: string;
     whyThis: string;
   } | null;
-  errorCode: 'UNREADABLE' | 'NOT_COSMETIC' | 'INTERNAL' | null;
+  errorCode: 'UNREADABLE' | 'NOT_COSMETIC' | 'INTERNAL' | 'NEED_INCI' | null;
 };

@@ -24,6 +24,7 @@ class _CameraScreenState extends State<CameraScreen> {
   bool torch = false;
   String? error;
   String? lockedBarcode;
+  bool wantInci = false;
 
   Future<void> _ensureQuota() async {
     if (GlowStore.instance.canScan) return;
@@ -36,10 +37,20 @@ class _CameraScreenState extends State<CameraScreen> {
       error = null;
     });
     try {
-      final ScanResult result = await GlowApi.analyzeJpeg(bytes, barcode: barcode);
+      final ScanResult result = await GlowApi.analyzeJpeg(bytes, barcode: barcode, readInci: wantInci);
       await GlowStore.instance.addScan(result);
       if (!mounted) return;
       Navigator.pushNamed(context, FinishWorkoutScreen.routeName, arguments: result);
+    } on GlowScanException catch (e) {
+      if (!mounted) return;
+      if (e.code == 'NEED_INCI') {
+        setState(() {
+          wantInci = true;
+          error = e.message;
+        });
+        return;
+      }
+      setState(() => error = e.message);
     } catch (e) {
       setState(() => error = _friendlyScanError(e));
     } finally {
@@ -53,22 +64,24 @@ class _CameraScreenState extends State<CameraScreen> {
     if (!GlowStore.instance.canScan) return;
     final bytes = await _live.capture?.call();
     if (bytes == null || bytes.isEmpty) return;
-    await _analyze(bytes, barcode: _live.lastBarcode);
+    await _analyze(bytes, barcode: _live.lastBarcode ?? lockedBarcode);
   }
 
   Future<void> _gallery() async {
     if (busy) return;
     await _ensureQuota();
     if (!GlowStore.instance.canScan) return;
-    _live.lastBarcode = null;
-    if (mounted) setState(() => lockedBarcode = null);
+    if (!wantInci) {
+      _live.lastBarcode = null;
+      if (mounted) setState(() => lockedBarcode = null);
+    }
     final file = await ImagePicker().pickImage(
       source: ImageSource.gallery,
       imageQuality: 70,
       maxWidth: 1600,
     );
     if (file == null) return;
-    await _analyze(await file.readAsBytes());
+    await _analyze(await file.readAsBytes(), barcode: _live.lastBarcode ?? lockedBarcode);
   }
 
   String _friendlyScanError(Object e) {
@@ -108,14 +121,17 @@ class _CameraScreenState extends State<CameraScreen> {
             obscured: busy,
             torchOn: torch,
             barcodeLocked: lockedBarcode != null,
+            inciMode: wantInci,
             badge: GlowStore.instance.highlightFirstScan && error == null && !busy
                 ? GlowL10n.t('cam_free_ready')
                 : null,
             hint: busy
                 ? null
-                : (lockedBarcode != null ? GlowL10n.t('cam_barcode_ok') : GlowL10n.t('cam_hunt_barcode')),
+                : wantInci
+                    ? GlowL10n.t('cam_inci_now')
+                    : (lockedBarcode != null ? GlowL10n.t('cam_barcode_ok') : GlowL10n.t('cam_hunt_barcode')),
             onBarcode: (code) {
-              if (!mounted || busy) return;
+              if (!mounted || busy || wantInci) return;
               setState(() => lockedBarcode = code);
             },
             onClose: () => DashboardScope.of(context)?.goTab(0),

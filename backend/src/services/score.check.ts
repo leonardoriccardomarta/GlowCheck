@@ -1,7 +1,7 @@
 import { scoreFormula } from './score';
 import { catalogFallback } from './suggestDupe';
 import { canonicalizeIngredients } from './matchIngredients';
-import { categoryFromOff, isValidGtin } from './beautyFacts';
+import { barcodeVariants, categoryFromOff, isValidGtin, normalizeBarcode } from './beautyFacts';
 import { classifyCatalogBlob, isOutOfCategory } from './personalCare';
 import { extractVisionJson } from './visionJson';
 
@@ -226,6 +226,10 @@ assert(thinkWrapped?.includes('"Garnier"'), 'strip qwen think tags before JSON')
 assert(extractVisionJson('<think>no json here') === null, 'think-only vision output is empty');
 assert(isValidGtin('4006381333931'), 'known EAN-13 must pass checksum');
 assert(!isValidGtin('3613138040476'), 'hallucinated Garnier barcode must fail checksum');
+assert(normalizeBarcode('0103600542540599') === '3600542540599', 'strip GS1 AI 01 + GTIN-14');
+assert(isValidGtin('0103600542540599'), 'GS1-wrapped Ultra Dolce EAN must count as valid');
+assert(isValidGtin('3600542540599'), 'decoded Ultra Dolce EAN must pass');
+assert(barcodeVariants('3600542540599').includes('03600542540599'), 'try GTIN-14 form of EAN-13');
 const unclosedThink = extractVisionJson(`<think>
 The user wants me to extract information from an image of a personal care product.
 {"kind":"personal_care","extractedIngredients":["Aqua"],"category":"body","productName":"Garnier","barcode":null}`);

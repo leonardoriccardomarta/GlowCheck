@@ -127,8 +127,24 @@ export async function analyzeProduct(req: AnalyzeRequest): Promise<AnalyzeRespon
   }
 
   const catalogHit = ingredientBuckets.flat().length >= 2;
+  const clientBarcode = Boolean(req.barcode && req.barcode.replace(/\D/g, '').length >= 8);
+  const readInci = Boolean(req.readInci);
 
   if (req.imageBase64 && !catalogHit) {
+    if (clientBarcode && !readInci) {
+      console.log('analyze result', {
+        barcode,
+        productName,
+        format,
+        source: 'barcode',
+        catalogSource,
+        visionKind: null,
+        ingredientCount: 0,
+        hasImage: true,
+        needInci: true,
+      });
+      return empty('NEED_INCI', copy(locale, 'need_inci'));
+    }
     const vision = await extractFromPhoto(req.imageBase64);
     if (vision) {
       visionKind = vision.kind;

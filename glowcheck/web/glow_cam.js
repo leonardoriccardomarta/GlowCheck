@@ -5,9 +5,19 @@ window.GlowCam = {
   _detector: null,
   _hunting: false,
   FRAME: { x: 0.08, y: 0.38, w: 0.84, h: 0.22 },
+  mode: 'barcode',
+
+  setMode: function (mode) {
+    this.mode = mode === 'inci' ? 'inci' : 'barcode';
+    this.FRAME = this.mode === 'inci'
+      ? { x: 0.06, y: 0.18, w: 0.88, h: 0.52 }
+      : { x: 0.08, y: 0.38, w: 0.84, h: 0.22 };
+  },
 
   _gtinOk: function (raw) {
     var d = String(raw || '').replace(/\D/g, '');
+    if (d.length === 16 && d.indexOf('01') === 0) d = d.slice(2);
+    if (d.length === 14 && d.charAt(0) === '0') d = d.slice(1);
     if (d.length === 12) d = '0' + d;
     if ([8, 13, 14].indexOf(d.length) === -1) return '';
     var body = d.slice(0, -1);
@@ -109,6 +119,7 @@ window.GlowCam = {
 
   _huntTick: async function (videoEl) {
     if (this._hunting || !videoEl || videoEl.readyState < 2) return;
+    if (this.mode === 'inci') return;
     this._hunting = true;
     try {
       var hit = await this._scanSource(this._frameCanvas(videoEl));

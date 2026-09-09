@@ -7,12 +7,20 @@ import '../l10n/glow_l10n.dart';
 import '../models/scan_result.dart';
 import '../state/glow_store.dart';
 
+class GlowScanException implements Exception {
+  GlowScanException(this.code, this.message);
+  final String code;
+  final String message;
+  @override
+  String toString() => message;
+}
+
 class GlowApi {
   GlowApi._();
 
   static String get baseUrl => AppEnv.analyzeBase;
 
-  static Future<ScanResult> analyzeJpeg(List<int> bytes, {String? barcode}) async {
+  static Future<ScanResult> analyzeJpeg(List<int> bytes, {String? barcode, bool readInci = false}) async {
     final store = GlowStore.instance;
     final skin = store.skinType;
     final goal = store.mainGoal;
@@ -32,6 +40,7 @@ class GlowApi {
               'mimeType': 'image/jpeg',
               if (barcode != null && barcode.replaceAll(RegExp(r'\D'), '').length >= 8)
                 'barcode': barcode.replaceAll(RegExp(r'\D'), ''),
+              if (readInci) 'readInci': true,
               'profile': {
                 'skinType': skin,
                 'mainGoal': goal,
@@ -49,7 +58,10 @@ class GlowApi {
 
     final json = jsonDecode(response.body) as Map<String, dynamic>;
     if (json['readable'] != true) {
-      throw Exception(_errorMessage(json['errorCode'] as String?));
+      throw GlowScanException(
+        json['errorCode'] as String? ?? 'UNREADABLE',
+        _errorMessage(json['errorCode'] as String?),
+      );
     }
 
     return ScanResult(
@@ -81,6 +93,8 @@ class GlowApi {
         return GlowL10n.t('err_not_cosmetic');
       case 'UNREADABLE':
         return GlowL10n.t('err_unreadable');
+      case 'NEED_INCI':
+        return GlowL10n.t('err_need_inci');
       case 'INTERNAL':
         return GlowL10n.t('err_internal');
       default:
