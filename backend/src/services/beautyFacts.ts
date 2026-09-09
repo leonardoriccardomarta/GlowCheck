@@ -1,4 +1,5 @@
 import { parseIngredientText } from './score';
+import { classifyCatalogBlob } from './personalCare';
 
 export type CatalogProduct = {
   barcode: string;
@@ -46,6 +47,15 @@ export function categoryFromOff(product: { categories?: string; categories_tags?
   if (/(toner|essence|lotion-tonique)/.test(blob)) return 'toner';
   if (/(cleanser|cleansers|face-wash|micellar|syndet|facial-cleans)/.test(blob)) return 'cleanser';
   if (/(face-oil|facial-oil|body-oil)/.test(blob)) return 'oil';
+  if (/(shampoo|shampoos|hair-wash)/.test(blob)) return 'shampoo';
+  if (/(conditioner|conditioners|hair-conditioner|balsamo)/.test(blob)) return 'conditioner';
+  if (/(deodorant|deodorants|antiperspirant)/.test(blob)) return 'deodorant';
+  if (/(makeup|make-up|mascara|lipstick|foundation|concealer)/.test(blob)) return 'makeup';
+  if (/(mask|masks|masque|peel-off)/.test(blob)) return 'mask';
+  if (/(perfume|perfumes|eau-de-toilette|eau-de-parfum)/.test(blob)) return 'perfume';
+  if (/(toothpaste|toothpastes|mouthwash)/.test(blob)) return 'toothpaste';
+  if (/(body-wash|shower-gel|shower-gels|hand-wash|soap|soaps)/.test(blob)) return 'soap';
+  if (/(body-care|body-lotion|body-cream|body-butter)/.test(blob)) return 'body';
   if (/(moistur|cream|creams|baume|balm|lotion|idratant)/.test(blob)) return 'cream';
   return null;
 }
@@ -131,27 +141,18 @@ export async function lookupBarcode(raw: string, locale?: string): Promise<Catal
     const beauty = await fetchOff('world.openbeautyfacts.org', barcode);
     if (beauty) {
       const mapped = toCatalog(barcode, beauty, locale, 'beauty');
-      if (mapped && mapped.ingredients.length >= 2) return mapped;
-      if (mapped) {
-        const food = await fetchOff('world.openfoodfacts.org', barcode);
-        if (food) {
-          const foodMapped = toCatalog(barcode, food, locale, 'food');
-          if (foodMapped && foodMapped.ingredients.length >= 2) {
-            return {
-              ...mapped,
-              ingredients: foodMapped.ingredients,
-              name: mapped.name || foodMapped.name,
-              category: mapped.category || foodMapped.category,
-              source: 'food',
-            };
-          }
-        }
-        return mapped;
-      }
+      if (mapped) return mapped;
     }
 
     const food = await fetchOff('world.openfoodfacts.org', barcode);
-    if (food) return toCatalog(barcode, food, locale, 'food');
+    if (!food) return null;
+    const blob = `${food.categories ?? ''} ${(food.categories_tags ?? []).join(' ')} ${pickName(food, locale) ?? ''}`;
+    const kind = classifyCatalogBlob(blob);
+    const mapped = toCatalog(barcode, food, locale, kind === 'personal_care' ? 'beauty' : 'food');
+    if (kind === 'personal_care' && mapped) {
+      return { ...mapped, source: 'beauty' };
+    }
+    if (mapped) return { ...mapped, source: 'food' };
   } catch (error) {
     console.warn('Barcode lookup failed', error);
   }

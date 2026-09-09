@@ -68,6 +68,16 @@ export function canonicalizeIngredient(raw: string): string {
   return fuzzyName(cleaned) ?? cleaned;
 }
 
+export function isKnownInci(raw: string): boolean {
+  const cleaned = raw.replace(/\s+/g, ' ').replace(/^[\d.\s%-]+/, '').trim();
+  if (cleaned.length < 3) return false;
+  return fuzzyName(cleaned) !== null;
+}
+
+export function knownInciCount(list: string[]): number {
+  return list.filter(isKnownInci).length;
+}
+
 export function canonicalizeIngredients(list: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];

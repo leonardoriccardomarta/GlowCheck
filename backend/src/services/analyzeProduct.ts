@@ -5,6 +5,7 @@ import { env } from '../config/env';
 import { lookupBarcode } from './beautyFacts';
 import { decodeBarcodeFromImage } from './decodeBarcode';
 import { canonicalizeIngredients } from './matchIngredients';
+import { isOutOfCategory } from './personalCare';
 import { scoreFormula } from './score';
 import { suggestDupe } from './suggestDupe';
 import { extractFromPhoto } from './vision';
@@ -97,9 +98,13 @@ export async function analyzeProduct(req: AnalyzeRequest): Promise<AnalyzeRespon
   const locale = req.profile.locale;
   let productName: string | null = null;
   let format: string | null = null;
+  let catalogSource: 'beauty' | 'food' | null = null;
+  let visionKind: 'personal_care' | 'food' | 'other' | 'unknown' | null = null;
   const ingredientBuckets: string[][] = [];
   let barcode = req.barcode?.replace(/\D/g, '') || null;
   let source: 'barcode' | 'ocr' | 'barcode+ocr' = 'ocr';
+
+  const reject = () => empty('NOT_COSMETIC', copy(locale, 'not_cosmetic'));
 
   if (!barcode && req.imageBase64) {
     barcode = await decodeBarcodeFromImage(req.imageBase64);
@@ -107,7 +112,11 @@ export async function analyzeProduct(req: AnalyzeRequest): Promise<AnalyzeRespon
 
   if (barcode) {
     const catalog = await lookupBarcode(barcode, locale);
+    if (catalog?.source === 'food') {
+      return reject();
+    }
     if (catalog?.source === 'beauty') {
+      catalogSource = 'beauty';
       productName = catalog.brand ? `${catalog.brand} ${catalog.name}` : catalog.name;
       format = catalog.category;
       if (catalog.ingredients.length >= 2) {
@@ -122,6 +131,10 @@ export async function analyzeProduct(req: AnalyzeRequest): Promise<AnalyzeRespon
   if (req.imageBase64 && !catalogHit) {
     const vision = await extractFromPhoto(req.imageBase64);
     if (vision) {
+      visionKind = vision.kind;
+      if (vision.kind === 'food' || vision.kind === 'other') {
+        return reject();
+      }
       productName = productName || vision.productName;
       format = format || vision.category;
       if (vision.ingredients.length) ingredientBuckets.push(vision.ingredients);
@@ -129,7 +142,11 @@ export async function analyzeProduct(req: AnalyzeRequest): Promise<AnalyzeRespon
       if (!barcode && vision.barcode) {
         barcode = vision.barcode;
         const catalog = await lookupBarcode(vision.barcode, locale);
+        if (catalog?.source === 'food') {
+          return reject();
+        }
         if (catalog?.source === 'beauty') {
+          catalogSource = 'beauty';
           productName = productName || (catalog.brand ? `${catalog.brand} ${catalog.name}` : catalog.name);
           format = format || catalog.category;
           if (catalog.ingredients.length >= 2) {
@@ -147,9 +164,22 @@ export async function analyzeProduct(req: AnalyzeRequest): Promise<AnalyzeRespon
     productName,
     format,
     source,
+    catalogSource,
+    visionKind,
     ingredientCount: ingredients.length,
     hasImage: Boolean(req.imageBase64),
   });
+
+  if (
+    isOutOfCategory({
+      kind: visionKind,
+      catalogSource,
+      productName,
+      ingredients,
+    })
+  ) {
+    return reject();
+  }
 
   if (ingredients.length >= 1) {
     const scored = scoreFormula({
@@ -176,6 +206,9 @@ export async function analyzeProduct(req: AnalyzeRequest): Promise<AnalyzeRespon
   }
 
   if (productName) {
+    if (catalogSource !== 'beauty' && visionKind !== 'personal_care') {
+      return reject();
+    }
     const scored = scoreFormula({
       productName,
       ingredients: ['Aqua'],

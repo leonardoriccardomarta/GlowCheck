@@ -2,6 +2,7 @@ import { scoreFormula } from './score';
 import { catalogFallback } from './suggestDupe';
 import { canonicalizeIngredients } from './matchIngredients';
 import { categoryFromOff } from './beautyFacts';
+import { classifyCatalogBlob, isOutOfCategory } from './personalCare';
 
 function assert(cond: unknown, message: string) {
   if (!cond) throw new Error(message);
@@ -168,6 +169,29 @@ assert(
 assert(categoryFromOff({ categories_tags: ['en:serums'] }) === 'serum', 'OBF serum tag');
 assert(categoryFromOff({ categories_tags: ['en:face-creams', 'en:moisturizers'] }) === 'cream', 'OBF cream tag');
 assert(categoryFromOff({ categories_tags: ['en:sunscreens'] }) === 'sunscreen', 'OBF sunscreen tag');
+assert(categoryFromOff({ categories_tags: ['en:shampoos'] }) === 'shampoo', 'OBF shampoo tag');
+assert(categoryFromOff({ categories_tags: ['en:body-care'] }) === 'body', 'OBF body tag');
+
+assert(classifyCatalogBlob('en:foods en:pastas') === 'food', 'pasta tags are food');
+assert(classifyCatalogBlob('en:shampoos en:hair-care') === 'personal_care', 'shampoo tags are care');
+assert(classifyCatalogBlob('en:detergents en:laundry') === 'other', 'laundry is other');
+assert(
+  isOutOfCategory({
+    ingredients: ['wheat flour', 'zucchero', 'latte scremato'],
+    productName: 'Pasta di semola',
+  }),
+  'food ingredients must be out of category'
+);
+assert(
+  !isOutOfCategory({
+    catalogSource: 'beauty',
+    ingredients: ['Aqua', 'Sodium Laureth Sulfate', 'Cocamidopropyl Betaine', 'Glycerin'],
+    productName: 'Daily shampoo',
+  }),
+  'shampoo INCI must stay in category'
+);
+assert(isOutOfCategory({ kind: 'food' }), 'vision food is out');
+assert(!isOutOfCategory({ kind: 'personal_care', ingredients: ['Aqua'] }), 'vision care stays in');
 
 console.log('score + dupe checks passed', {
   oilyPores: oilyPores.compatibilityScore,

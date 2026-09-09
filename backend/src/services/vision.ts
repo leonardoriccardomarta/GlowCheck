@@ -7,6 +7,7 @@ export const visionExtractSchema = z.object({
   extractedIngredients: z.array(z.string()).optional(),
   ingredients: z.array(z.string()).optional(),
   category: z.string().nullable().optional(),
+  kind: z.string().nullable().optional(),
 });
 
 export type VisionExtract = {
@@ -14,16 +15,18 @@ export type VisionExtract = {
   barcode: string | null;
   ingredients: string[];
   category: string | null;
+  kind: 'personal_care' | 'food' | 'other' | 'unknown';
 };
 
-const USER_INSTRUCTIONS = `Transcribe exclusively the readable INCI ingredient names in this image as a JSON list of strings.
-If you detect the product format, add it. Do not add comments, scores, safety judgments, or medical claims.
-Brand fame does not matter. Korean, pharmacy, supermarket, indie, luxury, tester, or sample labels are valid if an INCI list is visible.
+const USER_INSTRUCTIONS = `GlowCheck is personal-care only: face, hair, body, sun, makeup, perfume, soap, deodorant, toothpaste. Transcribe INCI names if this is a cosmetic/personal-care label.
+If the photo is food, drink, a nutrition label, household cleaner, electronics, or anything else, set kind accordingly and leave extractedIngredients empty.
+Do not add comments, scores, safety judgments, or medical claims. Never invent a famous brand.
 JSON only, no markdown:
-{"extractedIngredients":["Aqua","Glycerin"],"category":"serum|cream|cleanser|sunscreen|toner|oil|null","productName":null,"barcode":null}
-- extractedIngredients: every readable INCI name, label order if possible. Empty array if none are readable.
-- category: serum, cream, cleanser, sunscreen, toner, oil, or null. Never guess a dupe or a score.
-- productName: visible brand + product if readable, else null. Never invent a famous brand.
+{"kind":"personal_care|food|other|unknown","extractedIngredients":["Aqua","Glycerin"],"category":"serum|cream|cleanser|sunscreen|toner|oil|shampoo|conditioner|body|deodorant|makeup|mask|perfume|soap|toothpaste|null","productName":null,"barcode":null}
+- kind: personal_care if this is self-care/cosmetic; food for edible products; other for household/non-care; unknown only if you cannot tell.
+- extractedIngredients: readable INCI names in label order. Empty array if none, or if kind is not personal_care.
+- category: one of the values above, or null. Hair, body, and hygiene cosmetics are valid. Never guess a dupe or a score.
+- productName: visible brand + product if readable, else null.
 - barcode: digits only if an EAN/UPC is clearly visible, else null.`;
 
 function stripDataUrl(raw: string) {
@@ -195,12 +198,38 @@ function sanitizeExtract(parsed: z.infer<typeof visionExtractSchema>): VisionExt
   const barcodeDigits = parsed.barcode?.replace(/\D/g, '') ?? '';
   const rawList = parsed.extractedIngredients?.length ? parsed.extractedIngredients : parsed.ingredients ?? [];
   const category = (parsed.category ?? '').toLowerCase().trim();
-  const allowed = new Set(['serum', 'cream', 'cleanser', 'sunscreen', 'toner', 'oil']);
+  const allowed = new Set([
+    'serum',
+    'cream',
+    'cleanser',
+    'sunscreen',
+    'toner',
+    'oil',
+    'shampoo',
+    'conditioner',
+    'body',
+    'deodorant',
+    'makeup',
+    'mask',
+    'perfume',
+    'soap',
+    'toothpaste',
+  ]);
+  const kindRaw = (parsed.kind ?? '').toLowerCase().trim();
+  const kind =
+    kindRaw === 'personal_care' || kindRaw === 'food' || kindRaw === 'other' || kindRaw === 'unknown'
+      ? kindRaw
+      : 'unknown';
+  const ingredients =
+    kind === 'food' || kind === 'other'
+      ? []
+      : rawList.map((item) => item.trim()).filter((item) => item.length >= 3).slice(0, 120);
   return {
     productName: parsed.productName?.slice(0, 80) ?? null,
     barcode: barcodeDigits.length >= 8 && barcodeDigits.length <= 14 ? barcodeDigits : null,
-    ingredients: rawList.map((item) => item.trim()).filter((item) => item.length >= 3).slice(0, 120),
+    ingredients,
     category: allowed.has(category) ? category : null,
+    kind,
   };
 }
 
