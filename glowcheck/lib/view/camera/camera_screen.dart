@@ -28,13 +28,13 @@ class _CameraScreenState extends State<CameraScreen> {
     await Navigator.pushNamed(context, PaywallScreen.routeName);
   }
 
-  Future<void> _analyze(List<int> bytes) async {
+  Future<void> _analyze(List<int> bytes, {String? barcode}) async {
     setState(() {
       busy = true;
       error = null;
     });
     try {
-      final ScanResult result = await GlowApi.analyzeJpeg(bytes);
+      final ScanResult result = await GlowApi.analyzeJpeg(bytes, barcode: barcode);
       await GlowStore.instance.addScan(result);
       if (!mounted) return;
       Navigator.pushNamed(context, FinishWorkoutScreen.routeName, arguments: result);
@@ -51,13 +51,14 @@ class _CameraScreenState extends State<CameraScreen> {
     if (!GlowStore.instance.canScan) return;
     final bytes = await _live.capture?.call();
     if (bytes == null || bytes.isEmpty) return;
-    await _analyze(bytes);
+    await _analyze(bytes, barcode: _live.lastBarcode);
   }
 
   Future<void> _gallery() async {
     if (busy) return;
     await _ensureQuota();
     if (!GlowStore.instance.canScan) return;
+    _live.lastBarcode = null;
     final file = await ImagePicker().pickImage(
       source: ImageSource.gallery,
       imageQuality: 70,

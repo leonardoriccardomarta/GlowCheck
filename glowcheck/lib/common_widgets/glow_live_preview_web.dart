@@ -13,6 +13,7 @@ class JSGlowCam {}
 extension JSGlowCamMethods on JSGlowCam {
   external JSPromise<JSAny?> start(web.HTMLVideoElement video);
   external String capture(web.HTMLVideoElement video);
+  external JSPromise<JSAny?> readBarcode(web.HTMLVideoElement video);
   external void stop();
   external JSPromise<JSBoolean> torch(JSBoolean on);
 }
@@ -210,6 +211,14 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> with WidgetsBindingObse
 
   Future<List<int>?> _capture() async {
     if (!_ready || !_shown) return null;
+    widget.controller.lastBarcode = null;
+    try {
+      final raw = await _glowCam.readBarcode(_video).toDart;
+      final digits = (raw?.toString() ?? '').replaceAll(RegExp(r'\D'), '');
+      if (digits.length >= 8 && digits.length <= 14) {
+        widget.controller.lastBarcode = digits;
+      }
+    } catch (_) {}
     final dataUrl = _glowCam.capture(_video);
     final comma = dataUrl.indexOf(',');
     if (comma < 0) return null;

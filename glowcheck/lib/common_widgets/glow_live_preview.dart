@@ -4,6 +4,7 @@ import 'glow_live_preview_io.dart' if (dart.library.js_interop) 'glow_live_previ
 
 class GlowLiveController {
   Future<List<int>?> Function()? capture;
+  String? lastBarcode;
   Future<bool> Function(bool on)? torch;
   Future<void> Function()? retry;
 }

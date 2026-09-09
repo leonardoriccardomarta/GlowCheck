@@ -29,6 +29,18 @@ window.GlowCam = {
     canvas.getContext('2d').drawImage(videoEl, 0, 0, w, h);
     return canvas.toDataURL('image/jpeg', 0.72);
   },
+  readBarcode: async function (videoEl) {
+    try {
+      if (typeof BarcodeDetector === 'undefined') return '';
+      var detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128'] });
+      var codes = await detector.detect(videoEl);
+      for (var i = 0; i < codes.length; i++) {
+        var digits = String(codes[i].rawValue || '').replace(/\D/g, '');
+        if (digits.length >= 8 && digits.length <= 14) return digits;
+      }
+    } catch (e) {}
+    return '';
+  },
   stop: function () {
     if (!this.stream) return;
     this.stream.getTracks().forEach(function (track) { track.stop(); });

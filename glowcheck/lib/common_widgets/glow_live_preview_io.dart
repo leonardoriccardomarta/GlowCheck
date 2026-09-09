@@ -7,6 +7,7 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> {
   void initState() {
     super.initState();
     widget.controller.capture = () async {
+      widget.controller.lastBarcode = null;
       final file = await ImagePicker().pickImage(
         source: ImageSource.camera,
         imageQuality: 70,

@@ -4,24 +4,27 @@ import { env } from '../config/env';
 export const visionExtractSchema = z.object({
   productName: z.string().nullable().optional(),
   barcode: z.string().nullable().optional(),
-  ingredients: z.array(z.string()).optional().default([]),
-  looksLikeCosmetic: z.boolean().optional(),
+  extractedIngredients: z.array(z.string()).optional(),
+  ingredients: z.array(z.string()).optional(),
+  category: z.string().nullable().optional(),
 });
 
 export type VisionExtract = {
   productName: string | null;
   barcode: string | null;
   ingredients: string[];
+  category: string | null;
 };
 
-const USER_INSTRUCTIONS = `Look at this product photo. It may be a barcode, a front label, or the INCI ingredient list on the back.
-Brand fame does not matter. Korean, pharmacy, supermarket, indie, luxury, or unknown labels are all valid if an INCI list is visible.
-Extract:
-- productName: brand + product if visible, else null. Never invent a famous brand.
-- barcode: digits only if an EAN/UPC barcode is visible, else null
-- ingredients: EVERY readable INCI name, in label order if possible (Aqua, Glycerin, oils, silicones, fragrance, fillers). Do not stop after a few actives. Empty array if none are readable.
-- looksLikeCosmetic: true if this looks like skincare/makeup/hair/body packaging OR an ingredient list
-JSON only, no markdown.`;
+const USER_INSTRUCTIONS = `Transcribe exclusively the readable INCI ingredient names in this image as a JSON list of strings.
+If you detect the product format, add it. Do not add comments, scores, safety judgments, or medical claims.
+Brand fame does not matter. Korean, pharmacy, supermarket, indie, luxury, tester, or sample labels are valid if an INCI list is visible.
+JSON only, no markdown:
+{"extractedIngredients":["Aqua","Glycerin"],"category":"serum|cream|cleanser|sunscreen|toner|oil|null","productName":null,"barcode":null}
+- extractedIngredients: every readable INCI name, label order if possible. Empty array if none are readable.
+- category: serum, cream, cleanser, sunscreen, toner, oil, or null. Never guess a dupe or a score.
+- productName: visible brand + product if readable, else null. Never invent a famous brand.
+- barcode: digits only if an EAN/UPC is clearly visible, else null.`;
 
 function stripDataUrl(raw: string) {
   const comma = raw.indexOf(',');
@@ -190,10 +193,14 @@ async function callOpenAi(imageBase64: string, mimeType: string) {
 
 function sanitizeExtract(parsed: z.infer<typeof visionExtractSchema>): VisionExtract {
   const barcodeDigits = parsed.barcode?.replace(/\D/g, '') ?? '';
+  const rawList = parsed.extractedIngredients?.length ? parsed.extractedIngredients : parsed.ingredients ?? [];
+  const category = (parsed.category ?? '').toLowerCase().trim();
+  const allowed = new Set(['serum', 'cream', 'cleanser', 'sunscreen', 'toner', 'oil']);
   return {
     productName: parsed.productName?.slice(0, 80) ?? null,
     barcode: barcodeDigits.length >= 8 && barcodeDigits.length <= 14 ? barcodeDigits : null,
-    ingredients: (parsed.ingredients ?? []).map((item) => item.trim()).filter((item) => item.length >= 3).slice(0, 120),
+    ingredients: rawList.map((item) => item.trim()).filter((item) => item.length >= 3).slice(0, 120),
+    category: allowed.has(category) ? category : null,
   };
 }
 

@@ -22,7 +22,10 @@ type SuggestInput = {
   mainGoal: MainGoal;
   spendBand?: SpendBand;
   locale?: string;
+  format?: string | null;
 };
+
+const FORMAT_KINDS = new Set(['serum', 'cream', 'cleanser', 'sunscreen', 'toner', 'oil']);
 
 function priceOf(item: DupeEntry) {
   const n = Number(String(item.estimatedPrice).replace(/[^\d]/g, ''));
@@ -103,9 +106,17 @@ function detectActives(blob: string) {
   return keys.filter((item) => blob.includes(item));
 }
 
+function resolveKind(input: SuggestInput) {
+  const blob = blobOf(input.ingredients, input.productName);
+  const detected = detectKind(blob);
+  if (detected === 'shave' || detected === 'hair' || detected === 'makeup') return detected;
+  if (input.format && FORMAT_KINDS.has(input.format)) return input.format;
+  return detected;
+}
+
 export function catalogFallback(input: SuggestInput): DupeSuggestion | null {
   const blob = blobOf(input.ingredients, input.productName);
-  const kind = detectKind(blob);
+  const kind = resolveKind(input);
   if (!kind || kind === 'shave' || kind === 'hair' || kind === 'makeup') return null;
   const actives = detectActives(blob);
 
@@ -175,7 +186,7 @@ async function askModel(input: SuggestInput): Promise<DupeSuggestion | null> {
   const key = env.GROQ_API_KEY || env.OPENAI_API_KEY;
   if (!key) return null;
 
-  const scannedKind = detectKind(blobOf(input.ingredients, input.productName));
+  const scannedKind = resolveKind(input);
   if (!scannedKind || scannedKind === 'shave' || scannedKind === 'hair' || scannedKind === 'makeup') {
     return null;
   }
@@ -289,7 +300,7 @@ ${catalogPromptBlock()}`;
 
 export async function suggestDupe(input: SuggestInput): Promise<DupeSuggestion | null> {
   if (input.ingredients.length < 1 && !input.productName) return null;
-  const kind = detectKind(blobOf(input.ingredients, input.productName));
+  const kind = resolveKind(input);
   if (!kind || kind === 'shave' || kind === 'hair' || kind === 'makeup') return null;
   const fromModel = await askModel(input);
   if (fromModel) return fromModel;

@@ -1,5 +1,7 @@
 import { scoreFormula } from './score';
 import { catalogFallback } from './suggestDupe';
+import { canonicalizeIngredients } from './matchIngredients';
+import { categoryFromOff } from './beautyFacts';
 
 function assert(cond: unknown, message: string) {
   if (!cond) throw new Error(message);
@@ -143,6 +145,29 @@ const oilyAcid = scoreFormula({
 });
 assert(oilyAcid.ingredients.find((item) => item.name.includes('Salicylic'))?.tag === 'fit', 'BHA fit on oily');
 assert(oilyAcid.compatibilityScore >= 70, `oily+BHA should be compatible, got ${oilyAcid.compatibilityScore}`);
+
+const fuzzy = canonicalizeIngredients(['Glyceriin', 'Niacinamid', 'Isopropil Myristate', 'Aqua']);
+assert(fuzzy.includes('Glycerin'), `Glyceriin should map to Glycerin (${fuzzy.join(', ')})`);
+assert(fuzzy.includes('Niacinamide'), `Niacinamid should map to Niacinamide (${fuzzy.join(', ')})`);
+assert(
+  fuzzy.some((item) => /myristate/i.test(item)),
+  `Isopropil Myristate should map to isopropyl myristate (${fuzzy.join(', ')})`
+);
+
+const fuzzyOily = scoreFormula({
+  productName: 'Rich cream',
+  ingredients: canonicalizeIngredients(['Aqua', 'Isopropil Myristate', 'Glyceriin']),
+  skinType: 'oily',
+  mainGoal: 'pores',
+});
+assert(
+  fuzzyOily.ingredients.find((item) => /myristate/i.test(item.name))?.tag === 'watch',
+  'fuzzy IPM must still be watch on oily'
+);
+
+assert(categoryFromOff({ categories_tags: ['en:serums'] }) === 'serum', 'OBF serum tag');
+assert(categoryFromOff({ categories_tags: ['en:face-creams', 'en:moisturizers'] }) === 'cream', 'OBF cream tag');
+assert(categoryFromOff({ categories_tags: ['en:sunscreens'] }) === 'sunscreen', 'OBF sunscreen tag');
 
 console.log('score + dupe checks passed', {
   oilyPores: oilyPores.compatibilityScore,

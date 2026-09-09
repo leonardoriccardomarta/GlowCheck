@@ -12,7 +12,7 @@ class GlowApi {
 
   static String get baseUrl => AppEnv.analyzeBase;
 
-  static Future<ScanResult> analyzeJpeg(List<int> bytes) async {
+  static Future<ScanResult> analyzeJpeg(List<int> bytes, {String? barcode}) async {
     final store = GlowStore.instance;
     final skin = store.skinType;
     final goal = store.mainGoal;
@@ -30,6 +30,8 @@ class GlowApi {
             body: jsonEncode({
               'imageBase64': base64Encode(bytes),
               'mimeType': 'image/jpeg',
+              if (barcode != null && barcode.replaceAll(RegExp(r'\D'), '').length >= 8)
+                'barcode': barcode.replaceAll(RegExp(r'\D'), ''),
               'profile': {
                 'skinType': skin,
                 'mainGoal': goal,

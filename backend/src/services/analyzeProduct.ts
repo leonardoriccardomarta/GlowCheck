@@ -3,6 +3,8 @@ import { copy } from '../i18n/scoreCopy';
 import type { AnalyzeRequest, AnalyzeResponse } from '../schemas/analyze';
 import { env } from '../config/env';
 import { lookupBarcode } from './beautyFacts';
+import { decodeBarcodeFromImage } from './decodeBarcode';
+import { canonicalizeIngredients } from './matchIngredients';
 import { scoreFormula } from './score';
 import { suggestDupe } from './suggestDupe';
 import { extractFromPhoto } from './vision';
@@ -92,42 +94,59 @@ export async function analyzeProduct(req: AnalyzeRequest): Promise<AnalyzeRespon
     return mockResponse(req);
   }
 
+  const locale = req.profile.locale;
   let productName: string | null = null;
+  let format: string | null = null;
   const ingredientBuckets: string[][] = [];
   let barcode = req.barcode?.replace(/\D/g, '') || null;
+  let source: 'barcode' | 'ocr' | 'barcode+ocr' = 'ocr';
+
+  if (!barcode && req.imageBase64) {
+    barcode = await decodeBarcodeFromImage(req.imageBase64);
+  }
 
   if (barcode) {
-    const catalog = await lookupBarcode(barcode);
-    if (catalog) {
+    const catalog = await lookupBarcode(barcode, locale);
+    if (catalog?.source === 'beauty') {
       productName = catalog.brand ? `${catalog.brand} ${catalog.name}` : catalog.name;
-      ingredientBuckets.push(catalog.ingredients);
+      format = catalog.category;
+      if (catalog.ingredients.length >= 2) {
+        ingredientBuckets.push(catalog.ingredients);
+        source = 'barcode';
+      }
     }
   }
 
-  if (req.imageBase64 && ingredientBuckets.flat().length < 3) {
+  const catalogHit = ingredientBuckets.flat().length >= 2;
+
+  if (req.imageBase64 && !catalogHit) {
     const vision = await extractFromPhoto(req.imageBase64);
     if (vision) {
       productName = productName || vision.productName;
-      ingredientBuckets.push(vision.ingredients);
+      format = format || vision.category;
+      if (vision.ingredients.length) ingredientBuckets.push(vision.ingredients);
+      if (barcode) source = 'barcode+ocr';
       if (!barcode && vision.barcode) {
         barcode = vision.barcode;
-        const catalog = await lookupBarcode(vision.barcode);
-        if (catalog) {
+        const catalog = await lookupBarcode(vision.barcode, locale);
+        if (catalog?.source === 'beauty') {
           productName = productName || (catalog.brand ? `${catalog.brand} ${catalog.name}` : catalog.name);
-          ingredientBuckets.push(catalog.ingredients);
+          format = format || catalog.category;
+          if (catalog.ingredients.length >= 2) {
+            ingredientBuckets.unshift(catalog.ingredients);
+            source = 'barcode';
+          }
         }
       }
     }
-  } else if (req.imageBase64 && barcode && !productName) {
-    const vision = await extractFromPhoto(req.imageBase64);
-    if (vision?.productName) productName = vision.productName;
-    if (vision?.ingredients.length) ingredientBuckets.push(vision.ingredients);
   }
 
-  const ingredients = mergeIngredients(ingredientBuckets);
+  const ingredients = canonicalizeIngredients(mergeIngredients(ingredientBuckets));
   console.log('analyze result', {
     barcode,
     productName,
+    format,
+    source,
     ingredientCount: ingredients.length,
     hasImage: Boolean(req.imageBase64),
   });
@@ -138,7 +157,7 @@ export async function analyzeProduct(req: AnalyzeRequest): Promise<AnalyzeRespon
       ingredients,
       skinType: req.profile.skinType,
       mainGoal: req.profile.mainGoal,
-      locale: req.profile.locale,
+      locale,
     });
     const dupe = await suggestDupe({
       productName,
@@ -146,7 +165,8 @@ export async function analyzeProduct(req: AnalyzeRequest): Promise<AnalyzeRespon
       skinType: req.profile.skinType,
       mainGoal: req.profile.mainGoal,
       spendBand: req.profile.spendBand,
-      locale: req.profile.locale,
+      locale,
+      format,
     });
     return {
       ...scored,
@@ -161,7 +181,7 @@ export async function analyzeProduct(req: AnalyzeRequest): Promise<AnalyzeRespon
       ingredients: ['Aqua'],
       skinType: req.profile.skinType,
       mainGoal: req.profile.mainGoal,
-      locale: req.profile.locale,
+      locale,
     });
     const dupe = await suggestDupe({
       productName,
@@ -169,12 +189,13 @@ export async function analyzeProduct(req: AnalyzeRequest): Promise<AnalyzeRespon
       skinType: req.profile.skinType,
       mainGoal: req.profile.mainGoal,
       spendBand: req.profile.spendBand,
-      locale: req.profile.locale,
+      locale,
+      format,
     });
     return {
       ...scored,
-      headline: copy(req.profile.locale, 'limited_headline'),
-      whyForYou: copy(req.profile.locale, 'limited_why'),
+      headline: copy(locale, 'limited_headline'),
+      whyForYou: copy(locale, 'limited_why'),
       flaggedIngredients: [],
       ingredients: [],
       dupe,
@@ -183,7 +204,7 @@ export async function analyzeProduct(req: AnalyzeRequest): Promise<AnalyzeRespon
   }
 
   if (barcode && !req.imageBase64) {
-    return empty('UNREADABLE', copy(req.profile.locale, 'barcode_none'));
+    return empty('UNREADABLE', copy(locale, 'barcode_none'));
   }
-  return empty('UNREADABLE', copy(req.profile.locale, 'unreadable'));
+  return empty('UNREADABLE', copy(locale, 'unreadable'));
 }
