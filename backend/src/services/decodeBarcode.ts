@@ -50,7 +50,13 @@ async function raster(input: Buffer, rotate: number, maxEdge: number, band: Band
   const { data, info } = await sharp(input, { failOn: 'none' })
     .rotate(rotate || undefined)
     .greyscale()
-    .normalize()
+    .extend({
+      top: 24,
+      bottom: 24,
+      left: 48,
+      right: 48,
+      background: '#ffffff',
+    })
     .resize(maxEdge, maxEdge, { fit: 'inside', withoutEnlargement: false })
     .raw()
     .toBuffer({ resolveWithObject: true });
@@ -74,7 +80,13 @@ async function raster(input: Buffer, rotate: number, maxEdge: number, band: Band
   return { data: pixels, width, height };
 }
 
-function decodeBuffer(zxing: Zxing, pixels: Buffer, width: number, height: number) {
+function decodeBuffer(
+  zxing: Zxing,
+  pixels: Buffer,
+  width: number,
+  height: number,
+  opts: { tryHarder: boolean; pure: boolean }
+) {
   const hints = new Map();
   hints.set(zxing.DecodeHintType.POSSIBLE_FORMATS, [
     zxing.BarcodeFormat.EAN_13,
@@ -83,23 +95,22 @@ function decodeBuffer(zxing: Zxing, pixels: Buffer, width: number, height: numbe
     zxing.BarcodeFormat.UPC_E,
     zxing.BarcodeFormat.CODE_128,
   ]);
-  hints.set(zxing.DecodeHintType.TRY_HARDER, true);
+  if (opts.tryHarder) hints.set(zxing.DecodeHintType.TRY_HARDER, true);
+  if (opts.pure) hints.set(zxing.DecodeHintType.PURE_BARCODE, true);
   const source = new zxing.RGBLuminanceSource(Uint8ClampedArray.from(pixels), width, height);
   const reader = new zxing.MultiFormatReader();
   reader.setHints(hints);
   try {
-    const bitmap = new zxing.BinaryBitmap(new zxing.HybridBinarizer(source));
-    return reader.decode(bitmap).getText();
+    return reader.decode(new zxing.BinaryBitmap(new zxing.HybridBinarizer(source))).getText();
   } catch {
-    const bitmap = new zxing.BinaryBitmap(new zxing.GlobalHistogramBinarizer(source));
-    return reader.decode(bitmap).getText();
+    return reader.decode(new zxing.BinaryBitmap(new zxing.GlobalHistogramBinarizer(source))).getText();
   }
 }
 
 export async function decodeBarcodeFromImage(imageBase64: string): Promise<string | null> {
   const work = decodeBarcodeInner(imageBase64);
   const timeout = new Promise<null>((resolve) => {
-    setTimeout(() => resolve(null), 4000);
+    setTimeout(() => resolve(null), 5000);
   });
   return Promise.race([work, timeout]);
 }
@@ -110,24 +121,44 @@ async function decodeBarcodeInner(imageBase64: string): Promise<string | null> {
   try {
     const input = Buffer.from(cleanBase64(imageBase64), 'base64');
     if (input.length < 80) return null;
-    const attempts: { rotate: number; maxEdge: number; band: Band; invert: boolean }[] = [
-      { rotate: 0, maxEdge: 1400, band: 'center', invert: false },
-      { rotate: 0, maxEdge: 1400, band: 'bottom', invert: false },
-      { rotate: 0, maxEdge: 1600, band: 'full', invert: false },
-      { rotate: 90, maxEdge: 1200, band: 'center', invert: false },
-      { rotate: 270, maxEdge: 1200, band: 'center', invert: false },
-      { rotate: 0, maxEdge: 1400, band: 'center', invert: true },
-      { rotate: 180, maxEdge: 1200, band: 'center', invert: false },
-      { rotate: 0, maxEdge: 1400, band: 'top', invert: false },
+    const attempts: {
+      rotate: number;
+      maxEdge: number;
+      band: Band;
+      invert: boolean;
+      tryHarder: boolean;
+      pure: boolean;
+    }[] = [
+      { rotate: 0, maxEdge: 1600, band: 'full', invert: false, tryHarder: false, pure: true },
+      { rotate: 0, maxEdge: 1600, band: 'full', invert: false, tryHarder: true, pure: false },
+      { rotate: 0, maxEdge: 2000, band: 'full', invert: false, tryHarder: true, pure: true },
+      { rotate: 90, maxEdge: 1600, band: 'full', invert: false, tryHarder: true, pure: true },
+      { rotate: 270, maxEdge: 1600, band: 'full', invert: false, tryHarder: true, pure: true },
+      { rotate: 0, maxEdge: 1600, band: 'center', invert: false, tryHarder: true, pure: true },
+      { rotate: 0, maxEdge: 1600, band: 'center', invert: false, tryHarder: true, pure: false },
+      { rotate: 180, maxEdge: 1400, band: 'full', invert: false, tryHarder: true, pure: true },
+      { rotate: 0, maxEdge: 1600, band: 'full', invert: true, tryHarder: true, pure: true },
     ];
     for (const attempt of attempts) {
       try {
-        const { data, width, height } = await raster(input, attempt.rotate, attempt.maxEdge, attempt.band, attempt.invert);
-        const raw = decodeBuffer(zxing, data, width, height);
+        const { data, width, height } = await raster(
+          input,
+          attempt.rotate,
+          attempt.maxEdge,
+          attempt.band,
+          attempt.invert
+        );
+        const raw = decodeBuffer(zxing, data, width, height, {
+          tryHarder: attempt.tryHarder,
+          pure: attempt.pure,
+        });
         const barcode = normalizeBarcode(raw);
         if (isValidGtin(barcode)) {
           console.log('Barcode decoded', barcode, attempt);
           return barcode;
+        }
+        if (barcode.length >= 8) {
+          console.log('Barcode checksum rejected', barcode);
         }
       } catch {
         // next crop / rotation

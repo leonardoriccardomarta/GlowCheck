@@ -4,6 +4,7 @@ window.GlowCam = {
   _huntTimer: null,
   _detector: null,
   _hunting: false,
+  FRAME: { x: 0.08, y: 0.38, w: 0.84, h: 0.22 },
 
   _gtinOk: function (raw) {
     var d = String(raw || '').replace(/\D/g, '');
@@ -25,7 +26,7 @@ window.GlowCam = {
     if (this._detector) return this._detector;
     try {
       this._detector = new BarcodeDetector({
-        formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'qr_code'],
+        formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128'],
       });
     } catch (e) {
       this._detector = null;
@@ -52,33 +53,57 @@ window.GlowCam = {
     }
   },
 
-  _bandCanvas: function (from, yRatio, hRatio) {
-    var w = from.width || from.videoWidth || 0;
-    var h = from.height || from.videoHeight || 0;
-    if (w < 40 || h < 40) return null;
-    var by = Math.round(h * yRatio);
-    var bh = Math.max(48, Math.round(h * hRatio));
-    if (by + bh > h) by = Math.max(0, h - bh);
-    var band = document.createElement('canvas');
-    band.width = w;
-    band.height = bh;
-    band.getContext('2d').drawImage(from, 0, by, w, bh, 0, 0, w, bh);
-    return band;
+  _coverRect: function (videoEl) {
+    var vw = videoEl.videoWidth || 0;
+    var vh = videoEl.videoHeight || 0;
+    var dw = videoEl.clientWidth || 1;
+    var dh = videoEl.clientHeight || 1;
+    if (vw < 8 || vh < 8) return null;
+    var scale = Math.max(dw / vw, dh / vh);
+    return {
+      sx: (vw * scale - dw) / 2 / scale,
+      sy: (vh * scale - dh) / 2 / scale,
+      sw: dw / scale,
+      sh: dh / scale,
+    };
+  },
+
+  _crop: function (from, sx, sy, sw, sh) {
+    if (sw < 24 || sh < 24) return null;
+    var canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(sw));
+    canvas.height = Math.max(1, Math.round(sh));
+    canvas.getContext('2d').drawImage(from, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    return canvas;
+  },
+
+  _visibleCanvas: function (videoEl) {
+    var r = this._coverRect(videoEl);
+    if (!r) return null;
+    return this._crop(videoEl, r.sx, r.sy, r.sw, r.sh);
+  },
+
+  _frameCanvas: function (videoEl) {
+    var vis = this._visibleCanvas(videoEl);
+    if (!vis) return null;
+    var f = this.FRAME;
+    var padX = vis.width * 0.03;
+    var padY = vis.height * 0.06;
+    var x = vis.width * f.x - padX;
+    var y = vis.height * f.y - padY;
+    var w = vis.width * f.w + padX * 2;
+    var h = vis.height * f.h + padY * 2;
+    x = Math.max(0, x);
+    y = Math.max(0, y);
+    w = Math.min(vis.width - x, w);
+    h = Math.min(vis.height - y, h);
+    return this._crop(vis, x, y, w, h);
   },
 
   _scanSource: async function (source) {
+    if (!source) return '';
     var hit = await this._detect(source);
     if (hit) return hit;
-    var mid = this._bandCanvas(source, 0.28, 0.44);
-    if (mid) {
-      hit = await this._detect(mid);
-      if (hit) return hit;
-    }
-    var bottom = this._bandCanvas(source, 0.5, 0.48);
-    if (bottom) {
-      hit = await this._detect(bottom);
-      if (hit) return hit;
-    }
     return '';
   },
 
@@ -86,7 +111,8 @@ window.GlowCam = {
     if (this._hunting || !videoEl || videoEl.readyState < 2) return;
     this._hunting = true;
     try {
-      var hit = await this._scanSource(videoEl);
+      var hit = await this._scanSource(this._frameCanvas(videoEl));
+      if (!hit) hit = await this._scanSource(this._visibleCanvas(videoEl));
       if (hit) this.lastBarcode = hit;
     } finally {
       this._hunting = false;
@@ -98,7 +124,7 @@ window.GlowCam = {
     this._stopHunt();
     this._huntTimer = setInterval(function () {
       self._huntTick(videoEl);
-    }, 280);
+    }, 240);
     this._huntTick(videoEl);
   },
 
@@ -142,19 +168,25 @@ window.GlowCam = {
   },
 
   capture: async function (videoEl) {
-    var w = videoEl.videoWidth || 1280;
-    var h = videoEl.videoHeight || 720;
-    var canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    canvas.getContext('2d').drawImage(videoEl, 0, 0, w, h);
-    var fromShot = await this._scanSource(canvas);
-    if (fromShot) this.lastBarcode = fromShot;
-    return canvas.toDataURL('image/jpeg', 0.84);
+    var vis = this._visibleCanvas(videoEl);
+    var frame = this._frameCanvas(videoEl);
+    var hit = await this._scanSource(frame);
+    if (!hit) hit = await this._scanSource(vis);
+    if (hit) this.lastBarcode = hit;
+    var out = vis || frame;
+    if (!out) {
+      var fallback = document.createElement('canvas');
+      fallback.width = videoEl.videoWidth || 1280;
+      fallback.height = videoEl.videoHeight || 720;
+      fallback.getContext('2d').drawImage(videoEl, 0, 0);
+      out = fallback;
+    }
+    return out.toDataURL('image/jpeg', 0.92);
   },
 
   readBarcode: async function (videoEl) {
-    var live = await this._scanSource(videoEl);
+    var live = await this._scanSource(this._frameCanvas(videoEl));
+    if (!live) live = await this._scanSource(this._visibleCanvas(videoEl));
     if (live) this.lastBarcode = live;
     return this.lastBarcode || '';
   },

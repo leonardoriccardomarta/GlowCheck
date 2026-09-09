@@ -19,15 +19,16 @@ export type VisionExtract = {
   kind: 'personal_care' | 'food' | 'other' | 'unknown';
 };
 
-const USER_INSTRUCTIONS = `GlowCheck is personal-care only: face, hair, body, sun, makeup, perfume, soap, deodorant, toothpaste. Transcribe INCI names if this is a cosmetic/personal-care label.
+const USER_INSTRUCTIONS = `GlowCheck is personal-care only: face, hair, body, sun, makeup, perfume, soap, deodorant, toothpaste.
+If this photo is mainly a barcode, EAN, QR, or the back of a bottle without a readable INCI list, set extractedIngredients to [] and do not recall a typical formula.
 If the photo is food, drink, a nutrition label, household cleaner, electronics, or anything else, set kind accordingly and leave extractedIngredients empty.
 Do not add comments, scores, safety judgments, medical claims, or <think> tags.
-Never invent a brand line (Fructis vs Ultra Dolce vs another Garnier range). Copy only words visible on the pack. If the line is unreadable, brand only or null.
-Never guess barcode digits. Always set barcode to null.
+Never invent a brand line (Fructis vs Ultra Dolce vs another Garnier range). Copy only words printed in the photo. If you only see Garnier, productName is Garnier, not Fructis.
+Never guess barcode digits or ingredients that are not readable. Always set barcode to null.
 JSON only, no markdown and no reasoning:
 {"kind":"personal_care|food|other|unknown","extractedIngredients":["Aqua","Glycerin"],"category":"serum|cream|cleanser|sunscreen|toner|oil|shampoo|conditioner|body|deodorant|makeup|mask|perfume|soap|toothpaste|null","productName":null,"barcode":null}
 - kind: personal_care if this is self-care/cosmetic; food for edible products; other for household/non-care; unknown only if you cannot tell.
-- extractedIngredients: readable INCI names in label order. Empty array if none, or if kind is not personal_care.
+- extractedIngredients: only INCI names you can actually read, in label order. Empty array if the list is not in the photo.
 - category: one of the values above, or null. Hair, body, and hygiene cosmetics are valid. Never guess a dupe or a score.
 - productName: visible brand + product line if readable, else null. Do not substitute a sibling product.
 - barcode: always null. A separate decoder reads the bars.`;
