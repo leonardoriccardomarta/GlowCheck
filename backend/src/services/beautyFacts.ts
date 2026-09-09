@@ -39,6 +39,20 @@ export function normalizeBarcode(raw: string) {
   return value;
 }
 
+/** GS1 check digit for EAN-8 / UPC-A / EAN-13 / GTIN-14. */
+export function isValidGtin(raw: string) {
+  const value = digitsOnly(raw);
+  if (![8, 12, 13, 14].includes(value.length)) return false;
+  const body = value.slice(0, -1);
+  const check = Number(value.slice(-1));
+  let sum = 0;
+  for (let i = 0; i < body.length; i += 1) {
+    const digit = Number(body[body.length - 1 - i]);
+    sum += i % 2 === 0 ? digit * 3 : digit;
+  }
+  return (10 - (sum % 10)) % 10 === check;
+}
+
 export function categoryFromOff(product: { categories?: string; categories_tags?: string[] } | null | undefined): string | null {
   const blob = `${product?.categories ?? ''} ${(product?.categories_tags ?? []).join(' ')}`.toLowerCase();
   if (!blob.trim()) return null;
@@ -135,7 +149,7 @@ function toCatalog(barcode: string, product: OffProduct, locale: string | undefi
 
 export async function lookupBarcode(raw: string, locale?: string): Promise<CatalogProduct | null> {
   const barcode = normalizeBarcode(raw);
-  if (barcode.length < 8 || barcode.length > 14) return null;
+  if (!isValidGtin(barcode)) return null;
 
   try {
     const beauty = await fetchOff('world.openbeautyfacts.org', barcode);

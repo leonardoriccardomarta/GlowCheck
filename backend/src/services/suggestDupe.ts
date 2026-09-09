@@ -3,6 +3,7 @@ import { dupeBlurb, dupePrice } from '../i18n/dupeBlurbs';
 import { copy, normalizeLocale } from '../i18n/scoreCopy';
 import { env } from '../config/env';
 import type { MainGoal, SkinType } from './score';
+import { extractVisionJson } from './visionJson';
 
 export type SpendBand = 'low' | 'mid' | 'high';
 
@@ -25,7 +26,9 @@ type SuggestInput = {
   format?: string | null;
 };
 
-const FORMAT_KINDS = new Set(['serum', 'cream', 'cleanser', 'sunscreen', 'toner', 'oil']);
+const FACE_FORMATS = new Set(['serum', 'cream', 'cleanser', 'sunscreen', 'toner', 'oil']);
+const HAIR_FORMATS = new Set(['shampoo', 'conditioner']);
+const SKIP_DUPE_KINDS = new Set(['shave', 'makeup', 'perfume', 'deodorant', 'toothpaste', 'soap', 'mask', 'body']);
 
 function priceOf(item: DupeEntry) {
   const n = Number(String(item.estimatedPrice).replace(/[^\d]/g, ''));
@@ -33,13 +36,7 @@ function priceOf(item: DupeEntry) {
 }
 
 function extractJson(text: string) {
-  const trimmed = text.trim();
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const body = fenced ? fenced[1].trim() : trimmed;
-  const start = body.indexOf('{');
-  const end = body.lastIndexOf('}');
-  if (start !== -1 && end > start) return body.slice(start, end + 1);
-  return body;
+  return extractVisionJson(text);
 }
 
 function blobOf(ingredients: string[], productName: string | null) {
@@ -54,22 +51,24 @@ function detectKind(blob: string): string | null {
   ) {
     return 'shave';
   }
-  if (/(shampoo|conditioner|hair mask|balsamo capelli)/.test(blob)) return 'hair';
+  if (
+    /(shampoo|conditioner|hair mask|balsamo capelli|polyquaternium|fructis|elseve|dercos|pantene|head & shoulders)/.test(
+      blob
+    )
+  ) {
+    return 'hair';
+  }
   if (/(mascara|foundation|lipstick|concealer|eyeshadow|fondotinta)/.test(blob)) return 'makeup';
   if (/(spf|sunscreen|uvinul|tinosorb|zinc oxide|titanium dioxide|octinoxate|avobenzone)/.test(blob)) {
     return 'sunscreen';
   }
-  if (
-    /(cleans|face wash|micellar|syndet|gel nettoy|detergente viso|cleansing foam)/.test(blob) ||
-    blob.includes('sodium laureth') ||
-    blob.includes('coco-glucoside')
-  ) {
+  if (/(cleans|face wash|micellar|syndet|gel nettoy|detergente viso|cleansing foam)/.test(blob)) {
     return 'cleanser';
   }
   if (/(cream|moistur|baume|balm|butter|crema|idratante viso|night cream|barrier)/.test(blob)) return 'cream';
   if (/(serum|ampoule|concentrate|siero)/.test(blob)) return 'serum';
   if (/(toner|essence)/.test(blob)) return 'toner';
-  if (/(oil|huile|olio viso|squalane)/.test(blob)) return 'oil';
+  if (/(face oil|olio viso|huile visage|\bsqualane\b)/.test(blob)) return 'oil';
   if (ingredientsLookLikeSerum(blob)) return 'serum';
   return null;
 }
@@ -107,17 +106,21 @@ function detectActives(blob: string) {
 }
 
 function resolveKind(input: SuggestInput) {
-  const blob = blobOf(input.ingredients, input.productName);
-  const detected = detectKind(blob);
-  if (detected === 'shave' || detected === 'hair' || detected === 'makeup') return detected;
-  if (input.format && FORMAT_KINDS.has(input.format)) return input.format;
-  return detected;
+  const format = (input.format ?? '').toLowerCase().trim();
+  if (HAIR_FORMATS.has(format)) return 'hair';
+  if (SKIP_DUPE_KINDS.has(format)) return format;
+  if (FACE_FORMATS.has(format)) return format;
+  return detectKind(blobOf(input.ingredients, input.productName));
+}
+
+function shouldSkipDupe(kind: string | null) {
+  return !kind || SKIP_DUPE_KINDS.has(kind);
 }
 
 export function catalogFallback(input: SuggestInput): DupeSuggestion | null {
   const blob = blobOf(input.ingredients, input.productName);
   const kind = resolveKind(input);
-  if (!kind || kind === 'shave' || kind === 'hair' || kind === 'makeup') return null;
+  if (shouldSkipDupe(kind)) return null;
   const actives = detectActives(blob);
 
   const ranked = DUPE_CATALOG.map((item) => {
@@ -187,7 +190,7 @@ async function askModel(input: SuggestInput): Promise<DupeSuggestion | null> {
   if (!key) return null;
 
   const scannedKind = resolveKind(input);
-  if (!scannedKind || scannedKind === 'shave' || scannedKind === 'hair' || scannedKind === 'makeup') {
+  if (shouldSkipDupe(scannedKind)) {
     return null;
   }
 
@@ -195,11 +198,11 @@ async function askModel(input: SuggestInput): Promise<DupeSuggestion | null> {
   const lang = ({ it: 'Italian', en: 'English', es: 'Spanish', fr: 'French', de: 'German' } as const)[normalizeLocale(input.locale)];
   const priceHint = normalizeLocale(input.locale) === 'en' ? '~$12' : '~12 €';
   const system = `You recommend one cheaper drugstore dupe for a scanned cosmetic.
-Stay inside the same format only: serum vs serum, face cream vs moisturizer, cleanser vs cleanser, sunscreen vs sunscreen, toner vs toner or serum.
-Never swap a razor, shaving foam, aftershave, shampoo, hair product, or makeup against a face cream or serum.
+Stay inside the same format only: serum vs serum, face cream vs moisturizer, cleanser vs cleanser, sunscreen vs sunscreen, toner vs toner or serum, shampoo vs shampoo, conditioner vs conditioner.
+Never swap a razor, shaving foam, aftershave, shampoo, or makeup against a face cream, serum, or cleanser.
 Gillette, Schick, Wilkinson and similar shave brands are not daily face moisturizers.
-If the scanned item is not comparable skincare, or the category does not match, return {"skip":true}.
-JSON only, no markdown.`;
+If the scanned item is not comparable, or the category does not match, return {"skip":true}.
+JSON only, no markdown and no <think> tags.`;
   const prompt = `Suggest ONE cheaper, widely sold alternative for this scanned cosmetic.
 Write blurb and whyThis in ${lang}. Use prices like ${priceHint}.
 The scanned item can be any brand: Korean, pharmacy, supermarket, indie, luxury, or unknown. Fame does not matter.
@@ -211,9 +214,9 @@ INCI (readable): ${ingredients || 'none'}
 Detected format: ${scannedKind}
 
 Rules:
-- Same format only. Serum vs serum. Face cream vs face moisturizer. Cleanser vs cleanser. Sunscreen vs sunscreen.
-- Never swap a razor, shaving foam, aftershave, shampoo, or makeup against a face cream or serum.
-- Gillette, Schick, Wilkinson and similar shave brands are not daily face moisturizers. If the scan is shave or not comparable skincare, return {"skip":true}.
+- Same format only. Serum vs serum. Face cream vs face moisturizer. Cleanser vs cleanser. Sunscreen vs sunscreen. Shampoo vs shampoo. Conditioner vs conditioner.
+- Never swap a razor, shaving foam, aftershave, shampoo, or makeup against a face cream, serum, or cleanser.
+- If the scan is shave, makeup, body wash, or not comparable, return {"skip":true}.
 - Pick a real cheaper product sold in drugstores / pharmacies / Olive Young / Stylevana / ordinary EU or US shops
 - Match useful INCI jobs (niacinamide, hyaluronic, ceramide, BHA, cica, urea, etc.)
 - Skin first, then goal. Oily: no heavy cream. Dry: no foaming cleanser. Sensitive: fragrance-light.
@@ -236,9 +239,9 @@ ${catalogPromptBlock()}`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
+        model: env.DUPE_MODEL,
         temperature: 0.2,
-        max_completion_tokens: 220,
+        max_completion_tokens: 400,
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: prompt },
@@ -251,7 +254,9 @@ ${catalogPromptBlock()}`;
     }
     const json = (await response.json()) as { choices?: { message?: { content?: string } }[] };
     const raw = json.choices?.[0]?.message?.content ?? '';
-    const parsed = JSON.parse(extractJson(raw)) as {
+    const jsonText = extractJson(raw);
+    if (!jsonText) return null;
+    const parsed = JSON.parse(jsonText) as {
       skip?: boolean;
       brand?: string;
       name?: string;
@@ -263,7 +268,7 @@ ${catalogPromptBlock()}`;
     const brand = String(parsed.brand).slice(0, 40);
     const name = String(parsed.name).slice(0, 80);
     const suggestedKind = detectKind(`${brand} ${name} ${parsed.blurb ?? ''}`);
-    if (suggestedKind === 'shave' || suggestedKind === 'hair' || suggestedKind === 'makeup') return null;
+    if (suggestedKind && SKIP_DUPE_KINDS.has(suggestedKind)) return null;
     if (suggestedKind && !sameKindFamily(scannedKind, suggestedKind)) return null;
     const known = DUPE_CATALOG.find(
       (item) =>
@@ -301,7 +306,7 @@ ${catalogPromptBlock()}`;
 export async function suggestDupe(input: SuggestInput): Promise<DupeSuggestion | null> {
   if (input.ingredients.length < 1 && !input.productName) return null;
   const kind = resolveKind(input);
-  if (!kind || kind === 'shave' || kind === 'hair' || kind === 'makeup') return null;
+  if (shouldSkipDupe(kind)) return null;
   const fromModel = await askModel(input);
   if (fromModel) return fromModel;
   return catalogFallback(input);

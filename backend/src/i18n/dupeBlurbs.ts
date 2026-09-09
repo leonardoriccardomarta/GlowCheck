@@ -25,6 +25,9 @@ const it: Record<string, string> = {
   'avene-tolerance': 'Crema minima da farmacia per pelle reattiva',
   'eucerin-urea': 'Crema alla urea da farmacia per pelle secca',
   'boj-relief-sun': 'Solare quotidiano molto diffuso',
+  'loreal-elseve-hyaluron': 'Shampoo idratante da supermercato',
+  'ducray-extra-doux': 'Shampoo delicato da farmacia',
+  'vichy-dercos-oil-control': 'Shampoo sebo-regolatore da farmacia',
 };
 
 const en: Record<string, string> = {
@@ -52,6 +55,9 @@ const en: Record<string, string> = {
   'avene-tolerance': 'Minimal pharmacy cream for reactive skin',
   'eucerin-urea': 'Pharmacy urea cream for dry skin',
   'boj-relief-sun': 'Widely sold daily sunscreen',
+  'loreal-elseve-hyaluron': 'Drugstore hydrating shampoo',
+  'ducray-extra-doux': 'Pharmacy gentle shampoo',
+  'vichy-dercos-oil-control': 'Pharmacy clarifying shampoo',
 };
 
 const es: Record<string, string> = {
@@ -79,6 +85,9 @@ const es: Record<string, string> = {
   'avene-tolerance': 'Crema mínima de farmacia para piel reactiva',
   'eucerin-urea': 'Crema de urea de farmacia para piel seca',
   'boj-relief-sun': 'Protector diario muy extendido',
+  'loreal-elseve-hyaluron': 'Champú hidratante de supermercado',
+  'ducray-extra-doux': 'Champú suave de farmacia',
+  'vichy-dercos-oil-control': 'Champú seborregulador de farmacia',
 };
 
 const fr: Record<string, string> = {
@@ -106,6 +115,9 @@ const fr: Record<string, string> = {
   'avene-tolerance': 'Crème minimale de pharmacie pour peau réactive',
   'eucerin-urea': 'Crème urée de pharmacie pour peau sèche',
   'boj-relief-sun': 'Solaire quotidien très répandu',
+  'loreal-elseve-hyaluron': 'Shampoing hydratant de supermarché',
+  'ducray-extra-doux': 'Shampoing doux de pharmacie',
+  'vichy-dercos-oil-control': 'Shampoing sébo-régulateur de pharmacie',
 };
 
 const de: Record<string, string> = {
@@ -133,6 +145,9 @@ const de: Record<string, string> = {
   'avene-tolerance': 'Minimale Apotheken-Creme für reaktive Haut',
   'eucerin-urea': 'Harnstoffcreme aus der Apotheke für trockene Haut',
   'boj-relief-sun': 'Weit verbreiteter Alltagssonnenchutz',
+  'loreal-elseve-hyaluron': 'Feuchtigkeitsshampoo aus dem Supermarkt',
+  'ducray-extra-doux': 'Sanftes Apotheken-Shampoo',
+  'vichy-dercos-oil-control': 'Klärendes Apotheken-Shampoo',
 };
 
 const tables: Record<AppLocale, Record<string, string>> = { it, en, es, fr, de };

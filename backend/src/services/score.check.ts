@@ -1,7 +1,7 @@
 import { scoreFormula } from './score';
 import { catalogFallback } from './suggestDupe';
 import { canonicalizeIngredients } from './matchIngredients';
-import { categoryFromOff } from './beautyFacts';
+import { categoryFromOff, isValidGtin } from './beautyFacts';
 import { classifyCatalogBlob, isOutOfCategory } from './personalCare';
 import { extractVisionJson } from './visionJson';
 
@@ -129,6 +129,30 @@ const shaveFoam = catalogFallback({
 });
 assert(!shaveFoam, `shaving foam must not get a serum or cream (${shaveFoam?.brand} ${shaveFoam?.name})`);
 
+const fructisDupe = catalogFallback({
+  productName: 'Garnier Fructis Vegan Formula',
+  ingredients: [
+    'Aqua',
+    'Sodium Laureth Sulfate',
+    'Coco-Glucoside',
+    'Macadamia Ternifolia Seed Oil',
+    'Polyquaternium-10',
+  ],
+  skinType: 'oily',
+  mainGoal: 'pores',
+  spendBand: 'low',
+  format: 'shampoo',
+});
+assert(fructisDupe, 'shampoo must get a hair dupe, not nothing');
+assert(
+  fructisDupe && /shampoo|elseve|ducray|dercos/i.test(`${fructisDupe.brand} ${fructisDupe.name}`),
+  `shampoo must stay a shampoo (${fructisDupe?.brand} ${fructisDupe?.name})`
+);
+assert(
+  fructisDupe && !/cerave|cleanser|foaming|moisturizing cream|niacinamide/i.test(`${fructisDupe.brand} ${fructisDupe.name}`),
+  `shampoo must not get a face cleanser (${fructisDupe?.brand} ${fructisDupe?.name})`
+);
+
 const unknownBrand = scoreFormula({
   productName: 'No-name 수분 세럼',
   ingredients: ['Aqua', 'Glycerin', 'Niacinamide', 'Centella Asiatica Extract', 'Parfum'],
@@ -200,6 +224,8 @@ The user wants JSON.
 {"kind":"personal_care","extractedIngredients":["Aqua","Glycerin"],"category":"cream","productName":"Garnier","barcode":null}`);
 assert(thinkWrapped?.includes('"Garnier"'), 'strip qwen think tags before JSON');
 assert(extractVisionJson('<think>no json here') === null, 'think-only vision output is empty');
+assert(isValidGtin('4006381333931'), 'known EAN-13 must pass checksum');
+assert(!isValidGtin('3613138040476'), 'hallucinated Garnier barcode must fail checksum');
 const unclosedThink = extractVisionJson(`<think>
 The user wants me to extract information from an image of a personal care product.
 {"kind":"personal_care","extractedIngredients":["Aqua"],"category":"body","productName":"Garnier","barcode":null}`);
@@ -212,6 +238,7 @@ console.log('score + dupe checks passed', {
   combo: combo.compatibilityScore,
   oilyDupe: `${oilyDupe?.brand} ${oilyDupe?.name}`,
   dryDupe: `${dryDupe?.brand} ${dryDupe?.name}`,
+  fructisDupe: `${fructisDupe?.brand} ${fructisDupe?.name}`,
   unknown: unknownBrand.compatibilityScore,
   oilyAcid: oilyAcid.compatibilityScore,
 });

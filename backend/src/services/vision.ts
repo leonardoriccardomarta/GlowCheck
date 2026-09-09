@@ -21,14 +21,16 @@ export type VisionExtract = {
 
 const USER_INSTRUCTIONS = `GlowCheck is personal-care only: face, hair, body, sun, makeup, perfume, soap, deodorant, toothpaste. Transcribe INCI names if this is a cosmetic/personal-care label.
 If the photo is food, drink, a nutrition label, household cleaner, electronics, or anything else, set kind accordingly and leave extractedIngredients empty.
-Do not add comments, scores, safety judgments, medical claims, or <think> tags. Never invent a famous brand.
+Do not add comments, scores, safety judgments, medical claims, or <think> tags.
+Never invent a brand line (Fructis vs Ultra Dolce vs another Garnier range). Copy only words visible on the pack. If the line is unreadable, brand only or null.
+Never guess barcode digits. Always set barcode to null.
 JSON only, no markdown and no reasoning:
 {"kind":"personal_care|food|other|unknown","extractedIngredients":["Aqua","Glycerin"],"category":"serum|cream|cleanser|sunscreen|toner|oil|shampoo|conditioner|body|deodorant|makeup|mask|perfume|soap|toothpaste|null","productName":null,"barcode":null}
 - kind: personal_care if this is self-care/cosmetic; food for edible products; other for household/non-care; unknown only if you cannot tell.
 - extractedIngredients: readable INCI names in label order. Empty array if none, or if kind is not personal_care.
 - category: one of the values above, or null. Hair, body, and hygiene cosmetics are valid. Never guess a dupe or a score.
-- productName: visible brand + product if readable, else null.
-- barcode: digits only if an EAN/UPC is clearly visible, else null.`;
+- productName: visible brand + product line if readable, else null. Do not substitute a sibling product.
+- barcode: always null. A separate decoder reads the bars.`;
 
 function stripDataUrl(raw: string) {
   const comma = raw.indexOf(',');
@@ -201,7 +203,6 @@ async function callOpenAi(imageBase64: string, mimeType: string) {
 }
 
 function sanitizeExtract(parsed: z.infer<typeof visionExtractSchema>): VisionExtract {
-  const barcodeDigits = parsed.barcode?.replace(/\D/g, '') ?? '';
   const rawList = parsed.extractedIngredients?.length ? parsed.extractedIngredients : parsed.ingredients ?? [];
   const category = (parsed.category ?? '').toLowerCase().trim();
   const allowed = new Set([
@@ -232,7 +233,7 @@ function sanitizeExtract(parsed: z.infer<typeof visionExtractSchema>): VisionExt
       : rawList.map((item) => item.trim()).filter((item) => item.length >= 3).slice(0, 120);
   return {
     productName: parsed.productName?.slice(0, 80) ?? null,
-    barcode: barcodeDigits.length >= 8 && barcodeDigits.length <= 14 ? barcodeDigits : null,
+    barcode: null,
     ingredients,
     category: allowed.has(category) ? category : null,
     kind,

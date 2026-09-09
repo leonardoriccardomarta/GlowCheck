@@ -139,22 +139,6 @@ export async function analyzeProduct(req: AnalyzeRequest): Promise<AnalyzeRespon
       format = format || vision.category;
       if (vision.ingredients.length) ingredientBuckets.push(vision.ingredients);
       if (barcode) source = 'barcode+ocr';
-      if (!barcode && vision.barcode) {
-        barcode = vision.barcode;
-        const catalog = await lookupBarcode(vision.barcode, locale);
-        if (catalog?.source === 'food') {
-          return reject();
-        }
-        if (catalog?.source === 'beauty') {
-          catalogSource = 'beauty';
-          productName = productName || (catalog.brand ? `${catalog.brand} ${catalog.name}` : catalog.name);
-          format = format || catalog.category;
-          if (catalog.ingredients.length >= 2) {
-            ingredientBuckets.unshift(catalog.ingredients);
-            source = 'barcode';
-          }
-        }
-      }
     }
   }
 

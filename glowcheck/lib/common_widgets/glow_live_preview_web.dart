@@ -12,8 +12,9 @@ class JSGlowCam {}
 
 extension JSGlowCamMethods on JSGlowCam {
   external JSPromise<JSAny?> start(web.HTMLVideoElement video);
-  external String capture(web.HTMLVideoElement video);
+  external JSPromise<JSAny?> capture(web.HTMLVideoElement video);
   external JSPromise<JSAny?> readBarcode(web.HTMLVideoElement video);
+  external String getBarcode();
   external void stop();
   external JSPromise<JSBoolean> torch(JSBoolean on);
 }
@@ -31,9 +32,11 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> with WidgetsBindingObse
   late final web.HTMLButtonElement _shutter;
   late final web.HTMLButtonElement _flash;
   late final web.HTMLDivElement _badge;
+  late final web.HTMLDivElement _hint;
   bool _ready = false;
   bool _shown = false;
   String? _error;
+  int _huntTick = 0;
 
   web.HTMLButtonElement _btn(String className, String aria) {
     final btn = web.HTMLButtonElement()
@@ -69,8 +72,10 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> with WidgetsBindingObse
       ..className = 'glow-cam-shutter'
       ..setAttribute('aria-label', 'Shutter');
     _badge = web.HTMLDivElement()..className = 'glow-cam-badge is-hidden';
+    _hint = web.HTMLDivElement()..className = 'glow-cam-hint';
     _chrome.appendChild(_close);
     _chrome.appendChild(_badge);
+    _chrome.appendChild(_hint);
     _chrome.appendChild(_gallery);
     _chrome.appendChild(_shutter);
     _chrome.appendChild(_flash);
@@ -162,6 +167,18 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> with WidgetsBindingObse
       _badge.classList.remove('is-hidden');
       _badge.textContent = badge;
     }
+    final hint = widget.hint;
+    if (hint == null || hint.isEmpty || widget.obscured) {
+      _hint.classList.add('is-hidden');
+    } else {
+      _hint.classList.remove('is-hidden');
+      _hint.textContent = hint;
+    }
+    if (widget.barcodeLocked) {
+      _hint.classList.add('is-lock');
+    } else {
+      _hint.classList.remove('is-lock');
+    }
   }
 
   void _syncPosition() {
@@ -191,11 +208,20 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> with WidgetsBindingObse
       ..height = '${size.height}px';
 
     _frame.classList.remove('is-hidden');
+    if (widget.barcodeLocked) {
+      _frame.classList.add('is-lock');
+    } else {
+      _frame.classList.remove('is-lock');
+    }
     _frame.style
-      ..left = '${offset.dx + size.width * 0.11}px'
-      ..top = '${offset.dy + size.height * 0.33}px'
-      ..width = '${size.width * 0.78}px'
-      ..height = '${size.height * 0.34}px';
+      ..left = '${offset.dx + size.width * 0.08}px'
+      ..top = '${offset.dy + size.height * 0.38}px'
+      ..width = '${size.width * 0.84}px'
+      ..height = '${size.height * 0.22}px';
+    _huntTick += 1;
+    if (_ready && _huntTick % 16 == 0) {
+      _pullBarcode();
+    }
 
     _chrome.classList.remove('is-hidden');
     _chrome.style
@@ -221,20 +247,27 @@ class GlowLivePreviewImpl extends State<GlowLivePreview> with WidgetsBindingObse
     }
   }
 
+  void _pullBarcode() {
+    try {
+      final digits = _glowCam.getBarcode().replaceAll(RegExp(r'\D'), '');
+      final next = digits.length >= 8 && digits.length <= 14 ? digits : null;
+      if (next == widget.controller.lastBarcode) return;
+      widget.controller.lastBarcode = next;
+      widget.onBarcode?.call(next);
+    } catch (_) {}
+  }
+
   Future<List<int>?> _capture() async {
     if (!_ready || !_shown) return null;
-    widget.controller.lastBarcode = null;
     try {
-      final raw = await _glowCam.readBarcode(_video).toDart;
-      final digits = (raw?.toString() ?? '').replaceAll(RegExp(r'\D'), '');
-      if (digits.length >= 8 && digits.length <= 14) {
-        widget.controller.lastBarcode = digits;
-      }
-    } catch (_) {}
-    final dataUrl = _glowCam.capture(_video);
-    final comma = dataUrl.indexOf(',');
-    if (comma < 0) return null;
-    return base64Decode(dataUrl.substring(comma + 1));
+      final dataUrl = (await _glowCam.capture(_video).toDart)?.toString() ?? '';
+      _pullBarcode();
+      final comma = dataUrl.indexOf(',');
+      if (comma < 0) return null;
+      return base64Decode(dataUrl.substring(comma + 1));
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<bool> _torch(bool on) async {

@@ -23,6 +23,7 @@ class _CameraScreenState extends State<CameraScreen> {
   bool busy = false;
   bool torch = false;
   String? error;
+  String? lockedBarcode;
 
   Future<void> _ensureQuota() async {
     if (GlowStore.instance.canScan) return;
@@ -60,6 +61,7 @@ class _CameraScreenState extends State<CameraScreen> {
     await _ensureQuota();
     if (!GlowStore.instance.canScan) return;
     _live.lastBarcode = null;
+    if (mounted) setState(() => lockedBarcode = null);
     final file = await ImagePicker().pickImage(
       source: ImageSource.gallery,
       imageQuality: 70,
@@ -105,9 +107,17 @@ class _CameraScreenState extends State<CameraScreen> {
             controller: _live,
             obscured: busy,
             torchOn: torch,
+            barcodeLocked: lockedBarcode != null,
             badge: GlowStore.instance.highlightFirstScan && error == null && !busy
                 ? GlowL10n.t('cam_free_ready')
                 : null,
+            hint: busy
+                ? null
+                : (lockedBarcode != null ? GlowL10n.t('cam_barcode_ok') : GlowL10n.t('cam_hunt_barcode')),
+            onBarcode: (code) {
+              if (!mounted || busy) return;
+              setState(() => lockedBarcode = code);
+            },
             onClose: () => DashboardScope.of(context)?.goTab(0),
             onGallery: _gallery,
             onShutter: _shutter,

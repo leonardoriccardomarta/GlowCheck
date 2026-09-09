@@ -252,6 +252,36 @@ export const DUPE_CATALOG: DupeEntry[] = [
     kinds: ['sunscreen'],
     blurb: 'Widely sold daily sunscreen',
   },
+  {
+    id: 'loreal-elseve-hyaluron',
+    brand: "L'Oréal Paris",
+    name: 'Elseve Hyaluron Plump Shampoo',
+    estimatedPrice: '~$8',
+    matchesGoals: ['hydration', 'budget'],
+    actives: ['hyaluron', 'glycerin'],
+    kinds: ['hair'],
+    blurb: 'Drugstore hydrating shampoo',
+  },
+  {
+    id: 'ducray-extra-doux',
+    brand: 'Ducray',
+    name: 'Extra-Doux Shampoo',
+    estimatedPrice: '~$12',
+    matchesGoals: ['budget', 'hydration'],
+    actives: ['glycerin'],
+    kinds: ['hair'],
+    blurb: 'Pharmacy gentle shampoo',
+  },
+  {
+    id: 'vichy-dercos-oil-control',
+    brand: 'Vichy',
+    name: 'Dercos Technique Shampoo',
+    estimatedPrice: '~$14',
+    matchesGoals: ['pores', 'budget'],
+    actives: ['zinc', 'salicylic'],
+    kinds: ['hair'],
+    blurb: 'Pharmacy clarifying shampoo',
+  },
 ];
 
 export type DupeId = (typeof DUPE_CATALOG)[number]['id'];

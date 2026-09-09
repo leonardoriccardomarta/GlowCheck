@@ -7,6 +7,7 @@ const schema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   GROQ_API_KEY: z.string().optional(),
   VISION_MODEL: z.string().default('qwen/qwen3.6-27b'),
+  DUPE_MODEL: z.string().default('openai/gpt-oss-20b'),
   MOCK_VISION: z
     .string()
     .optional()
