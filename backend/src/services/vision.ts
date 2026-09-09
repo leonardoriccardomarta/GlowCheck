@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { env } from '../config/env';
+import { extractVisionJson } from './visionJson';
 
 export const visionExtractSchema = z.object({
   productName: z.string().nullable().optional(),
@@ -20,8 +21,8 @@ export type VisionExtract = {
 
 const USER_INSTRUCTIONS = `GlowCheck is personal-care only: face, hair, body, sun, makeup, perfume, soap, deodorant, toothpaste. Transcribe INCI names if this is a cosmetic/personal-care label.
 If the photo is food, drink, a nutrition label, household cleaner, electronics, or anything else, set kind accordingly and leave extractedIngredients empty.
-Do not add comments, scores, safety judgments, or medical claims. Never invent a famous brand.
-JSON only, no markdown:
+Do not add comments, scores, safety judgments, medical claims, or <think> tags. Never invent a famous brand.
+JSON only, no markdown and no reasoning:
 {"kind":"personal_care|food|other|unknown","extractedIngredients":["Aqua","Glycerin"],"category":"serum|cream|cleanser|sunscreen|toner|oil|shampoo|conditioner|body|deodorant|makeup|mask|perfume|soap|toothpaste|null","productName":null,"barcode":null}
 - kind: personal_care if this is self-care/cosmetic; food for edible products; other for household/non-care; unknown only if you cannot tell.
 - extractedIngredients: readable INCI names in label order. Empty array if none, or if kind is not personal_care.
@@ -42,16 +43,6 @@ function cleanBase64(raw: string) {
   value = value.replace(/-/g, '+').replace(/_/g, '/');
   while (value.length % 4 !== 0) value += '=';
   return value;
-}
-
-function extractJson(text: string) {
-  const trimmed = text.trim();
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const body = fenced ? fenced[1].trim() : trimmed;
-  const start = body.indexOf('{');
-  const end = body.lastIndexOf('}');
-  if (start !== -1 && end > start) return body.slice(start, end + 1);
-  return body;
 }
 
 function looksLikeGroqKey(key?: string) {
@@ -96,28 +87,34 @@ async function callChatCompletions(params: {
   imageBase64: string;
   mimeType: string;
   label: string;
+  groq?: boolean;
 }) {
   const dataUrl = `data:${params.mimeType};base64,${params.imageBase64}`;
+  const payload: Record<string, unknown> = {
+    model: params.model,
+    temperature: 0.1,
+    max_completion_tokens: params.label === 'Groq' ? 4096 : 2000,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: USER_INSTRUCTIONS },
+          { type: 'image_url', image_url: { url: dataUrl } },
+        ],
+      },
+    ],
+  };
+  if (params.groq) {
+    payload.reasoning_format = 'hidden';
+    payload.response_format = { type: 'json_object' };
+  }
   const response = await fetch(params.endpoint, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${params.apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model: params.model,
-      temperature: 0.1,
-      max_completion_tokens: 2000,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: USER_INSTRUCTIONS },
-            { type: 'image_url', image_url: { url: dataUrl } },
-          ],
-        },
-      ],
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
@@ -126,7 +123,7 @@ async function callChatCompletions(params: {
   }
 
   const json = (await response.json()) as {
-    choices?: { message?: { content?: string } }[];
+    choices?: { message?: { content?: string | null } }[];
   };
   return json.choices?.[0]?.message?.content ?? '';
 }
@@ -138,14 +135,22 @@ async function callGroq(imageBase64: string, mimeType: string) {
     env.VISION_MODEL.startsWith('qwen/') || env.VISION_MODEL.includes('llama')
       ? env.VISION_MODEL
       : 'qwen/qwen3.6-27b';
-  return callChatCompletions({
+  const base = {
     endpoint: 'https://api.groq.com/openai/v1/chat/completions',
     apiKey: key,
     model,
     imageBase64,
     mimeType,
     label: 'Groq',
-  });
+  } as const;
+  try {
+    return await callChatCompletions({ ...base, groq: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes('Groq 400')) throw error;
+    console.warn('Groq strict JSON rejected, retrying without reasoning_format', message.slice(0, 200));
+    return callChatCompletions({ ...base, groq: false });
+  }
 }
 
 async function callGemini(imageBase64: string, mimeType: string) {
@@ -250,7 +255,18 @@ export async function extractFromPhoto(imageBase64: string): Promise<VisionExtra
     }
 
     console.log('Vision raw', raw.slice(0, 280));
-    const parsedJson = JSON.parse(extractJson(raw)) as unknown;
+    const jsonText = extractVisionJson(raw);
+    if (!jsonText) {
+      console.error('Vision JSON missing', raw.slice(0, 400));
+      return null;
+    }
+    let parsedJson: unknown;
+    try {
+      parsedJson = JSON.parse(jsonText);
+    } catch (error) {
+      console.error('Vision JSON parse failed', error, jsonText.slice(0, 400));
+      return null;
+    }
     const parsed = visionExtractSchema.safeParse(parsedJson);
     if (!parsed.success) {
       console.error('Vision JSON failed Zod', parsed.error.flatten(), raw.slice(0, 300));

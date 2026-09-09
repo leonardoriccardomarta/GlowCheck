@@ -3,6 +3,7 @@ import { catalogFallback } from './suggestDupe';
 import { canonicalizeIngredients } from './matchIngredients';
 import { categoryFromOff } from './beautyFacts';
 import { classifyCatalogBlob, isOutOfCategory } from './personalCare';
+import { extractVisionJson } from './visionJson';
 
 function assert(cond: unknown, message: string) {
   if (!cond) throw new Error(message);
@@ -192,6 +193,13 @@ assert(
 );
 assert(isOutOfCategory({ kind: 'food' }), 'vision food is out');
 assert(!isOutOfCategory({ kind: 'personal_care', ingredients: ['Aqua'] }), 'vision care stays in');
+
+const thinkWrapped = extractVisionJson(`<think>
+The user wants JSON.
+</think>
+{"kind":"personal_care","extractedIngredients":["Aqua","Glycerin"],"category":"cream","productName":"Garnier","barcode":null}`);
+assert(thinkWrapped?.includes('"Garnier"'), 'strip qwen think tags before JSON');
+assert(extractVisionJson('<think>no json here') === null, 'think-only vision output is empty');
 
 console.log('score + dupe checks passed', {
   oilyPores: oilyPores.compatibilityScore,
