@@ -7,6 +7,7 @@ import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:fitnessapp/utils/glow_scroll.dart';
 import 'package:fitnessapp/view/splash/splash_screen.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 void main() async {
@@ -36,11 +37,15 @@ class MyApp extends StatelessWidget {
         final page = child ?? const SizedBox.shrink();
         if (!kIsWeb) return page;
         final mq = MediaQuery.of(context);
+        final keyboard = mq.viewInsets.bottom > 80;
         final top = mq.padding.top < 16 ? 16.0 : mq.padding.top;
         final bottom = mq.padding.bottom < 12 ? 12.0 : mq.padding.bottom;
-        if (top == mq.padding.top && bottom == mq.padding.bottom) return page;
         return MediaQuery(
-          data: mq.copyWith(padding: mq.padding.copyWith(top: top, bottom: bottom)),
+          data: mq.copyWith(
+            gestureSettings: const DeviceGestureSettings(touchSlop: 8),
+            padding: mq.padding.copyWith(top: top, bottom: bottom),
+            viewInsets: keyboard ? mq.viewInsets : EdgeInsets.zero,
+          ),
           child: page,
         );
       },

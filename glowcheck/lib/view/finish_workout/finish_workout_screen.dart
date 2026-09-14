@@ -274,6 +274,8 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                       const SizedBox(height: 10),
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
+                        primary: false,
+                        physics: const ClampingScrollPhysics(),
                         child: Row(
                           children: [
                             GlowChip(label: GlowL10n.t('filter_all'), selected: _inciFilter == 'all', onTap: () => setState(() => _inciFilter = 'all')),

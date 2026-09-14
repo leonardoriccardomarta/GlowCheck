@@ -136,6 +136,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 210,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
+                  primary: false,
+                  physics: const ClampingScrollPhysics(),
                   itemCount: shelf.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 12),
                   itemBuilder: (context, i) {

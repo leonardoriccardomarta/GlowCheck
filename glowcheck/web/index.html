@@ -24,14 +24,18 @@
     html, body {
       margin: 0;
       padding: 0;
+      position: fixed;
+      inset: 0;
       width: 100%;
       height: 100%;
       height: 100svh;
-      height: 100dvh;
       overflow: hidden;
       overscroll-behavior: none;
+      touch-action: pan-y;
       background: #F3F1ED;
       -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
+      user-select: none;
     }
     #glow-root {
       position: fixed;
@@ -42,10 +46,14 @@
       width: 100%;
       height: 100%;
       height: 100svh;
-      height: 100dvh;
       box-sizing: border-box;
       padding-top: env(safe-area-inset-top, 0px);
       overflow: hidden;
+      touch-action: pan-y;
+    }
+    flt-semantics,
+    flt-semantics-host {
+      pointer-events: none !important;
     }
     #glow-boot {
       position: fixed;
@@ -159,6 +167,8 @@
       appearance: none !important;
       pointer-events: auto;
       opacity: 1;
+      -webkit-user-select: text;
+      user-select: text;
     }
     input.glow-html-input.is-secret {
       -webkit-text-security: disc;
@@ -348,46 +358,34 @@
   <div id="glow-html-layer"></div>
   <script>
     (function () {
-      var lastH = -1;
-      var lastTop = -1;
       var fitting = false;
-      function visibleHeight() {
-        var vv = window.visualViewport;
-        if (vv && vv.height) return Math.round(vv.height);
-        if (window.innerHeight) return Math.round(window.innerHeight);
-        return Math.round(document.documentElement.clientHeight || 0);
-      }
       function typing() {
         var el = document.activeElement;
         return el && el.classList && el.classList.contains('glow-html-input');
       }
-      function fit(force) {
+      function fit() {
         if (fitting || typing()) return;
         var root = document.getElementById('glow-root');
         if (!root) return;
-        var h = visibleHeight();
-        if (!force && lastH > 0 && Math.abs(h - lastH) < 120) return;
-        lastH = h;
-        lastTop = 0;
         fitting = true;
         root.style.position = 'fixed';
         root.style.left = '0';
         root.style.right = '0';
         root.style.top = '0';
-        root.style.height = h + 'px';
+        root.style.bottom = '0';
+        root.style.height = '100svh';
         root.style.paddingTop = 'env(safe-area-inset-top, 0px)';
         root.style.boxSizing = 'border-box';
         fitting = false;
       }
-      fit(true);
-      window.addEventListener('resize', function () { fit(false); });
-      window.addEventListener('pageshow', function () { fit(true); });
+      fit();
+      window.addEventListener('pageshow', fit);
       window.addEventListener('orientationchange', function () {
-        setTimeout(function () { fit(true); }, 80);
-        setTimeout(function () { fit(true); }, 280);
+        setTimeout(fit, 80);
+        setTimeout(fit, 280);
       });
       window.addEventListener('flutter-first-frame', function () {
-        fit(true);
+        fit();
         var boot = document.getElementById('glow-boot');
         if (!boot) return;
         boot.classList.add('is-gone');
@@ -395,11 +393,6 @@
           if (boot && boot.parentNode) boot.parentNode.removeChild(boot);
         }, 300);
       });
-      document.addEventListener('visibilitychange', function () { fit(false); });
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', function () { fit(false); });
-      }
-      [50, 150, 400, 900].forEach(function (ms) { setTimeout(function () { fit(true); }, ms); });
     })();
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function (regs) {
