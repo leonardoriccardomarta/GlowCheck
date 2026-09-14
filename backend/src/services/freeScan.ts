@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import type { StoredUser } from './auth';
+import { markFreeUsed } from './auth';
 
 export const FREE_SCAN_COOKIE = 'glow_free_used';
 const IP_MAX = 3;
@@ -50,9 +51,9 @@ function ipOverLimit(ip: string) {
   return hit.n >= IP_MAX;
 }
 
-export function syncFreeFromCookie(req: Request, user: StoredUser | null) {
-  if (user && !user.isPro && cookieUsed(req)) {
-    user.usedFree = true;
+export async function syncFreeFromCookie(req: Request, user: StoredUser | null) {
+  if (user && !user.isPro && cookieUsed(req) && !user.usedFree) {
+    await markFreeUsed(user);
   }
 }
 
@@ -63,9 +64,9 @@ export function freeScanBlocked(req: Request, user: StoredUser | null): boolean 
   return ipOverLimit(clientIp(req));
 }
 
-export function consumeFreeScan(req: Request, res: Response, user: StoredUser | null) {
+export async function consumeFreeScan(req: Request, res: Response, user: StoredUser | null) {
   if (user?.isPro) return;
-  if (user) user.usedFree = true;
+  if (user) await markFreeUsed(user);
   const proto = req.headers['x-forwarded-proto'];
   const https =
     Boolean(process.env.VERCEL) ||

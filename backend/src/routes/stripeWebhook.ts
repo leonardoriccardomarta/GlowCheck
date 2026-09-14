@@ -25,7 +25,7 @@ export async function stripeWebhook(req: Request, res: Response) {
       const session = event.data.object;
       if (sessionPaid(session)) {
         const email = session.customer_details?.email || session.customer_email;
-        if (email) markPro(email);
+        if (email) await markPro(email);
         console.log('stripe lifetime paid', session.id);
       }
     }

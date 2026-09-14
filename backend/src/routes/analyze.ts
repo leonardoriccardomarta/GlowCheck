@@ -43,15 +43,15 @@ analyzeRouter.post('/', async (req, res) => {
     });
   }
 
-  const user = userFromRequest(req);
-  syncFreeFromCookie(req, user);
+  const user = await userFromRequest(req);
+  await syncFreeFromCookie(req, user);
   if (freeScanBlocked(req, user)) {
     return res.status(402).json(paywallBody());
   }
 
   const result = await analyzeProduct(parsed.data);
   if (result.readable && !result.errorCode) {
-    consumeFreeScan(req, res, user);
+    await consumeFreeScan(req, res, user);
   }
   return res.status(200).json(result);
 });

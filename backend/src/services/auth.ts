@@ -1,5 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { env } from '../config/env';
+import { ensureDb, sqlClient } from '../db';
 
 export type AuthUser = {
   id: string;
@@ -13,8 +14,6 @@ export type StoredUser = AuthUser & {
   isPro?: boolean;
   usedFree?: boolean;
 };
-
-const users = new Map<string, StoredUser>();
 
 function hashPassword(password: string) {
   const secret = env.AUTH_JWT_SECRET || 'glowcheck-sandbox';
@@ -43,46 +42,86 @@ function safeEqual(a: string, b: string) {
   return timingSafeEqual(left, right);
 }
 
-export function registerUser(input: { name: string; email: string; password: string }) {
+function asProvider(value: string | undefined): StoredUser['provider'] {
+  if (value === 'google' || value === 'apple') return value;
+  return 'email';
+}
+
+function rowToUser(row: Record<string, unknown>): StoredUser {
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    email: String(row.email),
+    provider: asProvider(String(row.provider)),
+    passwordHash: row.password_hash ? String(row.password_hash) : undefined,
+    isPro: Boolean(row.is_pro),
+    usedFree: Boolean(row.used_free),
+  };
+}
+
+async function findByEmail(email: string): Promise<StoredUser | null> {
+  await ensureDb();
+  const rows = await sqlClient()`
+    SELECT id, email, name, provider, password_hash, is_pro, used_free
+    FROM users
+    WHERE email = ${email}
+    LIMIT 1
+  `;
+  return rows[0] ? rowToUser(rows[0]) : null;
+}
+
+export async function registerUser(input: { name: string; email: string; password: string }) {
   const email = input.email.trim().toLowerCase();
   if (!email.includes('@') || input.password.length < 6 || input.name.trim().length < 1) {
     throw new Error('Name, email and a password of at least 6 characters.');
   }
-  if (users.has(email)) {
+  await ensureDb();
+  const rows = await sqlClient()`
+    INSERT INTO users (id, email, name, provider, password_hash)
+    VALUES (
+      ${randomBytes(8).toString('hex')},
+      ${email},
+      ${input.name.trim()},
+      'email',
+      ${hashPassword(input.password)}
+    )
+    ON CONFLICT (email) DO NOTHING
+    RETURNING id, email, name, provider, password_hash, is_pro, used_free
+  `;
+  if (!rows[0]) {
     throw new Error('An account with this email already exists.');
   }
-  const user: StoredUser = {
-    id: randomBytes(8).toString('hex'),
-    name: input.name.trim(),
-    email,
-    provider: 'email',
-    passwordHash: hashPassword(input.password),
-  };
-  users.set(email, user);
-  return sessionOf(user);
+  return sessionOf(rowToUser(rows[0]));
 }
 
-export function loginUser(input: { email: string; password: string }) {
+export async function loginUser(input: { email: string; password: string }) {
   const email = input.email.trim().toLowerCase();
-  const stored = users.get(email);
+  const stored = await findByEmail(email);
   if (!stored || !stored.passwordHash || !safeEqual(stored.passwordHash, hashPassword(input.password))) {
     throw new Error('Email or password does not match.');
   }
   return sessionOf(stored);
 }
 
-export function socialUser(input: { provider: 'google' | 'apple'; email?: string; name?: string }) {
+export async function socialUser(input: { provider: 'google' | 'apple'; email?: string; name?: string }) {
   const email = (input.email ?? `${input.provider}@glowcheck.local`).trim().toLowerCase();
-  const existing = users.get(email);
-  const user: StoredUser = existing ?? {
-    id: randomBytes(8).toString('hex'),
-    name: (input.name ?? (input.provider === 'apple' ? 'Apple user' : 'Google user')).trim(),
-    email,
-    provider: input.provider,
-  };
-  user.provider = input.provider;
-  users.set(email, user);
-  return sessionOf(user);
+  const name = (input.name ?? (input.provider === 'apple' ? 'Apple user' : 'Google user')).trim();
+  await ensureDb();
+  const rows = await sqlClient()`
+    INSERT INTO users (id, email, name, provider)
+    VALUES (${randomBytes(8).toString('hex')}, ${email}, ${name}, ${input.provider})
+    ON CONFLICT (email) DO UPDATE SET
+      provider = EXCLUDED.provider,
+      name = CASE
+        WHEN EXCLUDED.name <> '' THEN EXCLUDED.name
+        ELSE users.name
+      END
+    RETURNING id, email, name, provider, password_hash, is_pro, used_free
+  `;
+  if (!rows[0]) {
+    throw new Error('Social login failed.');
+  }
+  return sessionOf(rowToUser(rows[0]));
 }
 
 function sessionOf(user: StoredUser) {
@@ -101,7 +140,7 @@ function sessionOf(user: StoredUser) {
   };
 }
 
-export function verifyToken(token: string): StoredUser | null {
+export async function verifyToken(token: string): Promise<StoredUser | null> {
   const [payload, sig] = token.split('.');
   if (!payload || !sig) return null;
   const secret = env.AUTH_JWT_SECRET || 'glowcheck-sandbox';
@@ -117,54 +156,64 @@ export function verifyToken(token: string): StoredUser | null {
     };
     if (!data.email || (typeof data.exp === 'number' && data.exp < Date.now())) return null;
     const email = data.email.trim().toLowerCase();
-    const existing = users.get(email);
+    const existing = await findByEmail(email);
     if (existing) {
-      if (data.isPro) existing.isPro = true;
+      if (data.isPro && !existing.isPro) {
+        await sqlClient()`UPDATE users SET is_pro = TRUE WHERE email = ${email}`;
+        existing.isPro = true;
+      }
       return existing;
     }
-    const provider = data.provider === 'google' || data.provider === 'apple' ? data.provider : 'email';
-    const user: StoredUser = {
-      id: data.sub || randomBytes(8).toString('hex'),
-      name: email.split('@')[0] || 'GlowCheck',
-      email,
-      provider,
-      isPro: Boolean(data.isPro),
-    };
-    users.set(email, user);
-    return user;
+    const provider = asProvider(data.provider);
+    const rows = await sqlClient()`
+      INSERT INTO users (id, email, name, provider, is_pro)
+      VALUES (
+        ${data.sub || randomBytes(8).toString('hex')},
+        ${email},
+        ${email.split('@')[0] || 'GlowCheck'},
+        ${provider},
+        ${Boolean(data.isPro)}
+      )
+      ON CONFLICT (email) DO UPDATE SET
+        is_pro = users.is_pro OR EXCLUDED.is_pro
+      RETURNING id, email, name, provider, password_hash, is_pro, used_free
+    `;
+    return rows[0] ? rowToUser(rows[0]) : null;
   } catch {
     return null;
   }
 }
 
-export function issueSession(email: string) {
-  const user = users.get(email.trim().toLowerCase());
+export async function issueSession(email: string) {
+  const user = await findByEmail(email.trim().toLowerCase());
   return user ? sessionOf(user) : null;
 }
 
-export function userFromRequest(req: { headers: { authorization?: string } }): StoredUser | null {
+export async function userFromRequest(req: { headers: { authorization?: string } }): Promise<StoredUser | null> {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) return null;
   return verifyToken(header.slice(7).trim());
 }
 
-export function markPro(email: string) {
+export async function markPro(email: string) {
   const key = email.trim().toLowerCase();
   if (!key.includes('@')) return;
-  const existing = users.get(key);
-  if (existing) {
-    existing.isPro = true;
-    return;
-  }
-  users.set(key, {
-    id: randomBytes(8).toString('hex'),
-    name: key.split('@')[0] || 'GlowCheck',
-    email: key,
-    provider: 'email',
-    isPro: true,
-  });
+  await ensureDb();
+  await sqlClient()`
+    INSERT INTO users (id, email, name, provider, is_pro)
+    VALUES (
+      ${randomBytes(8).toString('hex')},
+      ${key},
+      ${key.split('@')[0] || 'GlowCheck'},
+      'email',
+      TRUE
+    )
+    ON CONFLICT (email) DO UPDATE SET is_pro = TRUE
+  `;
 }
 
-export function markFreeUsed(user: StoredUser) {
+export async function markFreeUsed(user: StoredUser) {
   user.usedFree = true;
+  await ensureDb();
+  await sqlClient()`UPDATE users SET used_free = TRUE WHERE id = ${user.id}`;
 }

@@ -112,8 +112,8 @@ billingRouter.post('/confirm', async (req, res) => {
     const session = await stripe.checkout.sessions.retrieve(parsed.data.sessionId);
     const unlocked = sessionPaid(session);
     const email = session.customer_details?.email || session.customer_email || null;
-    if (unlocked && email) markPro(email);
-    const issued = unlocked && email ? issueSession(email) : null;
+    if (unlocked && email) await markPro(email);
+    const issued = unlocked && email ? await issueSession(email) : null;
     return res.json({
       ok: true,
       unlocked,

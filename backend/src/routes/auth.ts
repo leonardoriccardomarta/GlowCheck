@@ -35,41 +35,50 @@ function keyFromMessage(message: string) {
   return 'auth_failed';
 }
 
-authRouter.post('/register', (req, res) => {
+authRouter.post('/register', async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
     return fail(res, 'login_fields', 'Name, email and a password of at least 6 characters.');
   }
   try {
-    return res.json(registerUser(parsed.data));
+    return res.json(await registerUser(parsed.data));
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Register failed.';
+    if (message.includes('DATABASE_URL')) {
+      return res.status(503).json({ ok: false, errorKey: 'auth_failed', error: message });
+    }
     return fail(res, keyFromMessage(message), message);
   }
 });
 
-authRouter.post('/login', (req, res) => {
+authRouter.post('/login', async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
     return fail(res, 'err_email_pass', 'Email or password does not match.');
   }
   try {
-    return res.json(loginUser(parsed.data));
+    return res.json(await loginUser(parsed.data));
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Login failed.';
+    if (message.includes('DATABASE_URL')) {
+      return res.status(503).json({ ok: false, errorKey: 'auth_failed', error: message });
+    }
     return fail(res, keyFromMessage(message), message);
   }
 });
 
-authRouter.post('/social', (req, res) => {
+authRouter.post('/social', async (req, res) => {
   const parsed = socialSchema.safeParse(req.body);
   if (!parsed.success) {
     return fail(res, 'auth_social', 'Unsupported social login.');
   }
   try {
-    return res.json(socialUser(parsed.data));
+    return res.json(await socialUser(parsed.data));
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Social login failed.';
+    if (message.includes('DATABASE_URL')) {
+      return res.status(503).json({ ok: false, errorKey: 'auth_failed', error: message });
+    }
     return fail(res, keyFromMessage(message), message);
   }
 });

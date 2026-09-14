@@ -13,6 +13,7 @@ const schema = z.object({
     .optional()
     .transform((value) => value === 'true'),
   AUTH_JWT_SECRET: z.string().optional(),
+  DATABASE_URL: z.string().optional(),
   PUBLIC_DIR: z.string().optional(),
   FRONTEND_ORIGIN: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().optional(),

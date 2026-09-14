@@ -23,14 +23,14 @@ function unauthorized(res: { status: (code: number) => { json: (body: unknown) =
   return res.status(401).json({ ok: false, error: 'UNAUTHORIZED' });
 }
 
-shelfRouter.get('/', (req, res) => {
-  const user = userFromRequest(req);
+shelfRouter.get('/', async (req, res) => {
+  const user = await userFromRequest(req);
   if (!user) return unauthorized(res);
   return res.json({ ok: true, items: listShelf(user.id) });
 });
 
-shelfRouter.post('/', (req, res) => {
-  const user = userFromRequest(req);
+shelfRouter.post('/', async (req, res) => {
+  const user = await userFromRequest(req);
   if (!user) return unauthorized(res);
   const parsed = shelfItemSchema.safeParse(req.body);
   if (!parsed.success) {
