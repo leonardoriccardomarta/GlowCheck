@@ -19,7 +19,7 @@ const socialSchema = z.object({
   provider: z.enum(['google', 'apple']),
   email: z.string().email().max(120).optional(),
   name: z.string().max(80).optional(),
-  idToken: z.string().max(8000).optional(),
+  idToken: z.string().max(16000).optional(),
   clientId: z.string().max(200).optional(),
 });
 
@@ -31,6 +31,7 @@ function keyFromMessage(message: string) {
   if (message.includes('does not match')) return 'err_email_pass';
   if (message.includes('already exists')) return 'auth_exists';
   if (message.includes('at least 6')) return 'login_fields';
+  if (message.includes('Google sign-in')) return 'auth_failed';
   if (message.includes('Unsupported')) return 'auth_social';
   return 'auth_failed';
 }
@@ -44,7 +45,7 @@ authRouter.post('/register', async (req, res) => {
     return res.json(await registerUser(parsed.data));
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Register failed.';
-    if (message.includes('DATABASE_URL')) {
+    if (message.includes('DATABASE_URL') || message.includes('GOOGLE_CLIENT_ID')) {
       return res.status(503).json({ ok: false, errorKey: 'auth_failed', error: message });
     }
     return fail(res, keyFromMessage(message), message);
@@ -60,7 +61,7 @@ authRouter.post('/login', async (req, res) => {
     return res.json(await loginUser(parsed.data));
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Login failed.';
-    if (message.includes('DATABASE_URL')) {
+    if (message.includes('DATABASE_URL') || message.includes('GOOGLE_CLIENT_ID')) {
       return res.status(503).json({ ok: false, errorKey: 'auth_failed', error: message });
     }
     return fail(res, keyFromMessage(message), message);
@@ -76,7 +77,7 @@ authRouter.post('/social', async (req, res) => {
     return res.json(await socialUser(parsed.data));
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Social login failed.';
-    if (message.includes('DATABASE_URL')) {
+    if (message.includes('DATABASE_URL') || message.includes('GOOGLE_CLIENT_ID')) {
       return res.status(503).json({ ok: false, errorKey: 'auth_failed', error: message });
     }
     return fail(res, keyFromMessage(message), message);

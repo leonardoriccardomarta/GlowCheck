@@ -51,6 +51,7 @@ dependencies:
   purchases_flutter: ^8.10.1
   calendar_agenda:
     path: dev_lib/calendar_agenda/
+  google_sign_in: 6.2.2
 
 
 flutter_native_splash:

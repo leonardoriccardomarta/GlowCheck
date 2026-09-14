@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { env } from '../config/env';
 import { ensureDb, sqlClient } from '../db';
+import { verifyGoogleIdToken } from './googleId';
 
 export type AuthUser = {
   id: string;
@@ -103,9 +104,22 @@ export async function loginUser(input: { email: string; password: string }) {
   return sessionOf(stored);
 }
 
-export async function socialUser(input: { provider: 'google' | 'apple'; email?: string; name?: string }) {
-  const email = (input.email ?? `${input.provider}@glowcheck.local`).trim().toLowerCase();
-  const name = (input.name ?? (input.provider === 'apple' ? 'Apple user' : 'Google user')).trim();
+export async function socialUser(input: {
+  provider: 'google' | 'apple';
+  email?: string;
+  name?: string;
+  idToken?: string;
+}) {
+  let email: string;
+  let name: string;
+  if (input.provider === 'google') {
+    const profile = await verifyGoogleIdToken(input.idToken);
+    email = profile.email;
+    name = profile.name;
+  } else {
+    email = (input.email ?? `${input.provider}@glowcheck.local`).trim().toLowerCase();
+    name = (input.name ?? 'Apple user').trim();
+  }
   await ensureDb();
   const rows = await sqlClient()`
     INSERT INTO users (id, email, name, provider)

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
@@ -66,15 +67,18 @@ class GlowAuth {
       await _appleNative();
       return;
     }
-    if (AppEnv.authApiReady &&
-        ((provider == 'google' && AppEnv.googleReady) || (provider == 'apple' && AppEnv.appleReady))) {
+    if (provider == 'google' && AppEnv.authApiReady && AppEnv.googleReady) {
+      await _google();
+      return;
+    }
+    if (AppEnv.authApiReady && provider == 'apple' && AppEnv.appleReady) {
       final user = await _post('/auth/social', {
         'provider': provider,
-        'clientId': provider == 'google' ? AppEnv.googleClientId : AppEnv.appleServiceId,
+        'clientId': AppEnv.appleServiceId,
       });
       await GlowStore.instance.applySession(
-        name: user['name'] as String? ?? GlowL10n.t(provider == 'apple' ? 'apple_user' : 'google_user'),
-        email: user['email'] as String? ?? '$provider@glowcheck.local',
+        name: user['name'] as String? ?? GlowL10n.t('apple_user'),
+        email: user['email'] as String? ?? 'apple@glowcheck.local',
         provider: provider,
         token: user['token'] as String?,
         isPro: user['isPro'] == true,
@@ -82,6 +86,36 @@ class GlowAuth {
       return;
     }
     await GlowStore.instance.signInSocial(provider);
+  }
+
+  static Future<void> _google() async {
+    final google = GoogleSignIn(
+      clientId: AppEnv.googleClientId,
+      scopes: const ['email', 'profile', 'openid'],
+    );
+    final account = await google.signIn();
+    if (account == null) {
+      throw Exception(GlowL10n.t('auth_failed'));
+    }
+    final tokens = await account.authentication;
+    final idToken = tokens.idToken;
+    if (idToken == null || idToken.isEmpty) {
+      throw Exception(GlowL10n.t('auth_failed'));
+    }
+    final user = await _post('/auth/social', {
+      'provider': 'google',
+      'clientId': AppEnv.googleClientId,
+      'email': account.email,
+      'name': account.displayName ?? '',
+      'idToken': idToken,
+    });
+    await GlowStore.instance.applySession(
+      name: user['name'] as String? ?? account.displayName ?? GlowL10n.t('google_user'),
+      email: user['email'] as String? ?? account.email,
+      provider: 'google',
+      token: user['token'] as String?,
+      isPro: user['isPro'] == true,
+    );
   }
 
   static Future<void> _appleNative() async {
