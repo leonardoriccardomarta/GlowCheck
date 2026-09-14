@@ -13,7 +13,7 @@ class GlowStore extends ChangeNotifier {
   static const _key = 'glowcheck.v1';
 
   bool ready = false;
-  String localeCode = 'it';
+  String localeCode = GlowL10n.defaultCode;
   String? skinType;
   String? mainGoal;
   String? spendBand;
@@ -24,6 +24,7 @@ class GlowStore extends ChangeNotifier {
   String? accountToken;
   bool isPro = false;
   String? proPlan;
+  String? stripeSessionId;
   int freeScansRemaining = 1;
   final List<ScanResult> history = [];
   final Set<int> pinned = {};
@@ -53,6 +54,7 @@ class GlowStore extends ChangeNotifier {
       accountToken = map['accountToken'] as String?;
       isPro = map['isPro'] == true;
       proPlan = map['proPlan'] as String?;
+      stripeSessionId = map['stripeSessionId'] as String?;
       freeScansRemaining = (map['freeScansRemaining'] as num?)?.toInt() ?? 1;
       history
         ..clear()
@@ -89,6 +91,7 @@ class GlowStore extends ChangeNotifier {
         'accountToken': accountToken,
         'isPro': isPro,
         'proPlan': proPlan,
+        'stripeSessionId': stripeSessionId,
         'freeScansRemaining': freeScansRemaining,
         'pinned': pinned.toList(),
         'history': history.map((item) => item.toJson()).toList(),
@@ -193,9 +196,18 @@ class GlowStore extends ChangeNotifier {
     await _persist();
   }
 
-  Future<void> unlockPro({required String plan}) async {
+  Future<void> unlockPro({required String plan, String? stripeSession}) async {
     isPro = true;
     proPlan = plan;
+    if (stripeSession != null && stripeSession.isNotEmpty) {
+      stripeSessionId = stripeSession;
+    }
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> setStripeSessionId(String? value) async {
+    stripeSessionId = value;
     notifyListeners();
     await _persist();
   }

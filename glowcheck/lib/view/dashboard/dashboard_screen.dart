@@ -4,7 +4,6 @@ import 'package:fitnessapp/view/activity/activity_screen.dart';
 import 'package:fitnessapp/view/camera/camera_screen.dart';
 import 'package:fitnessapp/view/paywall/paywall_screen.dart';
 import 'package:fitnessapp/view/profile/user_profile.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../home/home_screen.dart';
@@ -60,7 +59,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.paddingOf(context).bottom;
-    final double dockBottom = kIsWeb ? 16.0 : 12.0 + (bottom > 0 ? bottom : 8.0);
+    final double dockBottom = 12.0 + (bottom > 0 ? bottom : 8.0);
 
     return DashboardScope(
       goTab: goTab,

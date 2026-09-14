@@ -4,6 +4,7 @@ import 'package:fitnessapp/routes.dart';
 import 'package:fitnessapp/services/glow_billing.dart';
 import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
+import 'package:fitnessapp/utils/glow_scroll.dart';
 import 'package:fitnessapp/view/splash/splash_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -30,13 +31,16 @@ class MyApp extends StatelessWidget {
       locale: locale,
       supportedLocales: GlowL10n.supportedLocales,
       debugShowCheckedModeBanner: false,
+      scrollBehavior: const GlowScrollBehavior(),
       builder: (context, child) {
         final page = child ?? const SizedBox.shrink();
         if (!kIsWeb) return page;
         final mq = MediaQuery.of(context);
-        if (mq.padding.top >= 16) return page;
+        final top = mq.padding.top < 16 ? 16.0 : mq.padding.top;
+        final bottom = mq.padding.bottom < 12 ? 12.0 : mq.padding.bottom;
+        if (top == mq.padding.top && bottom == mq.padding.bottom) return page;
         return MediaQuery(
-          data: mq.copyWith(padding: mq.padding.copyWith(top: 16)),
+          data: mq.copyWith(padding: mq.padding.copyWith(top: top, bottom: bottom)),
           child: page,
         );
       },
@@ -45,7 +49,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Poppins',
         scaffoldBackgroundColor: AppColors.canvas,
-        colorScheme: ColorScheme.light(
+        colorScheme: const ColorScheme.light(
           primary: AppColors.ink,
           onPrimary: AppColors.card,
           surface: AppColors.card,

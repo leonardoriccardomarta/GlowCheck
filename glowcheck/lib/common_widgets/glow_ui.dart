@@ -201,9 +201,12 @@ class GlowPrimaryButton extends StatelessWidget {
         child: Text(
           title,
           textAlign: TextAlign.center,
+          maxLines: giant ? 2 : 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontWeight: FontWeight.w800,
-            fontSize: giant ? 18 : compact ? 13 : 16,
+            fontSize: giant ? 16 : compact ? 13 : 16,
+            height: 1.15,
           ),
         ),
       ),

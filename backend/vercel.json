@@ -4,6 +4,8 @@
   "rewrites": [
     { "source": "/health", "destination": "/api" },
     { "source": "/analyze", "destination": "/api" },
-    { "source": "/auth/:path*", "destination": "/api" }
+    { "source": "/auth/:path*", "destination": "/api" },
+    { "source": "/billing", "destination": "/api" },
+    { "source": "/billing/:path*", "destination": "/api" }
   ]
 }

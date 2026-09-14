@@ -14,4 +14,4 @@ class BillingPackage {
   final String productId;
 }
 
-enum PurchaseOutcome { unlocked, needsStore, nothingToRestore, cancelled }
+enum PurchaseOutcome { unlocked, needsStore, nothingToRestore, cancelled, redirecting }

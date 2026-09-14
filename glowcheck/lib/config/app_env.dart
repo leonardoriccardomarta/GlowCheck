@@ -12,6 +12,7 @@ class AppEnv {
   static String appleServiceId = const String.fromEnvironment('APPLE_SERVICE_ID');
   static String revenueCatKey = const String.fromEnvironment('REVENUECAT_API_KEY');
   static String stripeCheckoutUrl = const String.fromEnvironment('STRIPE_CHECKOUT_URL');
+  static bool stripeLive = false;
   static const weeklyProductId = String.fromEnvironment(
     'IAP_WEEKLY_ID',
     defaultValue: 'glowcheck_weekly',
@@ -65,5 +66,6 @@ class AppEnv {
   static bool get authApiReady => authApiUrl.isNotEmpty;
   static bool get googleReady => googleClientId.isNotEmpty;
   static bool get appleReady => appleServiceId.isNotEmpty;
-  static bool get billingLive => revenueCatKey.isNotEmpty || stripeCheckoutUrl.isNotEmpty;
+  static bool get billingLive =>
+      revenueCatKey.isNotEmpty || stripeCheckoutUrl.isNotEmpty || stripeLive;
 }

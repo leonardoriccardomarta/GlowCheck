@@ -6,6 +6,8 @@ import fs from 'fs';
 import path from 'path';
 import { analyzeRouter } from './routes/analyze';
 import { authRouter } from './routes/auth';
+import { billingRouter } from './routes/billing';
+import { stripeWebhook } from './routes/stripeWebhook';
 import { rateLimit } from './middleware/rateLimit';
 import { env } from './config/env';
 
@@ -34,6 +36,7 @@ export function createApp() {
     })
   );
   app.use(morgan('dev'));
+  app.post('/billing/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
   app.use(express.json({ limit: '8mb' }));
 
   const info = {
@@ -42,6 +45,7 @@ export function createApp() {
     health: '/health',
     analyze: 'POST /analyze',
     auth: 'POST /auth/register /auth/login /auth/social',
+    billing: 'GET /billing/ready POST /billing/checkout POST /billing/confirm',
   };
 
   app.get('/health', (_req, res) => {
@@ -54,6 +58,7 @@ export function createApp() {
 
   app.use('/auth', rateLimit, authRouter);
   app.use('/analyze', rateLimit, analyzeRouter);
+  app.use('/billing', rateLimit, billingRouter);
 
   if (hasWeb) {
     app.use(express.static(webRoot));

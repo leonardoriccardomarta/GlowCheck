@@ -72,7 +72,7 @@ const _blurbs = <String, Map<String, String>>{
 String localizedDupeBlurb(String? id, String fallback) {
   final locale = GlowL10n.normalize(GlowL10n.currentCode);
   if (id != null && id.isNotEmpty) {
-    final text = _blurbs[locale]?[id] ?? _blurbs['it']?[id];
+    final text = _blurbs[locale]?[id] ?? _blurbs['en']?[id] ?? _blurbs['it']?[id];
     if (text != null) return text;
   }
   return fallback;

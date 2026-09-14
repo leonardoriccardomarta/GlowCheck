@@ -15,6 +15,8 @@ const schema = z.object({
   AUTH_JWT_SECRET: z.string().optional(),
   PUBLIC_DIR: z.string().optional(),
   FRONTEND_ORIGIN: z.string().optional(),
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);

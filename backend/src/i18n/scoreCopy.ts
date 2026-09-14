@@ -289,9 +289,9 @@ const tables: Record<AppLocale, Record<string, string>> = {
 };
 
 export function normalizeLocale(value?: string | null): AppLocale {
-  const code = (value || 'it').toLowerCase();
+  const code = (value || 'en').toLowerCase();
   if (code === 'en' || code === 'es' || code === 'fr' || code === 'de' || code === 'it') return code;
-  return 'it';
+  return 'en';
 }
 
 export function copy(locale: string | null | undefined, key: string, vars?: Record<string, string>) {

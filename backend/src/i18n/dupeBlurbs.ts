@@ -153,8 +153,8 @@ const de: Record<string, string> = {
 const tables: Record<AppLocale, Record<string, string>> = { it, en, es, fr, de };
 
 function localeOf(code?: string): AppLocale {
-  const value = (code ?? 'it').toLowerCase();
-  return value in tables ? (value as AppLocale) : 'it';
+  const value = (code ?? 'en').toLowerCase();
+  return value in tables ? (value as AppLocale) : 'en';
 }
 
 export function dupeBlurb(locale: string | undefined, id: string, fallback: string) {

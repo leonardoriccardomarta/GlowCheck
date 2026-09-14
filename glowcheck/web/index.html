@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <base href="$FLUTTER_BASE_HREF">
 
@@ -27,20 +27,87 @@
       width: 100%;
       height: 100%;
       height: 100svh;
+      height: 100dvh;
       overflow: hidden;
+      overscroll-behavior: none;
       background: #F3F1ED;
+      -webkit-tap-highlight-color: transparent;
     }
     #glow-root {
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
+      bottom: 0;
       width: 100%;
       height: 100%;
       height: 100svh;
+      height: 100dvh;
       box-sizing: border-box;
       padding-top: env(safe-area-inset-top, 0px);
       overflow: hidden;
+    }
+    #glow-boot {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-sizing: border-box;
+      padding: calc(28px + env(safe-area-inset-top, 0px)) 28px calc(36px + env(safe-area-inset-bottom, 0px));
+      background: #F3F1ED;
+      font-family: 'Poppins', sans-serif;
+      pointer-events: none;
+      transition: opacity 280ms ease;
+    }
+    #glow-boot.is-gone {
+      opacity: 0;
+    }
+    .glow-boot-kicker {
+      font-size: 13px;
+      font-weight: 600;
+      color: #6F6A67;
+      letter-spacing: 0.6px;
+    }
+    .glow-boot-mark {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: #00E676 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23111111' d='M9 3.2l.9-1.1A2 2 0 0 1 11.4 1.5h1.2a2 2 0 0 1 1.5.6L15 3.2H19a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2h4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'/%3E%3C/svg%3E") center / 26px no-repeat;
+      margin-bottom: 22px;
+    }
+    .glow-boot-title {
+      font-size: 34px;
+      font-weight: 800;
+      line-height: 1.08;
+      letter-spacing: -0.6px;
+      color: #111111;
+      margin: 0 0 12px;
+    }
+    .glow-boot-tag {
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 1.4;
+      color: #6F6A67;
+      margin: 0;
+    }
+    .glow-boot-dots {
+      display: flex;
+      gap: 8px;
+    }
+    .glow-boot-dots span {
+      width: 8px;
+      height: 8px;
+      border-radius: 99px;
+      background: #E6E2DC;
+      animation: glow-boot-pulse 1.2s ease-in-out infinite;
+    }
+    .glow-boot-dots span:nth-child(2) { animation-delay: 0.15s; }
+    .glow-boot-dots span:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes glow-boot-pulse {
+      0%, 70%, 100% { width: 8px; background: #E6E2DC; }
+      35% { width: 18px; background: #111111; }
     }
     #glow-html-layer {
       position: fixed;
@@ -269,6 +336,15 @@
 </head>
 <body>
   <div id="glow-root"></div>
+  <div id="glow-boot">
+    <div class="glow-boot-kicker">GlowCheck</div>
+    <div>
+      <div class="glow-boot-mark"></div>
+      <p class="glow-boot-title">Your bottle.<br>Your skin.</p>
+      <p class="glow-boot-tag">INCI vs your skin</p>
+    </div>
+    <div class="glow-boot-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+  </div>
   <div id="glow-html-layer"></div>
   <script>
     (function () {
@@ -276,25 +352,22 @@
       var lastTop = -1;
       var fitting = false;
       function visibleHeight() {
-        var heights = [window.innerHeight];
-        if (window.visualViewport && window.visualViewport.height) {
-          heights.push(window.visualViewport.height);
-        }
-        if (document.documentElement && document.documentElement.clientHeight) {
-          heights.push(document.documentElement.clientHeight);
-        }
-        return Math.round(Math.min.apply(null, heights.filter(Boolean)));
+        var vv = window.visualViewport;
+        if (vv && vv.height) return Math.round(vv.height);
+        if (window.innerHeight) return Math.round(window.innerHeight);
+        return Math.round(document.documentElement.clientHeight || 0);
       }
       function typing() {
         var el = document.activeElement;
         return el && el.classList && el.classList.contains('glow-html-input');
       }
       function fit() {
-        if (fitting || typing()) return;
+        if (fitting) return;
         var root = document.getElementById('glow-root');
         if (!root) return;
         var vv = window.visualViewport;
-        var top = vv && vv.offsetTop ? Math.round(vv.offsetTop) : 0;
+        var offset = vv && vv.offsetTop ? Math.round(vv.offsetTop) : 0;
+        var top = (typing() || offset > 24) ? offset : 0;
         var h = visibleHeight();
         if (h === lastH && top === lastTop) return;
         lastH = h;
@@ -314,12 +387,24 @@
       window.addEventListener('pageshow', fit);
       window.addEventListener('orientationchange', function () {
         setTimeout(fit, 80);
+        setTimeout(fit, 280);
       });
-      window.addEventListener('flutter-first-frame', fit);
+      window.addEventListener('flutter-first-frame', function () {
+        fit();
+        var boot = document.getElementById('glow-boot');
+        if (!boot) return;
+        boot.classList.add('is-gone');
+        setTimeout(function () {
+          if (boot && boot.parentNode) boot.parentNode.removeChild(boot);
+        }, 300);
+      });
       document.addEventListener('visibilitychange', fit);
       if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', fit);
-        window.visualViewport.addEventListener('scroll', fit);
+        window.visualViewport.addEventListener('scroll', function () {
+          var offset = window.visualViewport.offsetTop || 0;
+          if (offset > 24 || lastTop > 24) fit();
+        });
       }
       [50, 150, 400, 900].forEach(function (ms) { setTimeout(fit, ms); });
     })();

@@ -87,6 +87,66 @@ class GlowApi {
     );
   }
 
+  static Future<bool> billingReady() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$baseUrl/billing/ready'))
+          .timeout(const Duration(seconds: 6));
+      if (response.statusCode != 200) return false;
+      final json = jsonDecode(response.body);
+      return json is Map && json['stripe'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<String> createCheckout({
+    required String successUrl,
+    required String cancelUrl,
+    String? email,
+    String? locale,
+  }) async {
+    late http.Response response;
+    try {
+      response = await http
+          .post(
+            Uri.parse('$baseUrl/billing/checkout'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'successUrl': successUrl,
+              'cancelUrl': cancelUrl,
+              if (email != null && email.contains('@')) 'email': email,
+              if (locale != null && locale.isNotEmpty) 'locale': locale,
+            }),
+          )
+          .timeout(const Duration(seconds: 20));
+    } catch (_) {
+      throw Exception(GlowL10n.t('paywall_store_err'));
+    }
+    final json = jsonDecode(response.body);
+    if (json is Map && json['ok'] == true && json['url'] is String) {
+      return json['url'] as String;
+    }
+    throw Exception(GlowL10n.t('paywall_store_err'));
+  }
+
+  static Future<bool> confirmCheckout(String sessionId) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/billing/confirm'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'sessionId': sessionId}),
+          )
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode != 200) return false;
+      final json = jsonDecode(response.body);
+      return json is Map && json['unlocked'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static String _errorMessage(String? code) {
     switch (code) {
       case 'NOT_COSMETIC':
