@@ -28,15 +28,20 @@ export function allowedReturnUrl(raw: string) {
     return false;
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
-  if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') return true;
+  const host = parsed.hostname.toLowerCase();
+  if (host === 'localhost' || host === '127.0.0.1') return true;
+  const bare = host.replace(/^www\./, '');
   if (env.FRONTEND_ORIGIN) {
     try {
-      if (parsed.origin === new URL(env.FRONTEND_ORIGIN).origin) return true;
+      const allowed = new URL(env.FRONTEND_ORIGIN);
+      const allowedBare = allowed.hostname.toLowerCase().replace(/^www\./, '');
+      if (parsed.origin === allowed.origin) return true;
+      if (parsed.protocol === 'https:' && bare === allowedBare) return true;
     } catch {
       /* ignore */
     }
   }
-  if (parsed.protocol === 'https:' && /glow-?check/i.test(parsed.hostname) && parsed.hostname.endsWith('.vercel.app')) {
+  if (parsed.protocol === 'https:' && (bare === 'glow-check.com' || /glow-?check/i.test(host) && host.endsWith('.vercel.app'))) {
     return true;
   }
   return false;

@@ -1,5 +1,7 @@
 import 'package:fitnessapp/common_widgets/glow_ui.dart';
+import 'package:fitnessapp/config/app_env.dart';
 import 'package:fitnessapp/l10n/glow_l10n.dart';
+import 'package:fitnessapp/services/glow_api.dart';
 import 'package:fitnessapp/services/glow_billing.dart';
 import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
@@ -18,7 +20,44 @@ class _PaywallScreenState extends State<PaywallScreen> {
   bool busy = false;
   String? error;
 
+  @override
+  void initState() {
+    super.initState();
+    GlowApi.billingReady().then((ready) {
+      AppEnv.stripeLive = ready;
+    });
+  }
+
   Future<void> _buy() async {
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    var stayBusy = false;
+    try {
+      if (!AppEnv.stripeLive) {
+        AppEnv.stripeLive = await GlowApi.billingReady();
+      }
+      final outcome = await GlowBilling.purchase(GlowBilling.lifetimeId);
+      if (!mounted) return;
+      if (outcome == PurchaseOutcome.redirecting) {
+        stayBusy = true;
+        return;
+      }
+      if (outcome == PurchaseOutcome.cancelled) return;
+      if (outcome == PurchaseOutcome.needsStore) {
+        setState(() {
+          error = GlowL10n.t('paywall_store_err');
+        });
+        return;
+      }
+      Navigator.pop(context, true);
+    } catch (e) {
+      setState(() => error = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted && !stayBusy) setState(() => busy = false);
+    }
+  }
     setState(() {
       busy = true;
       error = null;
@@ -168,10 +207,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                         ],
                       ),
                     ),
-                    if (error != null) ...[
-                      const SizedBox(height: 14),
-                      Text(error!, style: const TextStyle(color: AppColors.caution, fontSize: 13, height: 1.4)),
-                    ],
+                    const SizedBox(height: 22),
                   ],
                 ),
               ),
@@ -184,6 +220,14 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       title: busy ? GlowL10n.t('paywall_working') : GlowL10n.t('paywall_cta'),
                       onPressed: busy ? () {} : _buy,
                     ),
+                    if (error != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        error!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AppColors.caution, fontSize: 13, height: 1.4),
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     Text(
                       GlowL10n.t('paywall_once'),
