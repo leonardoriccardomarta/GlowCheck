@@ -1,7 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { env } from '../config/env';
 import { ensureDb, sqlClient } from '../db';
-import { verifyGoogleIdToken } from './googleId';
+import { verifyGoogleSignIn } from './googleId';
 
 export type AuthUser = {
   id: string;
@@ -109,11 +109,15 @@ export async function socialUser(input: {
   email?: string;
   name?: string;
   idToken?: string;
+  accessToken?: string;
 }) {
   let email: string;
   let name: string;
   if (input.provider === 'google') {
-    const profile = await verifyGoogleIdToken(input.idToken);
+    const profile = await verifyGoogleSignIn({
+      idToken: input.idToken,
+      accessToken: input.accessToken,
+    });
     email = profile.email;
     name = profile.name;
   } else {

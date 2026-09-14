@@ -99,7 +99,8 @@ class GlowAuth {
     }
     final tokens = await account.authentication;
     final idToken = tokens.idToken;
-    if (idToken == null || idToken.isEmpty) {
+    final accessToken = tokens.accessToken;
+    if ((idToken == null || idToken.isEmpty) && (accessToken == null || accessToken.isEmpty)) {
       throw Exception(GlowL10n.t('auth_failed'));
     }
     final user = await _post('/auth/social', {
@@ -107,7 +108,8 @@ class GlowAuth {
       'clientId': AppEnv.googleClientId,
       'email': account.email,
       'name': account.displayName ?? '',
-      'idToken': idToken,
+      if (idToken != null && idToken.isNotEmpty) 'idToken': idToken,
+      if (accessToken != null && accessToken.isNotEmpty) 'accessToken': accessToken,
     });
     await GlowStore.instance.applySession(
       name: user['name'] as String? ?? account.displayName ?? GlowL10n.t('google_user'),

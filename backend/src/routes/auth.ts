@@ -20,6 +20,7 @@ const socialSchema = z.object({
   email: z.string().email().max(120).optional(),
   name: z.string().max(80).optional(),
   idToken: z.string().max(16000).optional(),
+  accessToken: z.string().max(16000).optional(),
   clientId: z.string().max(200).optional(),
 });
 
