@@ -6,6 +6,7 @@ import '../config/app_env.dart';
 import '../l10n/glow_l10n.dart';
 import '../models/scan_result.dart';
 import '../state/glow_store.dart';
+import 'glow_http.dart';
 
 class GlowScanException implements Exception {
   GlowScanException(this.code, this.message);
@@ -19,6 +20,15 @@ class GlowApi {
   GlowApi._();
 
   static String get baseUrl => AppEnv.analyzeBase;
+  static final http.Client _client = createGlowHttpClient();
+
+  static Map<String, String> _headers() {
+    final token = GlowStore.instance.accountToken;
+    return {
+      'Content-Type': 'application/json',
+      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+    };
+  }
 
   static Future<ScanResult> analyzeJpeg(List<int> bytes, {String? barcode, bool readInci = false}) async {
     final store = GlowStore.instance;
@@ -31,10 +41,10 @@ class GlowApi {
     final uri = Uri.parse('$baseUrl/analyze');
     late http.Response response;
     try {
-      response = await http
+      response = await _client
           .post(
             uri,
-            headers: {'Content-Type': 'application/json'},
+            headers: _headers(),
             body: jsonEncode({
               'imageBase64': base64Encode(bytes),
               'mimeType': 'image/jpeg',
@@ -87,9 +97,23 @@ class GlowApi {
     );
   }
 
+  static Future<void> saveShelf(ScanResult scan) async {
+    final token = GlowStore.instance.accountToken;
+    if (token == null || token.isEmpty) return;
+    try {
+      await _client
+          .post(
+            Uri.parse('$baseUrl/shelf'),
+            headers: _headers(),
+            body: jsonEncode(scan.toJson()),
+          )
+          .timeout(const Duration(seconds: 20));
+    } catch (_) {}
+  }
+
   static Future<bool> billingReady() async {
     try {
-      final response = await http
+      final response = await _client
           .get(Uri.parse('$baseUrl/billing/ready'))
           .timeout(const Duration(seconds: 6));
       if (response.statusCode != 200) return false;
@@ -108,10 +132,10 @@ class GlowApi {
   }) async {
     late http.Response response;
     try {
-      response = await http
+      response = await _client
           .post(
             Uri.parse('$baseUrl/billing/checkout'),
-            headers: {'Content-Type': 'application/json'},
+            headers: _headers(),
             body: jsonEncode({
               'successUrl': successUrl,
               'cancelUrl': cancelUrl,
@@ -130,20 +154,29 @@ class GlowApi {
     throw Exception(GlowL10n.t('paywall_store_err'));
   }
 
-  static Future<bool> confirmCheckout(String sessionId) async {
+  static Future<({bool unlocked, String? email, String? token})> confirmCheckout(String sessionId) async {
     try {
-      final response = await http
+      final response = await _client
           .post(
             Uri.parse('$baseUrl/billing/confirm'),
-            headers: {'Content-Type': 'application/json'},
+            headers: _headers(),
             body: jsonEncode({'sessionId': sessionId}),
           )
           .timeout(const Duration(seconds: 20));
-      if (response.statusCode != 200) return false;
+      if (response.statusCode != 200) return (unlocked: false, email: null, token: null);
       final json = jsonDecode(response.body);
-      return json is Map && json['unlocked'] == true;
+      if (json is! Map || json['unlocked'] != true) {
+        return (unlocked: false, email: null, token: null);
+      }
+      final email = json['email'];
+      final token = json['token'];
+      return (
+        unlocked: true,
+        email: email is String && email.contains('@') ? email : null,
+        token: token is String && token.isNotEmpty ? token : null,
+      );
     } catch (_) {
-      return false;
+      return (unlocked: false, email: null, token: null);
     }
   }
 
@@ -155,6 +188,8 @@ class GlowApi {
         return GlowL10n.t('err_unreadable');
       case 'NEED_INCI':
         return GlowL10n.t('err_need_inci');
+      case 'PAYWALL':
+        return GlowL10n.t('err_paywall');
       case 'INTERNAL':
         return GlowL10n.t('err_internal');
       default:

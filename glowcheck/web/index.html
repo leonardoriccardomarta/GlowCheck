@@ -141,7 +141,7 @@
     input.glow-html-input,
     input.glow-html-input::placeholder {
       font-family: 'Poppins', sans-serif !important;
-      font-size: 14px !important;
+      font-size: 16px !important;
       font-weight: 400 !important;
       letter-spacing: 0 !important;
       -webkit-font-smoothing: antialiased;
@@ -361,36 +361,33 @@
         var el = document.activeElement;
         return el && el.classList && el.classList.contains('glow-html-input');
       }
-      function fit() {
-        if (fitting) return;
+      function fit(force) {
+        if (fitting || typing()) return;
         var root = document.getElementById('glow-root');
         if (!root) return;
-        var vv = window.visualViewport;
-        var offset = vv && vv.offsetTop ? Math.round(vv.offsetTop) : 0;
-        var top = (typing() || offset > 24) ? offset : 0;
         var h = visibleHeight();
-        if (h === lastH && top === lastTop) return;
+        if (!force && lastH > 0 && Math.abs(h - lastH) < 120) return;
         lastH = h;
-        lastTop = top;
+        lastTop = 0;
         fitting = true;
         root.style.position = 'fixed';
         root.style.left = '0';
         root.style.right = '0';
-        root.style.top = top + 'px';
+        root.style.top = '0';
         root.style.height = h + 'px';
         root.style.paddingTop = 'env(safe-area-inset-top, 0px)';
         root.style.boxSizing = 'border-box';
         fitting = false;
       }
-      fit();
-      window.addEventListener('resize', fit);
-      window.addEventListener('pageshow', fit);
+      fit(true);
+      window.addEventListener('resize', function () { fit(false); });
+      window.addEventListener('pageshow', function () { fit(true); });
       window.addEventListener('orientationchange', function () {
-        setTimeout(fit, 80);
-        setTimeout(fit, 280);
+        setTimeout(function () { fit(true); }, 80);
+        setTimeout(function () { fit(true); }, 280);
       });
       window.addEventListener('flutter-first-frame', function () {
-        fit();
+        fit(true);
         var boot = document.getElementById('glow-boot');
         if (!boot) return;
         boot.classList.add('is-gone');
@@ -398,15 +395,11 @@
           if (boot && boot.parentNode) boot.parentNode.removeChild(boot);
         }, 300);
       });
-      document.addEventListener('visibilitychange', fit);
+      document.addEventListener('visibilitychange', function () { fit(false); });
       if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', fit);
-        window.visualViewport.addEventListener('scroll', function () {
-          var offset = window.visualViewport.offsetTop || 0;
-          if (offset > 24 || lastTop > 24) fit();
-        });
+        window.visualViewport.addEventListener('resize', function () { fit(false); });
       }
-      [50, 150, 400, 900].forEach(function (ms) { setTimeout(fit, ms); });
+      [50, 150, 400, 900].forEach(function (ms) { setTimeout(function () { fit(true); }, ms); });
     })();
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function (regs) {

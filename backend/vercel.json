@@ -5,6 +5,8 @@
     { "source": "/health", "destination": "/api" },
     { "source": "/analyze", "destination": "/api" },
     { "source": "/auth/:path*", "destination": "/api" },
+    { "source": "/shelf", "destination": "/api" },
+    { "source": "/shelf/:path*", "destination": "/api" },
     { "source": "/billing", "destination": "/api" },
     { "source": "/billing/:path*", "destination": "/api" }
   ]

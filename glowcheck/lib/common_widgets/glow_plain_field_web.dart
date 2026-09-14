@@ -30,6 +30,15 @@ class _GlowPlainFieldImplState extends State<GlowPlainFieldImpl>
   late final String _id;
   late final web.HTMLInputElement _input;
   bool _shown = false;
+  String _left = '';
+  String _top = '';
+  String _width = '';
+  String _height = '';
+
+  bool get _focused {
+    final active = web.document.activeElement;
+    return active != null && active.id == _id;
+  }
 
   @override
   void initState() {
@@ -49,7 +58,7 @@ class _GlowPlainFieldImplState extends State<GlowPlainFieldImpl>
       ..padding = '0'
       ..backgroundColor = '#ffffff'
       ..color = '#111111'
-      ..fontSize = '14px'
+      ..fontSize = '16px'
       ..lineHeight = '20px'
       ..fontFamily = 'Poppins, sans-serif'
       ..fontWeight = '400'
@@ -67,6 +76,9 @@ class _GlowPlainFieldImplState extends State<GlowPlainFieldImpl>
       }
       widget.onChanged?.call(value);
     });
+    _input.onFocus.listen((_) {
+      Future<void>.delayed(const Duration(milliseconds: 320), _ensureVisible);
+    });
     widget.controller.addListener(_syncFromController);
     final layer = web.document.querySelector('#glow-html-layer');
     (layer ?? web.document.body)?.appendChild(_input);
@@ -74,21 +86,38 @@ class _GlowPlainFieldImplState extends State<GlowPlainFieldImpl>
     WidgetsBinding.instance.addPostFrameCallback(_onFrame);
   }
 
+  void _ensureVisible() {
+    if (!mounted || !_focused) return;
+    final ctx = _boxKey.currentContext;
+    if (ctx == null || !ctx.mounted) return;
+    try {
+      Scrollable.ensureVisible(
+        ctx,
+        alignment: 0.2,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+    } catch (_) {}
+  }
+
   void _applyAttrs() {
-    // Keep type=text so iOS Chrome actually opens the keyboard.
-    // Mask password in CSS; hint the email keyboard via inputMode.
-    _input
-      ..type = 'text'
-      ..placeholder = widget.hint
-      ..autocomplete = 'off'
-      ..spellcheck = false
-      ..inputMode = widget.email ? 'email' : 'text';
-    _input.className = _shown
-        ? (widget.obscure ? 'glow-html-input is-secret' : 'glow-html-input')
-        : (widget.obscure ? 'glow-html-input is-secret is-hidden' : 'glow-html-input is-hidden');
+    final mode = widget.email ? 'email' : 'text';
+    if (_input.type != 'text') _input.type = 'text';
+    if (_input.placeholder != widget.hint) _input.placeholder = widget.hint;
+    if (_input.inputMode != mode) _input.inputMode = mode;
+    _input.autocomplete = widget.email ? 'email' : (widget.obscure ? 'current-password' : 'off');
+    _input.spellcheck = false;
+    _input.setAttribute('autocapitalize', widget.email || widget.obscure ? 'none' : 'sentences');
+    _input.setAttribute('autocorrect', 'off');
+    _input.setAttribute('enterkeyhint', 'done');
+    final hidden = !_shown ? ' is-hidden' : '';
+    final secret = widget.obscure ? ' is-secret' : '';
+    final next = 'glow-html-input$secret$hidden';
+    if (_input.className != next) _input.className = next;
   }
 
   void _syncFromController() {
+    if (_focused) return;
     if (_input.value != widget.controller.text) {
       _input.value = widget.controller.text;
     }
@@ -139,10 +168,11 @@ class _GlowPlainFieldImplState extends State<GlowPlainFieldImpl>
   }
 
   void _hide({required bool blur}) {
+    if (_focused && !blur) return;
     if (_shown || blur) {
       _shown = false;
       _input.classList.add('is-hidden');
-      if (blur) {
+      if (blur && _focused) {
         _input.blur();
       }
     }
@@ -150,37 +180,44 @@ class _GlowPlainFieldImplState extends State<GlowPlainFieldImpl>
 
   void _syncPosition() {
     final ctx = _boxKey.currentContext;
+    final focused = _focused;
     if (ctx == null || !ctx.mounted || !_onStage(ctx)) {
-      _hide(blur: true);
+      if (!focused) _hide(blur: true);
       return;
     }
     final box = ctx.findRenderObject() as RenderBox?;
     if (box == null || !box.hasSize || !box.attached) {
-      _hide(blur: true);
+      if (!focused) _hide(blur: true);
       return;
     }
     final offset = box.localToGlobal(Offset.zero);
     final size = box.size;
     if (size.width < 8 || size.height < 8) {
-      _hide(blur: true);
-      return;
-    }
-    final view = View.of(ctx);
-    final logical = view.physicalSize / view.devicePixelRatio;
-    if (offset.dx + size.width < 0 ||
-        offset.dy + size.height < 0 ||
-        offset.dx > logical.width ||
-        offset.dy > logical.height) {
-      _hide(blur: true);
+      if (!focused) _hide(blur: true);
       return;
     }
     _shown = true;
     _input.classList.remove('is-hidden');
-    _input.style
-      ..left = '${offset.dx}px'
-      ..top = '${offset.dy}px'
-      ..width = '${size.width}px'
-      ..height = '${size.height}px';
+    final left = '${offset.dx.round()}px';
+    final top = '${offset.dy.round()}px';
+    final width = '${size.width.round()}px';
+    final height = '${size.height.round()}px';
+    if (left != _left) {
+      _left = left;
+      _input.style.left = left;
+    }
+    if (top != _top) {
+      _top = top;
+      _input.style.top = top;
+    }
+    if (width != _width) {
+      _width = width;
+      _input.style.width = width;
+    }
+    if (height != _height) {
+      _height = height;
+      _input.style.height = height;
+    }
   }
 
   @override

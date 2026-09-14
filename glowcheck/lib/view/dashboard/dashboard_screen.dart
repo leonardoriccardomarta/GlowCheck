@@ -2,7 +2,7 @@ import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:fitnessapp/view/activity/activity_screen.dart';
 import 'package:fitnessapp/view/camera/camera_screen.dart';
-import 'package:fitnessapp/view/paywall/paywall_screen.dart';
+import 'package:fitnessapp/services/glow_funnel.dart';
 import 'package:fitnessapp/view/profile/user_profile.dart';
 import 'package:flutter/material.dart';
 
@@ -46,14 +46,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void goTab(int index) {
-    if (index == 2 && !GlowStore.instance.canScan) {
-      Navigator.pushNamed(context, PaywallScreen.routeName);
+    if (index == 2) {
+      _openScan();
       return;
     }
     if (selectTab == 2 && index != 2) {
       GlowStore.instance.clearFirstScanBadge();
     }
     if (mounted) setState(() => selectTab = index);
+  }
+
+  Future<void> _openScan() async {
+    final ok = await GlowFunnel.ensureCanScan(context);
+    if (!ok || !mounted) return;
+    if (selectTab == 2) return;
+    setState(() => selectTab = 2);
   }
 
   @override

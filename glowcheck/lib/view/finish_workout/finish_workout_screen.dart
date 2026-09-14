@@ -3,6 +3,8 @@ import 'package:fitnessapp/data/dupe_catalog.dart';
 import 'package:fitnessapp/l10n/dupe_blurbs.dart';
 import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/models/scan_result.dart';
+import 'package:fitnessapp/services/glow_api.dart';
+import 'package:fitnessapp/services/glow_funnel.dart';
 import 'package:fitnessapp/services/glow_link.dart';
 import 'package:fitnessapp/services/glow_share.dart';
 import 'package:fitnessapp/state/glow_store.dart';
@@ -206,6 +208,18 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                   padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
                   child: Column(
                     children: [
+                      const SizedBox(height: 16),
+                      GlowPrimaryButton(
+                        title: GlowL10n.t('hook_save'),
+                        onPressed: () => _saveToShelf(scan),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        GlowL10n.t('hook_save_hint'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: AppColors.muted, fontSize: 13, height: 1.35),
+                      ),
+                      const SizedBox(height: 20),
                       if (dupe != null) ...[
                         _DupeCard(scan: scan, dupe: dupe),
                         const SizedBox(height: 12),
@@ -299,7 +313,7 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                           ),
                         ),
                       const SizedBox(height: 16),
-                      if (!GlowStore.instance.isPro && GlowStore.instance.freeScansRemaining == 0) ...[
+                      if (!GlowStore.instance.isPro && GlowStore.instance.freeScansRemaining == 0 && GlowStore.instance.hasAccount) ...[
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(18),
@@ -346,22 +360,33 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(22, 8, 22, 16),
               child: GlowPrimaryButton(
-                title: !GlowStore.instance.isPro && GlowStore.instance.freeScansRemaining <= 0
-                    ? GlowL10n.t('unlock_unlimited')
-                    : GlowL10n.t('scan_another'),
-                onPressed: () {
-                  if (!GlowStore.instance.isPro && GlowStore.instance.freeScansRemaining <= 0) {
-                    Navigator.pushNamed(context, PaywallScreen.routeName);
-                    return;
-                  }
-                  Navigator.pop(context);
-                },
+                title: GlowL10n.t('scan_another'),
+                onPressed: _scanAnother,
               ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _saveToShelf(ScanResult scan) async {
+    final signed = await GlowFunnel.ensureSignedIn(context);
+    if (!signed || !mounted) return;
+    await GlowApi.saveShelf(scan);
+    if (!GlowStore.instance.isPinned(scan.at)) {
+      await GlowStore.instance.togglePin(scan.at);
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(GlowL10n.t('hook_saved'))),
+    );
+  }
+
+  Future<void> _scanAnother() async {
+    final ok = await GlowFunnel.ensureCanScan(context);
+    if (!ok || !mounted) return;
+    Navigator.pop(context);
   }
 
   List<Widget> _inciRows(List<IngredientLine> lines) {

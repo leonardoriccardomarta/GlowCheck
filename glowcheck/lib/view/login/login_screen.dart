@@ -34,6 +34,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _finish() async {
     if (!mounted) return;
+    if (Navigator.of(context).canPop() && GlowStore.instance.hasProfile) {
+      Navigator.of(context).pop(true);
+      return;
+    }
+    final next = GlowStore.instance.hasProfile
+        ? const DashboardScreen()
+        : const OnBoardingScreen();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => next),
+      (route) => false,
+    );
+  }
+
+  void _skip() {
+    if (!mounted) return;
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop(false);
+      return;
+    }
     final next = GlowStore.instance.hasProfile
         ? const DashboardScreen()
         : const OnBoardingScreen();
@@ -114,6 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 absorbing: busy,
                 child: ListView(
           padding: const EdgeInsets.fromLTRB(22, 18, 22, 24),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           children: [
             Row(
               children: [
@@ -122,6 +142,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted, letterSpacing: 0.6),
                 ),
                 const Spacer(),
+                TextButton(
+                  onPressed: _skip,
+                  child: Text(
+                    GlowL10n.t('login_guest'),
+                    style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w700),
+                  ),
+                ),
                 const GlowLanguageButton(),
               ],
             ),

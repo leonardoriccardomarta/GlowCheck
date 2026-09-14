@@ -8,7 +8,11 @@ export type AuthUser = {
   provider: 'email' | 'google' | 'apple';
 };
 
-type StoredUser = AuthUser & { passwordHash?: string };
+export type StoredUser = AuthUser & {
+  passwordHash?: string;
+  isPro?: boolean;
+  usedFree?: boolean;
+};
 
 const users = new Map<string, StoredUser>();
 
@@ -17,9 +21,15 @@ function hashPassword(password: string) {
   return createHmac('sha256', secret).update(password).digest('hex');
 }
 
-function signToken(user: AuthUser) {
+function signToken(user: StoredUser) {
   const payload = Buffer.from(
-    JSON.stringify({ sub: user.id, email: user.email, provider: user.provider, exp: Date.now() + 1000 * 60 * 60 * 24 * 30 })
+    JSON.stringify({
+      sub: user.id,
+      email: user.email,
+      provider: user.provider,
+      isPro: Boolean(user.isPro),
+      exp: Date.now() + 1000 * 60 * 60 * 24 * 30,
+    })
   ).toString('base64url');
   const secret = env.AUTH_JWT_SECRET || 'glowcheck-sandbox';
   const sig = createHmac('sha256', secret).update(payload).digest('base64url');
@@ -85,7 +95,76 @@ function sessionOf(user: StoredUser) {
   return {
     ok: true as const,
     live: Boolean(env.AUTH_JWT_SECRET),
-    token: signToken(publicUser),
+    token: signToken(user),
     user: publicUser,
+    isPro: Boolean(user.isPro),
   };
+}
+
+export function verifyToken(token: string): StoredUser | null {
+  const [payload, sig] = token.split('.');
+  if (!payload || !sig) return null;
+  const secret = env.AUTH_JWT_SECRET || 'glowcheck-sandbox';
+  const expected = createHmac('sha256', secret).update(payload).digest('base64url');
+  if (!safeEqual(sig, expected)) return null;
+  try {
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as {
+      sub?: string;
+      email?: string;
+      provider?: string;
+      isPro?: boolean;
+      exp?: number;
+    };
+    if (!data.email || (typeof data.exp === 'number' && data.exp < Date.now())) return null;
+    const email = data.email.trim().toLowerCase();
+    const existing = users.get(email);
+    if (existing) {
+      if (data.isPro) existing.isPro = true;
+      return existing;
+    }
+    const provider = data.provider === 'google' || data.provider === 'apple' ? data.provider : 'email';
+    const user: StoredUser = {
+      id: data.sub || randomBytes(8).toString('hex'),
+      name: email.split('@')[0] || 'GlowCheck',
+      email,
+      provider,
+      isPro: Boolean(data.isPro),
+    };
+    users.set(email, user);
+    return user;
+  } catch {
+    return null;
+  }
+}
+
+export function issueSession(email: string) {
+  const user = users.get(email.trim().toLowerCase());
+  return user ? sessionOf(user) : null;
+}
+
+export function userFromRequest(req: { headers: { authorization?: string } }): StoredUser | null {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) return null;
+  return verifyToken(header.slice(7).trim());
+}
+
+export function markPro(email: string) {
+  const key = email.trim().toLowerCase();
+  if (!key.includes('@')) return;
+  const existing = users.get(key);
+  if (existing) {
+    existing.isPro = true;
+    return;
+  }
+  users.set(key, {
+    id: randomBytes(8).toString('hex'),
+    name: key.split('@')[0] || 'GlowCheck',
+    email: key,
+    provider: 'email',
+    isPro: true,
+  });
+}
+
+export function markFreeUsed(user: StoredUser) {
+  user.usedFree = true;
 }

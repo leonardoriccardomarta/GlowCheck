@@ -44,9 +44,9 @@ class GlowBilling {
     final sessionId = uri.queryParameters['session_id'];
     if (flag == 'success' && sessionId != null && sessionId.isNotEmpty) {
       await GlowStore.instance.setStripeSessionId(sessionId);
-      final ok = await GlowApi.confirmCheckout(sessionId);
-      if (ok) {
-        await GlowStore.instance.unlockPro(plan: lifetimeId, stripeSession: sessionId);
+      final result = await GlowApi.confirmCheckout(sessionId);
+      if (result.unlocked) {
+        await _applyPaid(result, sessionId);
       }
       stripCheckoutQuery();
       return;
@@ -106,6 +106,22 @@ class GlowBilling {
     return PurchaseOutcome.needsStore;
   }
 
+  static Future<void> _applyPaid(({bool unlocked, String? email, String? token}) result, String sessionId) async {
+    await GlowStore.instance.unlockPro(plan: lifetimeId, stripeSession: sessionId);
+    final email = result.email ?? GlowStore.instance.accountEmail;
+    if (result.token != null && email != null && email.contains('@')) {
+      await GlowStore.instance.applySession(
+        name: GlowStore.instance.accountName ?? email.split('@').first,
+        email: email,
+        provider: GlowStore.instance.accountProvider ?? 'email',
+        token: result.token,
+        isPro: true,
+      );
+    } else if (result.email != null) {
+      await GlowStore.instance.applyStripeAccount(result.email!);
+    }
+  }
+
   static Future<PurchaseOutcome> restore() async {
     if (GlowPurchases.enabled) {
       return GlowPurchases.restore();
@@ -113,9 +129,9 @@ class GlowBilling {
     if (kIsWeb) {
       final sessionId = GlowStore.instance.stripeSessionId;
       if (sessionId != null && sessionId.isNotEmpty && AppEnv.stripeLive) {
-        final ok = await GlowApi.confirmCheckout(sessionId);
-        if (ok) {
-          await GlowStore.instance.unlockPro(plan: lifetimeId, stripeSession: sessionId);
+        final result = await GlowApi.confirmCheckout(sessionId);
+        if (result.unlocked) {
+          await _applyPaid(result, sessionId);
           return PurchaseOutcome.unlocked;
         }
         return PurchaseOutcome.nothingToRestore;

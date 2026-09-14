@@ -33,6 +33,7 @@ class GlowAuth {
         email: user['email'] as String? ?? email,
         provider: 'email',
         token: user['token'] as String?,
+        isPro: user['isPro'] == true,
       );
       return;
     }
@@ -53,6 +54,7 @@ class GlowAuth {
         email: user['email'] as String? ?? email,
         provider: 'email',
         token: user['token'] as String?,
+        isPro: user['isPro'] == true,
       );
       return;
     }
@@ -75,6 +77,7 @@ class GlowAuth {
         email: user['email'] as String? ?? '$provider@glowcheck.local',
         provider: provider,
         token: user['token'] as String?,
+        isPro: user['isPro'] == true,
       );
       return;
     }
@@ -107,6 +110,7 @@ class GlowAuth {
         email: user['email'] as String? ?? (email.isEmpty ? 'apple@glowcheck.local' : email),
         provider: 'apple',
         token: user['token'] as String?,
+        isPro: user['isPro'] == true,
       );
       return;
     }
@@ -140,6 +144,7 @@ class GlowAuth {
       return {
         ...user,
         'token': json['token'],
+        'isPro': json['isPro'] == true,
       };
     }
     throw Exception(GlowL10n.t('auth_missing'));

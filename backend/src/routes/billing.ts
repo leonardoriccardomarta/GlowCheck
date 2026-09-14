@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { Router } from 'express';
 import { z } from 'zod';
+import { issueSession, markPro } from '../services/auth';
 import {
   LIFETIME_AMOUNT,
   LIFETIME_CURRENCY,
@@ -110,7 +111,17 @@ billingRouter.post('/confirm', async (req, res) => {
   try {
     const session = await stripe.checkout.sessions.retrieve(parsed.data.sessionId);
     const unlocked = sessionPaid(session);
-    return res.json({ ok: true, unlocked, plan: unlocked ? LIFETIME_PLAN : null });
+    const email = session.customer_details?.email || session.customer_email || null;
+    if (unlocked && email) markPro(email);
+    const issued = unlocked && email ? issueSession(email) : null;
+    return res.json({
+      ok: true,
+      unlocked,
+      plan: unlocked ? LIFETIME_PLAN : null,
+      email: unlocked ? email : null,
+      token: issued?.token ?? null,
+      isPro: unlocked,
+    });
   } catch (error) {
     console.error(error);
     return res.status(404).json({ ok: false, error: 'SESSION_NOT_FOUND' });

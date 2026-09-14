@@ -6,7 +6,6 @@ import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:fitnessapp/utils/glow_verdict.dart';
 import 'package:fitnessapp/view/dashboard/dashboard_screen.dart';
 import 'package:fitnessapp/view/finish_workout/finish_workout_screen.dart';
-import 'package:fitnessapp/view/paywall/paywall_screen.dart';
 import 'package:flutter/material.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -68,13 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
               color: AppColors.ink,
               borderRadius: BorderRadius.circular(28),
               child: InkWell(
-                onTap: () {
-                  if (store.canScan) {
-                    DashboardScope.of(context)?.goTab(2);
-                  } else {
-                    Navigator.pushNamed(context, PaywallScreen.routeName);
-                  }
-                },
+                onTap: () => DashboardScope.of(context)?.goTab(2),
                 borderRadius: BorderRadius.circular(28),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(22, 22, 18, 22),
@@ -143,7 +136,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 210,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
                   itemCount: shelf.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 12),
                   itemBuilder: (context, i) {

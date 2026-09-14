@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
@@ -10,11 +11,17 @@ class GlowScrollBehavior extends MaterialScrollBehavior {
         PointerDeviceKind.stylus,
         PointerDeviceKind.invertedStylus,
         PointerDeviceKind.trackpad,
-        PointerDeviceKind.mouse,
       };
 
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {
-    return const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
+    if (kIsWeb) return const ClampingScrollPhysics();
+    return const BouncingScrollPhysics();
+  }
+
+  @override
+  Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) {
+    if (kIsWeb) return child;
+    return super.buildOverscrollIndicator(context, child, details);
   }
 }

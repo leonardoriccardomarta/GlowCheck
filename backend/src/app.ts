@@ -7,9 +7,11 @@ import path from 'path';
 import { analyzeRouter } from './routes/analyze';
 import { authRouter } from './routes/auth';
 import { billingRouter } from './routes/billing';
+import { shelfRouter } from './routes/shelf';
 import { stripeWebhook } from './routes/stripeWebhook';
 import { rateLimit } from './middleware/rateLimit';
 import { env } from './config/env';
+import { allowedReturnUrl } from './services/stripeBilling';
 
 function publicDir() {
   const raw = env.PUBLIC_DIR || path.join(process.cwd(), 'public');
@@ -32,7 +34,13 @@ export function createApp() {
   );
   app.use(
     cors({
-      origin: true,
+      origin(origin, callback) {
+        if (!origin) return callback(null, true);
+        if (allowedReturnUrl(origin)) return callback(null, origin);
+        return callback(null, false);
+      },
+      credentials: true,
+      allowedHeaders: ['Content-Type', 'Authorization'],
     })
   );
   app.use(morgan('dev'));
@@ -45,6 +53,7 @@ export function createApp() {
     health: '/health',
     analyze: 'POST /analyze',
     auth: 'POST /auth/register /auth/login /auth/social',
+    shelf: 'GET|POST /shelf',
     billing: 'GET /billing/ready POST /billing/checkout POST /billing/confirm',
   };
 
@@ -58,6 +67,7 @@ export function createApp() {
 
   app.use('/auth', rateLimit, authRouter);
   app.use('/analyze', rateLimit, analyzeRouter);
+  app.use('/shelf', rateLimit, shelfRouter);
   app.use('/billing', rateLimit, billingRouter);
 
   if (hasWeb) {

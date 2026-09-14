@@ -186,12 +186,24 @@ class GlowStore extends ChangeNotifier {
     required String email,
     required String provider,
     String? token,
+    bool? isPro,
   }) async {
     accountName = name.trim();
     accountEmail = email.trim().toLowerCase();
     accountProvider = provider;
     accountToken = token;
     if (provider != 'email') accountPassword = null;
+    if (isPro == true) {
+      this.isPro = true;
+      proPlan = proPlan ?? 'lifetime';
+    }
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> markFreeUsed() async {
+    if (isPro || freeScansRemaining <= 0) return;
+    freeScansRemaining = 0;
     notifyListeners();
     await _persist();
   }
@@ -236,6 +248,17 @@ class GlowStore extends ChangeNotifier {
     accountName = (name ?? GlowL10n.t(provider == 'apple' ? 'apple_user' : 'google_user')).trim();
     accountEmail = (email ?? '$provider@glowcheck.local').toLowerCase();
     accountPassword = null;
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> applyStripeAccount(String email) async {
+    final value = email.trim().toLowerCase();
+    if (value.isEmpty || !value.contains('@')) return;
+    if (hasAccount) return;
+    accountEmail = value;
+    accountName = accountName ?? value.split('@').first;
+    accountProvider = 'email';
     notifyListeners();
     await _persist();
   }

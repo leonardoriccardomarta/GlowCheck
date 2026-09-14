@@ -2,11 +2,11 @@ import 'package:fitnessapp/common_widgets/glow_live_preview.dart';
 import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/models/scan_result.dart';
 import 'package:fitnessapp/services/glow_api.dart';
+import 'package:fitnessapp/services/glow_funnel.dart';
 import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:fitnessapp/view/dashboard/dashboard_screen.dart';
 import 'package:fitnessapp/view/finish_workout/finish_workout_screen.dart';
-import 'package:fitnessapp/view/paywall/paywall_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -27,8 +27,7 @@ class _CameraScreenState extends State<CameraScreen> {
   bool wantInci = false;
 
   Future<void> _ensureQuota() async {
-    if (GlowStore.instance.canScan) return;
-    await Navigator.pushNamed(context, PaywallScreen.routeName);
+    await GlowFunnel.ensureCanScan(context);
   }
 
   Future<void> _analyze(List<int> bytes, {String? barcode}) async {
@@ -48,6 +47,12 @@ class _CameraScreenState extends State<CameraScreen> {
           wantInci = true;
           error = e.message;
         });
+        return;
+      }
+      if (e.code == 'PAYWALL') {
+        await GlowStore.instance.markFreeUsed();
+        if (!mounted) return;
+        await GlowFunnel.ensureCanScan(context);
         return;
       }
       setState(() => error = e.message);

@@ -66,17 +66,20 @@ class _UserProfileState extends State<UserProfile> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          store.accountName ?? GlowL10n.t('your_account'),
+                          store.hasAccount
+                              ? (store.accountName ?? GlowL10n.t('your_account'))
+                              : GlowL10n.t('guest_name'),
                           style: const TextStyle(color: AppColors.card, fontWeight: FontWeight.w700, fontSize: 16),
                         ),
                         Text(
                           store.accountEmail ?? GlowL10n.t('not_signed_in'),
                           style: TextStyle(color: AppColors.card.withValues(alpha: 0.65), fontSize: 12),
                         ),
-                        Text(
-                          GlowL10n.t('signed_in_with', {'provider': GlowStore.providerLabel(store.accountProvider)}),
-                          style: TextStyle(color: AppColors.card.withValues(alpha: 0.55), fontSize: 12),
-                        ),
+                        if (store.hasAccount)
+                          Text(
+                            GlowL10n.t('signed_in_with', {'provider': GlowStore.providerLabel(store.accountProvider)}),
+                            style: TextStyle(color: AppColors.card.withValues(alpha: 0.55), fontSize: 12),
+                          ),
                       ],
                     ),
                   ),
@@ -182,18 +185,20 @@ class _UserProfileState extends State<UserProfile> {
             const SizedBox(height: 14),
             _MenuCard(
               children: [
-                _MenuRow(
-                  icon: Icons.logout_rounded,
-                  title: GlowL10n.t('sign_out'),
-                  onTap: () async {
-                    await GlowStore.instance.signOut();
-                    if (!mounted) return;
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      (route) => false,
-                    );
-                  },
-                ),
+                if (store.hasAccount)
+                  _MenuRow(
+                    icon: Icons.logout_rounded,
+                    title: GlowL10n.t('sign_out'),
+                    onTap: () async {
+                      await GlowStore.instance.signOut();
+                    },
+                  )
+                else
+                  _MenuRow(
+                    icon: Icons.login_rounded,
+                    title: GlowL10n.t('login_btn'),
+                    onTap: () => Navigator.pushNamed(context, LoginScreen.routeName),
+                  ),
                 _MenuRow(
                   icon: Icons.info_outline,
                   title: GlowL10n.t('not_medical'),

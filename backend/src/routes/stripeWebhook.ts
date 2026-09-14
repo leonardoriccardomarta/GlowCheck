@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { env } from '../config/env';
+import { markPro } from '../services/auth';
 import { sessionPaid, stripeClient } from '../services/stripeBilling';
 
 export async function stripeWebhook(req: Request, res: Response) {
@@ -23,6 +24,8 @@ export async function stripeWebhook(req: Request, res: Response) {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       if (sessionPaid(session)) {
+        const email = session.customer_details?.email || session.customer_email;
+        if (email) markPro(email);
         console.log('stripe lifetime paid', session.id);
       }
     }

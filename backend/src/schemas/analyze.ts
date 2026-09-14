@@ -60,7 +60,7 @@ export const analyzeResponseSchema = z.object({
     })
     .nullable()
     .optional(),
-  errorCode: z.enum(['UNREADABLE', 'NOT_COSMETIC', 'INTERNAL', 'NEED_INCI']).nullable().optional(),
+  errorCode: z.enum(['UNREADABLE', 'NOT_COSMETIC', 'INTERNAL', 'NEED_INCI', 'PAYWALL']).nullable().optional(),
 });
 
 export type AnalyzeRequest = z.infer<typeof analyzeRequestSchema>;
@@ -83,5 +83,5 @@ export type AnalyzeResponse = {
     blurb: string;
     whyThis: string;
   } | null;
-  errorCode: 'UNREADABLE' | 'NOT_COSMETIC' | 'INTERNAL' | 'NEED_INCI' | null;
+  errorCode: 'UNREADABLE' | 'NOT_COSMETIC' | 'INTERNAL' | 'NEED_INCI' | 'PAYWALL' | null;
 };
