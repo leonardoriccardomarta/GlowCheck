@@ -7,6 +7,6 @@
     { "source": "/privacy", "destination": "/privacy.html" },
     { "source": "/terms", "destination": "/terms.html" },
     { "source": "/about", "destination": "/about.html" },
-    { "source": "/((?!privacy(?:\\.html)?|terms(?:\\.html)?|about(?:\\.html)?|oauth-logo\\.png).*)", "destination": "/index.html" }
+    { "source": "/((?!privacy(?:\\.html)?|terms(?:\\.html)?|about(?:\\.html)?|oauth-logo\\.png|favicon(?:-96)?\\.png|icons/).*)", "destination": "/index.html" }
   ]
 }
