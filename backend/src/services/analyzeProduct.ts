@@ -55,7 +55,7 @@ function mockResponse(req: AnalyzeRequest): AnalyzeResponse {
           id: 'to-niacinamide-10',
           brand: 'The Ordinary',
           name: 'Niacinamide 10% + Zinc 1%',
-          estimatedPrice: '~$7',
+          estimatedPrice: '~7 €',
           blurb: 'Drugstore niacinamide serum',
           whyThis: copy(locale, 'mock_why_oily'),
         }
@@ -63,7 +63,7 @@ function mockResponse(req: AnalyzeRequest): AnalyzeResponse {
           id: 'to-ha-2',
           brand: 'The Ordinary',
           name: 'Hyaluronic Acid 2% + B5',
-          estimatedPrice: '~$8',
+          estimatedPrice: '~8 €',
           blurb: 'Simple hydrating serum',
           whyThis: copy(locale, 'mock_why_hydration'),
         },

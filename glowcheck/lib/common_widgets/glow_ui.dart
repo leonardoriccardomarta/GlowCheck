@@ -102,11 +102,13 @@ class GlowCircleButton extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.dark = false,
+    this.iconColor,
   });
 
   final IconData icon;
   final VoidCallback onTap;
   final bool dark;
+  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
@@ -119,7 +121,11 @@ class GlowCircleButton extends StatelessWidget {
         child: SizedBox(
           width: 42,
           height: 42,
-          child: Icon(icon, size: 20, color: dark ? AppColors.card : AppColors.ink),
+          child: Icon(
+            icon,
+            size: 20,
+            color: iconColor ?? (dark ? AppColors.card : AppColors.ink),
+          ),
         ),
       ),
     );

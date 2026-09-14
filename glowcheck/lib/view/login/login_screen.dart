@@ -128,31 +128,56 @@ class _LoginScreenState extends State<LoginScreen> {
                 color: AppColors.ink,
                 backgroundColor: AppColors.line,
               ),
+            AbsorbPointer(
+              absorbing: busy,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(22, 4, 12, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          'GlowCheck',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.muted,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                        Spacer(),
+                        GlowLanguageMini(),
+                      ],
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _skip,
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          GlowL10n.t('login_guest'),
+                          style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             Expanded(
               child: AbsorbPointer(
                 absorbing: busy,
                 child: ListView(
-          padding: const EdgeInsets.fromLTRB(22, 18, 22, 24),
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          children: [
-            Row(
-              children: [
-                const Text(
-                  "GlowCheck",
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted, letterSpacing: 0.6),
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: _skip,
-                  child: Text(
-                    GlowL10n.t('login_guest'),
-                    style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w700),
-                  ),
-                ),
-                const GlowLanguageButton(),
-              ],
-            ),
-            const SizedBox(height: 18),
+                  padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
+                  physics: const ClampingScrollPhysics(),
+                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                  children: [
             Text(
               register ? GlowL10n.t('login_create') : GlowL10n.t('login_welcome'),
               style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700, height: 1.1),

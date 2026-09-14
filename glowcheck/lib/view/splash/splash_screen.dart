@@ -57,10 +57,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.canvas,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(28, 28, 28, 36),
-          child: Column(
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(28, 28, 28, 36),
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
@@ -129,7 +128,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 }

@@ -197,7 +197,7 @@ async function askModel(input: SuggestInput): Promise<DupeSuggestion | null> {
 
   const ingredients = input.ingredients.slice(0, 50).join(', ');
   const lang = ({ it: 'Italian', en: 'English', es: 'Spanish', fr: 'French', de: 'German' } as const)[normalizeLocale(input.locale)];
-  const priceHint = normalizeLocale(input.locale) === 'en' ? '~$12' : '~12 €';
+  const priceHint = '~12 €';
   const system = `You recommend one cheaper drugstore dupe for a scanned cosmetic.
 Stay inside the same format only: serum vs serum, face cream vs moisturizer, cleanser vs cleanser, sunscreen vs sunscreen, toner vs toner or serum, shampoo vs shampoo, conditioner vs conditioner.
 Never swap a razor, shaving foam, aftershave, shampoo, or makeup against a face cream, serum, or cleanser.

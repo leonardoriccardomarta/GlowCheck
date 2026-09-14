@@ -48,6 +48,7 @@
       height: 100svh;
       box-sizing: border-box;
       padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
       overflow: hidden;
       touch-action: pan-y;
     }
@@ -375,6 +376,7 @@
         root.style.bottom = '0';
         root.style.height = '100svh';
         root.style.paddingTop = 'env(safe-area-inset-top, 0px)';
+        root.style.paddingBottom = 'env(safe-area-inset-bottom, 0px)';
         root.style.boxSizing = 'border-box';
         fitting = false;
       }

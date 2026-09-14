@@ -38,12 +38,13 @@ class MyApp extends StatelessWidget {
         if (!kIsWeb) return page;
         final mq = MediaQuery.of(context);
         final keyboard = mq.viewInsets.bottom > 80;
-        final top = mq.padding.top < 16 ? 16.0 : mq.padding.top;
-        final bottom = mq.padding.bottom < 12 ? 12.0 : mq.padding.bottom;
         return MediaQuery(
           data: mq.copyWith(
             gestureSettings: const DeviceGestureSettings(touchSlop: 8),
-            padding: mq.padding.copyWith(top: top, bottom: bottom),
+            // CSS on #glow-root already applies the notch inset. Zeroing these
+            // stops SafeArea from adding it again after the first frame.
+            padding: EdgeInsets.zero,
+            viewPadding: EdgeInsets.zero,
             viewInsets: keyboard ? mq.viewInsets : EdgeInsets.zero,
           ),
           child: page,

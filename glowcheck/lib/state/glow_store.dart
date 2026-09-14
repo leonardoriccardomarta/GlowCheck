@@ -145,6 +145,22 @@ class GlowStore extends ChangeNotifier {
 
   bool isPinned(int at) => pinned.contains(at);
 
+  List<ScanResult> pinnedFirst(Iterable<ScanResult> source) {
+    final items = source.toList();
+    items.sort((a, b) {
+      final pin = (isPinned(b.at) ? 1 : 0) - (isPinned(a.at) ? 1 : 0);
+      if (pin != 0) return pin;
+      return b.at.compareTo(a.at);
+    });
+    return items;
+  }
+
+  List<ScanResult> historyPinnedFirst({int? limit}) {
+    final items = pinnedFirst(history);
+    if (limit == null || items.length <= limit) return items;
+    return items.take(limit).toList();
+  }
+
   Future<void> togglePin(int at) async {
     if (pinned.contains(at)) {
       pinned.remove(at);

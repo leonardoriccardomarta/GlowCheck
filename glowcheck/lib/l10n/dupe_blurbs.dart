@@ -81,6 +81,5 @@ String localizedDupeBlurb(String? id, String fallback) {
 String localizedDupePrice(String raw) {
   final n = raw.replaceAll(RegExp(r'[^\d]'), '');
   if (n.isEmpty) return raw;
-  if (GlowL10n.normalize(GlowL10n.currentCode) == 'en') return '~\$$n';
   return '~$n €';
 }

@@ -38,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final store = GlowStore.instance;
     final latest = store.latest;
-    final shelf = store.history.take(8).toList();
+    final shelf = store.historyPinnedFirst(limit: 8);
 
     return Scaffold(
       backgroundColor: AppColors.canvas,
@@ -275,7 +275,17 @@ class _BottleCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            GlowInitials(label: scan.productName, size: 72, dark: true),
+            Stack(
+              children: [
+                GlowInitials(label: scan.productName, size: 72, dark: true),
+                if (GlowStore.instance.isPinned(scan.at))
+                  const Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Icon(Icons.favorite, size: 16, color: AppColors.vividRed),
+                  ),
+              ],
+            ),
             const Spacer(),
             Text(
               scan.productName,

@@ -128,6 +128,7 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                               const SizedBox(width: 8),
                               GlowCircleButton(
                                 icon: pinned ? Icons.favorite : Icons.favorite_border,
+                                iconColor: pinned ? AppColors.vividRed : AppColors.ink,
                                 onTap: () => GlowStore.instance.togglePin(scan.at),
                               ),
                             ],
@@ -209,17 +210,19 @@ class _FinishWorkoutScreenState extends State<FinishWorkoutScreen> {
                   child: Column(
                     children: [
                       const SizedBox(height: 16),
-                      GlowPrimaryButton(
-                        title: GlowL10n.t('hook_save'),
-                        onPressed: () => _saveToShelf(scan),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        GlowL10n.t('hook_save_hint'),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: AppColors.muted, fontSize: 13, height: 1.35),
-                      ),
-                      const SizedBox(height: 20),
+                      if (!GlowStore.instance.hasAccount) ...[
+                        GlowPrimaryButton(
+                          title: GlowL10n.t('hook_save'),
+                          onPressed: () => _saveToShelf(scan),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          GlowL10n.t('hook_save_hint'),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: AppColors.muted, fontSize: 13, height: 1.35),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
                       if (dupe != null) ...[
                         _DupeCard(scan: scan, dupe: dupe),
                         const SizedBox(height: 12),

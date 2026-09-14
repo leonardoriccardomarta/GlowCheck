@@ -156,9 +156,15 @@ class GlowLanguageMini extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextButton(
       onPressed: () => GlowL10n.pick(context),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
+      ),
       child: Text(
         GlowL10n.currentLang().nativeName,
-        style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w700),
+        style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w700, fontSize: 13),
       ),
     );
   }

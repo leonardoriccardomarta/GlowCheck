@@ -162,8 +162,8 @@ export function dupeBlurb(locale: string | undefined, id: string, fallback: stri
   return table[id] ?? tables.en[id] ?? fallback;
 }
 
-export function dupePrice(raw: string, locale?: string) {
+export function dupePrice(raw: string, _locale?: string) {
   const n = String(raw).replace(/[^\d]/g, '');
   if (!n) return raw;
-  return localeOf(locale) === 'en' ? `~$${n}` : `~${n} €`;
+  return `~${n} €`;
 }

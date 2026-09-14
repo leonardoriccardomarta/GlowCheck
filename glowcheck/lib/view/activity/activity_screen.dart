@@ -37,8 +37,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
   @override
   Widget build(BuildContext context) {
     final history = GlowStore.instance.history;
-    final approved = history.where(GlowVerdict.approved).toList();
-    final rejected = history.where((s) => !GlowVerdict.approved(s)).toList();
+    final store = GlowStore.instance;
+    final approved = store.pinnedFirst(history.where(GlowVerdict.approved));
+    final rejected = store.pinnedFirst(history.where((s) => !GlowVerdict.approved(s)));
 
     return Scaffold(
       backgroundColor: AppColors.canvas,
@@ -165,6 +166,10 @@ class _ShelfCard extends StatelessWidget {
                       '${scan.score}',
                       style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: AppColors.scoreColor(scan.score)),
                     ),
+                    if (GlowStore.instance.isPinned(scan.at)) ...[
+                      const SizedBox(width: 8),
+                      const Icon(Icons.favorite, size: 18, color: AppColors.vividRed),
+                    ],
                   ],
                 ),
                 if (rejected && price != null) ...[
