@@ -145,8 +145,6 @@ export async function socialUser(input: {
     throw new Error('An account with this email already exists.');
   }
   return sessionOf(rowToUser(rows[0]));
-  }
-  return sessionOf(rowToUser(rows[0]));
 }
 
 function sessionOf(user: StoredUser) {

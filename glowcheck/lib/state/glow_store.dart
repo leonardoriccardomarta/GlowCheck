@@ -183,6 +183,29 @@ class GlowStore extends ChangeNotifier {
     await _persist();
   }
 
+  Future<void> mergeHistory(Iterable<ScanResult> remote) async {
+    if (remote.isEmpty) return;
+    final byAt = <int, ScanResult>{
+      for (final item in history) item.at: item,
+    };
+    var changed = false;
+    for (final item in remote) {
+      if (byAt.containsKey(item.at)) continue;
+      byAt[item.at] = item;
+      changed = true;
+    }
+    if (!changed) return;
+    final next = byAt.values.toList()..sort((a, b) => b.at.compareTo(a.at));
+    if (next.length > 40) {
+      next.removeRange(40, next.length);
+    }
+    history
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+    await _persist();
+  }
+
   Future<void> signUp({
     required String name,
     required String email,

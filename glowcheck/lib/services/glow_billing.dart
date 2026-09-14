@@ -117,6 +117,7 @@ class GlowBilling {
         token: result.token,
         isPro: true,
       );
+      await GlowApi.pullAndMergeShelf();
     } else if (result.email != null) {
       await GlowStore.instance.applyStripeAccount(result.email!);
     }

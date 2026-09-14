@@ -1,6 +1,7 @@
 import 'package:fitnessapp/config/app_env.dart';
 import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/routes.dart';
+import 'package:fitnessapp/services/glow_api.dart';
 import 'package:fitnessapp/services/glow_billing.dart';
 import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/utils/app_colors.dart';
@@ -14,6 +15,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppEnv.loadRuntime();
   await GlowStore.instance.load();
+  GlowApi.pullAndMergeShelf();
   await GlowBilling.configure();
   runApp(const MyApp());
 }
@@ -40,8 +42,6 @@ class MyApp extends StatelessWidget {
         return MediaQuery(
           data: mq.copyWith(
             gestureSettings: const DeviceGestureSettings(touchSlop: 8),
-            padding: EdgeInsets.zero,
-            viewPadding: EdgeInsets.zero,
             viewInsets: EdgeInsets.zero,
           ),
           child: page,

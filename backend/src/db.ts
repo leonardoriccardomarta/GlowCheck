@@ -31,6 +31,15 @@ export async function ensureDb() {
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
       `;
+      await client`
+        CREATE TABLE IF NOT EXISTS shelf_items (
+          user_id TEXT NOT NULL,
+          item_at BIGINT NOT NULL,
+          item JSONB NOT NULL,
+          PRIMARY KEY (user_id, item_at)
+        )
+      `;
+      await client`CREATE INDEX IF NOT EXISTS shelf_items_user_at ON shelf_items (user_id, item_at DESC)`;
     })().catch((error) => {
       ready = null;
       throw error;

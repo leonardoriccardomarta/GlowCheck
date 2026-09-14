@@ -8,6 +8,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../config/app_env.dart';
 import '../l10n/glow_l10n.dart';
 import '../state/glow_store.dart';
+import 'glow_api.dart';
 
 class GlowAuth {
   GlowAuth._();
@@ -36,6 +37,7 @@ class GlowAuth {
         token: user['token'] as String?,
         isPro: user['isPro'] == true,
       );
+      await GlowApi.pullAndMergeShelf();
       return;
     }
     await GlowStore.instance.signUp(name: name, email: email, password: password);
@@ -57,6 +59,7 @@ class GlowAuth {
         token: user['token'] as String?,
         isPro: user['isPro'] == true,
       );
+      await GlowApi.pullAndMergeShelf();
       return;
     }
     await GlowStore.instance.signInEmail(email: email, password: password);
@@ -83,6 +86,7 @@ class GlowAuth {
         token: user['token'] as String?,
         isPro: user['isPro'] == true,
       );
+      await GlowApi.pullAndMergeShelf();
       return;
     }
     await GlowStore.instance.signInSocial(provider);
@@ -118,6 +122,7 @@ class GlowAuth {
       token: user['token'] as String?,
       isPro: user['isPro'] == true,
     );
+    await GlowApi.pullAndMergeShelf();
   }
 
   static Future<void> _appleNative() async {
@@ -148,6 +153,7 @@ class GlowAuth {
         token: user['token'] as String?,
         isPro: user['isPro'] == true,
       );
+      await GlowApi.pullAndMergeShelf();
       return;
     }
     await GlowStore.instance.signInSocial(

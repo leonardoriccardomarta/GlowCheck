@@ -111,6 +111,46 @@ class GlowApi {
     } catch (_) {}
   }
 
+  static Future<List<ScanResult>> fetchShelf() async {
+    final token = GlowStore.instance.accountToken;
+    if (token == null || token.isEmpty) return const [];
+    final response = await _client
+        .get(Uri.parse('$baseUrl/shelf'), headers: _headers())
+        .timeout(const Duration(seconds: 12));
+    if (response.statusCode != 200) return const [];
+    final json = jsonDecode(response.body);
+    if (json is! Map || json['ok'] != true) return const [];
+    return ((json['items'] as List?) ?? [])
+        .whereType<Map>()
+        .map((item) => ScanResult.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+  }
+
+  static Future<void> syncShelf(List<ScanResult> items) async {
+    final token = GlowStore.instance.accountToken;
+    if (token == null || token.isEmpty) return;
+    await _client
+        .post(
+          Uri.parse('$baseUrl/shelf/sync'),
+          headers: _headers(),
+          body: jsonEncode({'items': items.map((item) => item.toJson()).toList()}),
+        )
+        .timeout(const Duration(seconds: 20));
+  }
+
+  static Future<void> pullAndMergeShelf() async {
+    final token = GlowStore.instance.accountToken;
+    if (token == null || token.isEmpty) return;
+    try {
+      final remote = await fetchShelf();
+      await GlowStore.instance.mergeHistory(remote);
+      final local = GlowStore.instance.history;
+      if (local.isNotEmpty) {
+        await syncShelf(local);
+      }
+    } catch (_) {}
+  }
+
   static Future<bool> billingReady() async {
     try {
       final response = await _client

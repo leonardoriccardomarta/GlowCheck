@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { userFromRequest } from '../services/auth';
-import { listShelf, saveShelfItem } from '../services/shelf';
+import { listShelf, mergeShelf, saveShelfItem } from '../services/shelf';
 
 export const shelfRouter = Router();
 
@@ -19,6 +19,10 @@ const shelfItemSchema = z.object({
   flagged: z.array(z.unknown()).optional().default([]),
 });
 
+const shelfSyncSchema = z.object({
+  items: z.array(shelfItemSchema).max(40),
+});
+
 function unauthorized(res: { status: (code: number) => { json: (body: unknown) => unknown } }) {
   return res.status(401).json({ ok: false, error: 'UNAUTHORIZED' });
 }
@@ -26,7 +30,7 @@ function unauthorized(res: { status: (code: number) => { json: (body: unknown) =
 shelfRouter.get('/', async (req, res) => {
   const user = await userFromRequest(req);
   if (!user) return unauthorized(res);
-  return res.json({ ok: true, items: listShelf(user.id) });
+  return res.json({ ok: true, items: await listShelf(user.id) });
 });
 
 shelfRouter.post('/', async (req, res) => {
@@ -36,6 +40,17 @@ shelfRouter.post('/', async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ ok: false, error: 'INVALID_SCAN' });
   }
-  const items = saveShelfItem(user.id, parsed.data);
+  const items = await saveShelfItem(user.id, parsed.data);
+  return res.json({ ok: true, items });
+});
+
+shelfRouter.post('/sync', async (req, res) => {
+  const user = await userFromRequest(req);
+  if (!user) return unauthorized(res);
+  const parsed = shelfSyncSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ ok: false, error: 'INVALID_SCAN' });
+  }
+  const items = await mergeShelf(user.id, parsed.data.items);
   return res.json({ ok: true, items });
 });
