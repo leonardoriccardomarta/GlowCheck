@@ -98,6 +98,9 @@ export async function registerUser(input: { name: string; email: string; passwor
 export async function loginUser(input: { email: string; password: string }) {
   const email = input.email.trim().toLowerCase();
   const stored = await findByEmail(email);
+  if (stored && !stored.passwordHash) {
+    throw new Error('An account with this email already exists.');
+  }
   if (!stored || !stored.passwordHash || !safeEqual(stored.passwordHash, hashPassword(input.password))) {
     throw new Error('Email or password does not match.');
   }
@@ -125,19 +128,23 @@ export async function socialUser(input: {
     name = (input.name ?? 'Apple user').trim();
   }
   await ensureDb();
+  const existing = await findByEmail(email);
+  if (existing) {
+    if (existing.provider === 'email' && existing.passwordHash) {
+      throw new Error('An account with this email already exists.');
+    }
+    return sessionOf(existing);
+  }
   const rows = await sqlClient()`
     INSERT INTO users (id, email, name, provider)
     VALUES (${randomBytes(8).toString('hex')}, ${email}, ${name}, ${input.provider})
-    ON CONFLICT (email) DO UPDATE SET
-      provider = EXCLUDED.provider,
-      name = CASE
-        WHEN EXCLUDED.name <> '' THEN EXCLUDED.name
-        ELSE users.name
-      END
+    ON CONFLICT (email) DO NOTHING
     RETURNING id, email, name, provider, password_hash, is_pro, used_free
   `;
   if (!rows[0]) {
-    throw new Error('Social login failed.');
+    throw new Error('An account with this email already exists.');
+  }
+  return sessionOf(rowToUser(rows[0]));
   }
   return sessionOf(rowToUser(rows[0]));
 }
