@@ -193,12 +193,6 @@ class _LoginScreenState extends State<LoginScreen> {
               leading: const GlowGoogleMark(size: 18),
               onTap: () => _social('google'),
             ),
-            const SizedBox(height: 10),
-            _SocialButton(
-              label: GlowL10n.t('login_apple'),
-              leading: const GlowAppleMark(size: 18),
-              onTap: () => _social('apple'),
-            ),
             const SizedBox(height: 22),
             Row(
               children: [

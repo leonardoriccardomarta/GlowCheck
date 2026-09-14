@@ -101,12 +101,6 @@ class _GlowLoginSheetState extends State<GlowLoginSheet> {
                     leading: const GlowGoogleMark(size: 18),
                     onTap: () => _social('google'),
                   ),
-                  const SizedBox(height: 10),
-                  _SheetButton(
-                    label: GlowL10n.t('login_apple'),
-                    leading: const GlowAppleMark(size: 18),
-                    onTap: () => _social('apple'),
-                  ),
                   const SizedBox(height: 8),
                   TextButton(
                     onPressed: _email,
