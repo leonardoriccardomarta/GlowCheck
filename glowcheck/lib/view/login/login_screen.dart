@@ -130,42 +130,22 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             AbsorbPointer(
               absorbing: busy,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(22, 4, 12, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+              child: const Padding(
+                padding: EdgeInsets.fromLTRB(22, 4, 12, 0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          'GlowCheck',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.muted,
-                            letterSpacing: 0.6,
-                          ),
-                        ),
-                        Spacer(),
-                        GlowLanguageMini(),
-                      ],
-                    ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: _skip,
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: Text(
-                          GlowL10n.t('login_guest'),
-                          style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w700),
-                        ),
+                    Text(
+                      'GlowCheck',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.muted,
+                        letterSpacing: 0.6,
                       ),
                     ),
+                    Spacer(),
+                    GlowLanguageMini(),
                   ],
                 ),
               ),
@@ -230,6 +210,13 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Text(
                 register ? GlowL10n.t('login_have_account') : GlowL10n.t('login_new_here'),
                 style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w600),
+              ),
+            ),
+            TextButton(
+              onPressed: _skip,
+              child: Text(
+                GlowL10n.t('login_guest'),
+                style: const TextStyle(color: AppColors.muted, fontWeight: FontWeight.w700),
               ),
             ),
           ],
