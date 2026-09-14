@@ -212,6 +212,9 @@ class GlowStore extends ChangeNotifier {
     if (isPro == true) {
       this.isPro = true;
       proPlan = proPlan ?? 'lifetime';
+    } else if (isPro == false) {
+      this.isPro = false;
+      proPlan = null;
     }
     notifyListeners();
     await _persist();
@@ -285,6 +288,9 @@ class GlowStore extends ChangeNotifier {
     accountProvider = null;
     accountPassword = null;
     accountToken = null;
+    isPro = false;
+    proPlan = null;
+    stripeSessionId = null;
     notifyListeners();
     await _persist();
   }

@@ -58,32 +58,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
       if (mounted && !stayBusy) setState(() => busy = false);
     }
   }
-    setState(() {
-      busy = true;
-      error = null;
-    });
-    var stayBusy = false;
-    try {
-      final outcome = await GlowBilling.purchase(GlowBilling.lifetimeId);
-      if (!mounted) return;
-      if (outcome == PurchaseOutcome.redirecting) {
-        stayBusy = true;
-        return;
-      }
-      if (outcome == PurchaseOutcome.cancelled) return;
-      if (outcome == PurchaseOutcome.needsStore) {
-        setState(() {
-          error = GlowL10n.t('paywall_store_err');
-        });
-        return;
-      }
-      Navigator.pop(context, true);
-    } catch (e) {
-      setState(() => error = e.toString().replaceFirst('Exception: ', ''));
-    } finally {
-      if (mounted && !stayBusy) setState(() => busy = false);
-    }
-  }
 
   Future<void> _restore() async {
     setState(() {
