@@ -4,6 +4,8 @@
   "buildCommand": "bash tool/vercel-build.sh",
   "outputDirectory": "build/web",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/privacy", "destination": "/privacy.html" },
+    { "source": "/terms", "destination": "/terms.html" },
+    { "source": "/((?!privacy(?:\\.html)?|terms(?:\\.html)?|oauth-logo\\.png).*)", "destination": "/index.html" }
   ]
 }
