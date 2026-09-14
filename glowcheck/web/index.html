@@ -43,7 +43,7 @@
       height: 100%;
       box-sizing: border-box;
       padding-top: env(safe-area-inset-top, 0px);
-      padding-bottom: env(safe-area-inset-bottom, 0px);
+      padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
       overflow: hidden;
       touch-action: none;
     }
@@ -354,13 +354,36 @@
   <div id="glow-html-layer"></div>
   <script>
     (function () {
-      function resetScroll() {
+      function sizeRoot() {
+        var root = document.getElementById('glow-root');
+        if (!root) return;
         if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
+        var h = window.innerHeight;
+        if (window.visualViewport && window.visualViewport.height > 40) {
+          h = Math.round(window.visualViewport.height);
+        }
+        root.style.position = 'fixed';
+        root.style.left = '0';
+        root.style.right = '0';
+        root.style.top = '0';
+        root.style.bottom = 'auto';
+        root.style.width = '100%';
+        root.style.height = h + 'px';
       }
-      window.addEventListener('scroll', resetScroll, { passive: true });
-      window.addEventListener('pageshow', resetScroll);
+      function sizeSoon() {
+        sizeRoot();
+        setTimeout(sizeRoot, 80);
+        setTimeout(sizeRoot, 280);
+        setTimeout(function () {
+          sizeRoot();
+          window.dispatchEvent(new Event('resize'));
+        }, 600);
+      }
+      sizeSoon();
+      window.addEventListener('pageshow', sizeSoon);
+      window.addEventListener('orientationchange', sizeSoon);
       window.addEventListener('flutter-first-frame', function () {
-        resetScroll();
+        sizeSoon();
         var boot = document.getElementById('glow-boot');
         if (!boot) return;
         boot.classList.add('is-gone');

@@ -119,15 +119,14 @@ class _LoginScreenState extends State<LoginScreen> {
       animation: GlowStore.instance,
       builder: (context, _) => Scaffold(
       backgroundColor: AppColors.canvas,
-      body: SafeArea(
-        child: Column(
-          children: [
-            if (busy)
-              const LinearProgressIndicator(
-                minHeight: 2,
-                color: AppColors.ink,
-                backgroundColor: AppColors.line,
-              ),
+      body: Column(
+        children: [
+          if (busy)
+            const LinearProgressIndicator(
+              minHeight: 2,
+              color: AppColors.ink,
+              backgroundColor: AppColors.line,
+            ),
             AbsorbPointer(
               absorbing: busy,
               child: const Padding(
@@ -154,7 +153,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: AbsorbPointer(
                 absorbing: busy,
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
+                  padding: const EdgeInsets.fromLTRB(22, 12, 22, 48),
                   physics: const ClampingScrollPhysics(),
                   keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                   children: [
@@ -226,7 +225,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ],
         ),
       ),
-    ),
     );
   }
 }
