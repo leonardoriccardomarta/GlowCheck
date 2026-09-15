@@ -410,6 +410,10 @@ const _it = <String, String>{
   'auth_social': 'Questo accesso social non è ancora collegato.',
   'apple_user': 'Utente Apple',
   'google_user': 'Utente Google',
+  'install_title': 'Salva l’app sul telefono',
+  'install_ios': 'Premi il tasto Condividi in basso e seleziona “Aggiungi a schermata Home” per averla sempre pronta.',
+  'install_android': 'Apri il menu del browser e scegli “Aggiungi a schermata Home” per averla sempre pronta.',
+  'install_ok': 'Ok',
 };
 
 const _en = <String, String>{
@@ -709,6 +713,10 @@ const _en = <String, String>{
   'auth_social': 'This social login is not connected yet.',
   'apple_user': 'Apple user',
   'google_user': 'Google user',
+  'install_title': 'Save the app on your phone',
+  'install_ios': 'Tap Share at the bottom, then Add to Home Screen so it’s always ready.',
+  'install_android': 'Open the browser menu and choose Add to Home Screen so it’s always ready.',
+  'install_ok': 'OK',
 };
 
 const _es = <String, String>{
@@ -1008,6 +1016,10 @@ const _es = <String, String>{
   'auth_social': 'Este acceso social aún no está conectado.',
   'apple_user': 'Usuario de Apple',
   'google_user': 'Usuario de Google',
+  'install_title': 'Guarda la app en el teléfono',
+  'install_ios': 'Pulsa Compartir abajo y elige “Añadir a pantalla de inicio” para tenerla siempre a mano.',
+  'install_android': 'Abre el menú del navegador y elige “Añadir a pantalla de inicio” para tenerla siempre a mano.',
+  'install_ok': 'Ok',
 };
 
 const _fr = <String, String>{
@@ -1307,6 +1319,10 @@ const _fr = <String, String>{
   'auth_social': 'Cette connexion sociale n’est pas encore reliée.',
   'apple_user': 'Utilisateur Apple',
   'google_user': 'Utilisateur Google',
+  'install_title': 'Enregistrez l’app sur le téléphone',
+  'install_ios': 'Appuyez sur Partager en bas, puis sur « Sur l’écran d’accueil » pour l’avoir toujours sous la main.',
+  'install_android': 'Ouvrez le menu du navigateur et choisissez « Ajouter à l’écran d’accueil » pour l’avoir toujours sous la main.',
+  'install_ok': 'Ok',
 };
 
 const _de = <String, String>{
@@ -1606,4 +1622,8 @@ const _de = <String, String>{
   'auth_social': 'Dieser Social-Login ist noch nicht verbunden.',
   'apple_user': 'Apple-Nutzer',
   'google_user': 'Google-Nutzer',
+  'install_title': 'App auf dem Handy speichern',
+  'install_ios': 'Tippe unten auf Teilen und wähle „Zum Home-Bildschirm“ — dann ist sie immer bereit.',
+  'install_android': 'Öffne das Browser-Menü und wähle „Zum Startbildschirm hinzufügen“, dann ist sie immer bereit.',
+  'install_ok': 'Ok',
 };

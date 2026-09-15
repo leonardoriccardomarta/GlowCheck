@@ -48,6 +48,7 @@ class GlowBilling {
       if (result.unlocked) {
         await _applyPaid(result, sessionId);
       }
+      await GlowStore.instance.markHomeInstallHint();
       stripCheckoutQuery();
       return;
     }

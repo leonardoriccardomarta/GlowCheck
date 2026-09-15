@@ -30,6 +30,7 @@ class GlowStore extends ChangeNotifier {
   final Set<int> pinned = {};
 
   bool highlightFirstScan = false;
+  bool pendingHomeInstallHint = false;
 
   bool get hasProfile => skinType != null && mainGoal != null;
 
@@ -55,6 +56,7 @@ class GlowStore extends ChangeNotifier {
       isPro = map['isPro'] == true;
       proPlan = map['proPlan'] as String?;
       stripeSessionId = map['stripeSessionId'] as String?;
+      pendingHomeInstallHint = map['pendingHomeInstallHint'] == true;
       freeScansRemaining = (map['freeScansRemaining'] as num?)?.toInt() ?? 1;
       history
         ..clear()
@@ -92,6 +94,7 @@ class GlowStore extends ChangeNotifier {
         'isPro': isPro,
         'proPlan': proPlan,
         'stripeSessionId': stripeSessionId,
+        'pendingHomeInstallHint': pendingHomeInstallHint,
         'freeScansRemaining': freeScansRemaining,
         'pinned': pinned.toList(),
         'history': history.map((item) => item.toJson()).toList(),
@@ -246,6 +249,19 @@ class GlowStore extends ChangeNotifier {
   Future<void> markFreeUsed() async {
     if (isPro || freeScansRemaining <= 0) return;
     freeScansRemaining = 0;
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> markHomeInstallHint() async {
+    pendingHomeInstallHint = true;
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> consumeHomeInstallHint() async {
+    if (!pendingHomeInstallHint) return;
+    pendingHomeInstallHint = false;
     notifyListeners();
     await _persist();
   }

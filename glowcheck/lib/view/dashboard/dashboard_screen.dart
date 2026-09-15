@@ -3,7 +3,10 @@ import 'package:fitnessapp/utils/app_colors.dart';
 import 'package:fitnessapp/view/activity/activity_screen.dart';
 import 'package:fitnessapp/view/camera/camera_screen.dart';
 import 'package:fitnessapp/services/glow_funnel.dart';
+import 'package:fitnessapp/services/glow_web_nav.dart';
+import 'package:fitnessapp/view/home/install_hint_sheet.dart';
 import 'package:fitnessapp/view/profile/user_profile.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../home/home_screen.dart';
@@ -43,6 +46,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     selectTab = widget.initialTab;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future<void>.delayed(const Duration(milliseconds: 420), _maybeInstallHint);
+    });
+  }
+
+  Future<void> _maybeInstallHint() async {
+    if (!mounted || !kIsWeb) return;
+    if (!GlowStore.instance.pendingHomeInstallHint) return;
+    if (isStandaloneDisplay() || (!isIosWeb() && !isAndroidWeb())) {
+      await GlowStore.instance.consumeHomeInstallHint();
+      return;
+    }
+    await GlowStore.instance.consumeHomeInstallHint();
+    if (!mounted) return;
+    await showGlowInstallHint(context);
   }
 
   void goTab(int index) {
