@@ -118,120 +118,136 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: GlowStore.instance,
-      builder: (context, _) => Scaffold(
-      backgroundColor: AppColors.canvas,
-      resizeToAvoidBottomInset: false,
-      body: WillPopScope(
-        onWillPop: () async => !GlowStore.instance.mustClaimPurchase || Navigator.of(context).canPop(),
-        child: SafeArea(
-        child: Column(
-        children: [
-          if (busy)
-            const LinearProgressIndicator(
-              minHeight: 2,
-              color: AppColors.ink,
-              backgroundColor: AppColors.line,
-            ),
-            AbsorbPointer(
-              absorbing: busy,
-              child: const Padding(
-                padding: EdgeInsets.fromLTRB(22, 4, 12, 0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      'GlowCheck',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.muted,
-                        letterSpacing: 0.6,
+      builder: (context, _) {
+        return Scaffold(
+          backgroundColor: AppColors.canvas,
+          resizeToAvoidBottomInset: false,
+          body: PopScope(
+            canPop: !GlowStore.instance.mustClaimPurchase || Navigator.of(context).canPop(),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  if (busy)
+                    const LinearProgressIndicator(
+                      minHeight: 2,
+                      color: AppColors.ink,
+                      backgroundColor: AppColors.line,
+                    ),
+                  AbsorbPointer(
+                    absorbing: busy,
+                    child: const Padding(
+                      padding: EdgeInsets.fromLTRB(22, 4, 12, 0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            'GlowCheck',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.muted,
+                              letterSpacing: 0.6,
+                            ),
+                          ),
+                          Spacer(),
+                          GlowLanguageMini(),
+                        ],
                       ),
                     ),
-                    Spacer(),
-                    GlowLanguageMini(),
-                  ],
-                ),
+                  ),
+                  Expanded(
+                    child: AbsorbPointer(
+                      absorbing: busy,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(22, 12, 22, 96),
+                        physics: const ClampingScrollPhysics(),
+                        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                        children: [
+                          Text(
+                            register ? GlowL10n.t('login_create') : GlowL10n.t('login_welcome'),
+                            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700, height: 1.1),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            GlowL10n.t(GlowStore.instance.mustClaimPurchase ? 'hook_after_pay' : 'login_note'),
+                            style: const TextStyle(color: AppColors.muted, fontSize: 14, height: 1.4),
+                          ),
+                          const SizedBox(height: 24),
+                          _SocialButton(
+                            label: GlowL10n.t('login_google'),
+                            leading: const GlowGoogleMark(size: 18),
+                            onTap: () => _social('google'),
+                          ),
+                          const SizedBox(height: 22),
+                          Row(
+                            children: [
+                              const Expanded(child: Divider(color: AppColors.line)),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  GlowL10n.t('login_or_email'),
+                                  style: const TextStyle(color: AppColors.muted, fontSize: 12),
+                                ),
+                              ),
+                              const Expanded(child: Divider(color: AppColors.line)),
+                            ],
+                          ),
+                          const SizedBox(height: 18),
+                          if (register) ...[
+                            _Field(controller: name, hint: GlowL10n.t('login_name'), icon: Icons.person_outline),
+                            const SizedBox(height: 10),
+                          ],
+                          _Field(
+                            controller: email,
+                            hint: GlowL10n.t('login_email'),
+                            icon: Icons.mail_outline,
+                            keyboard: TextInputType.emailAddress,
+                          ),
+                          const SizedBox(height: 10),
+                          _Field(
+                            controller: password,
+                            hint: GlowL10n.t('login_password'),
+                            icon: Icons.lock_outline,
+                            obscure: true,
+                          ),
+                          if (error != null) ...[
+                            const SizedBox(height: 12),
+                            Text(error!, style: const TextStyle(color: AppColors.caution, fontSize: 13)),
+                          ],
+                          const SizedBox(height: 18),
+                          GlowPrimaryButton(
+                            title: register ? GlowL10n.t('login_create_btn') : GlowL10n.t('login_btn'),
+                            onPressed: _email,
+                          ),
+                          const SizedBox(height: 14),
+                          TextButton(
+                            onPressed: () => setState(() {
+                              register = !register;
+                              error = null;
+                            }),
+                            child: Text(
+                              register ? GlowL10n.t('login_have_account') : GlowL10n.t('login_new_here'),
+                              style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          if (!GlowStore.instance.mustClaimPurchase)
+                            TextButton(
+                              onPressed: _skip,
+                              child: Text(
+                                GlowL10n.t('login_guest'),
+                                style: const TextStyle(color: AppColors.muted, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            Expanded(
-              child: AbsorbPointer(
-                absorbing: busy,
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(22, 12, 22, 96),
-                  physics: const ClampingScrollPhysics(),
-                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                  children: [
-            Text(
-              register ? GlowL10n.t('login_create') : GlowL10n.t('login_welcome'),
-              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700, height: 1.1),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              GlowL10n.t(GlowStore.instance.mustClaimPurchase ? 'hook_after_pay' : 'login_note'),
-              style: const TextStyle(color: AppColors.muted, fontSize: 14, height: 1.4),
-            ),
-            const SizedBox(height: 24),
-            _SocialButton(
-              label: GlowL10n.t('login_google'),
-              leading: const GlowGoogleMark(size: 18),
-              onTap: () => _social('google'),
-            ),
-            const SizedBox(height: 22),
-            Row(
-              children: [
-                const Expanded(child: Divider(color: AppColors.line)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text(GlowL10n.t('login_or_email'), style: const TextStyle(color: AppColors.muted, fontSize: 12)),
-                ),
-                const Expanded(child: Divider(color: AppColors.line)),
-              ],
-            ),
-            const SizedBox(height: 18),
-            if (register) ...[
-              _Field(controller: name, hint: GlowL10n.t('login_name'), icon: Icons.person_outline),
-              const SizedBox(height: 10),
-            ],
-            _Field(controller: email, hint: GlowL10n.t('login_email'), icon: Icons.mail_outline, keyboard: TextInputType.emailAddress),
-            const SizedBox(height: 10),
-            _Field(controller: password, hint: GlowL10n.t('login_password'), icon: Icons.lock_outline, obscure: true),
-            if (error != null) ...[
-              const SizedBox(height: 12),
-              Text(error!, style: const TextStyle(color: AppColors.caution, fontSize: 13)),
-            ],
-            const SizedBox(height: 18),
-            GlowPrimaryButton(
-              title: register ? GlowL10n.t('login_create_btn') : GlowL10n.t('login_btn'),
-              onPressed: _email,
-            ),
-            const SizedBox(height: 14),
-            TextButton(
-              onPressed: () => setState(() {
-                register = !register;
-                error = null;
-              }),
-              child: Text(
-                register ? GlowL10n.t('login_have_account') : GlowL10n.t('login_new_here'),
-                style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w600),
-              ),
-            ),
-            if (!GlowStore.instance.mustClaimPurchase)
-              TextButton(
-                onPressed: _skip,
-                child: Text(
-                  GlowL10n.t('login_guest'),
-                  style: const TextStyle(color: AppColors.muted, fontWeight: FontWeight.w700),
-                ),
-              ),
-          ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
