@@ -72,7 +72,6 @@ billingRouter.post('/checkout', async (req, res) => {
       locale: checkoutLocale(locale),
       submit_type: 'pay',
       allow_promotion_codes: true,
-      payment_method_types: ['card'],
       metadata: { plan: LIFETIME_PLAN },
       line_items: [
         {
