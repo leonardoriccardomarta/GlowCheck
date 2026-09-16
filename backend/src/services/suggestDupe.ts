@@ -30,9 +30,49 @@ const FACE_FORMATS = new Set(['serum', 'cream', 'cleanser', 'sunscreen', 'toner'
 const HAIR_FORMATS = new Set(['shampoo', 'conditioner']);
 const SKIP_DUPE_KINDS = new Set(['shave', 'makeup', 'perfume', 'deodorant', 'toothpaste', 'soap', 'mask', 'body']);
 
-function priceOf(item: DupeEntry) {
+function priceOf(item: { estimatedPrice: string }) {
   const n = Number(String(item.estimatedPrice).replace(/[^\d]/g, ''));
   return Number.isFinite(n) ? n : 15;
+}
+
+function scannedCatalogItem(input: SuggestInput): DupeEntry | null {
+  const raw = (input.productName ?? '').trim().toLowerCase();
+  if (raw.length < 4) return null;
+  let best: DupeEntry | null = null;
+  let bestLen = 0;
+  for (const item of DUPE_CATALOG) {
+    const brand = item.brand.toLowerCase();
+    const name = item.name.toLowerCase();
+    const full = `${brand} ${name}`;
+    const hit =
+      raw === full ||
+      raw.includes(full) ||
+      full.includes(raw) ||
+      (raw.includes(brand) && (raw.includes(name.slice(0, 12)) || name.includes(raw.replace(brand, '').trim().slice(0, 10))));
+    if (!hit) continue;
+    if (full.length >= bestLen) {
+      best = item;
+      bestLen = full.length;
+    }
+  }
+  return best;
+}
+
+function looksLuxury(name: string | null) {
+  return /(la mer|la prairie|skinceuticals|drunk elephant|augustinus|sisley|\bchanel\b|\bdior\b|tatcha|orveda|sunday riley|elemis)/i.test(
+    name ?? ''
+  );
+}
+
+function maxSavePrice(input: SuggestInput) {
+  const scanned = scannedCatalogItem(input);
+  if (scanned) return Math.max(6, priceOf(scanned) - 1);
+  if (looksLuxury(input.productName)) return 22;
+  return 16;
+}
+
+function isPriceSave(price: number, input: SuggestInput) {
+  return price <= maxSavePrice(input);
 }
 
 function extractJson(text: string) {
@@ -148,6 +188,7 @@ export function catalogFallback(input: SuggestInput): DupeSuggestion | null {
       if (item.id === 'lrp-toleriane' || item.id === 'simple-micellar' || item.id === 'cetaphil-gentle') score += 3;
     }
     const price = priceOf(item);
+    score -= Math.floor(price / 4);
     if (input.spendBand === 'low' && price <= 12) score += 2;
     if (input.spendBand === 'low' && price >= 18) score -= 2;
     if (input.spendBand === 'high' && price >= 16) score += 1;
@@ -155,8 +196,8 @@ export function catalogFallback(input: SuggestInput): DupeSuggestion | null {
     if (input.productName && sameName.includes(input.productName.toLowerCase().slice(0, 12))) score -= 8;
     return { item, score };
   })
-    .filter((row) => row.score > 0)
-    .sort((a, b) => b.score - a.score);
+    .filter((row) => row.score > 0 && isPriceSave(priceOf(row.item), input))
+    .sort((a, b) => b.score - a.score || priceOf(a.item) - priceOf(b.item));
 
   const best = ranked[0]?.item;
   if (!best) return null;
@@ -202,7 +243,7 @@ async function askModel(input: SuggestInput): Promise<DupeSuggestion | null> {
 Stay inside the same format only: serum vs serum, face cream vs moisturizer, cleanser vs cleanser, sunscreen vs sunscreen, toner vs toner or serum, shampoo vs shampoo, conditioner vs conditioner.
 Never swap a razor, shaving foam, aftershave, shampoo, or makeup against a face cream, serum, or cleanser.
 Gillette, Schick, Wilkinson and similar shave brands are not daily face moisturizers.
-If the scanned item is not comparable, or the category does not match, return {"skip":true}.
+If the scanned item is not comparable, the category does not match, or you cannot name a cheaper product, return {"skip":true}.
 JSON only, no markdown and no <think> tags.`;
   const prompt = `Suggest ONE cheaper, widely sold alternative for this scanned cosmetic.
 Write blurb and whyThis in ${lang}. Use prices like ${priceHint}.
@@ -218,7 +259,7 @@ Rules:
 - Same format only. Serum vs serum. Face cream vs face moisturizer. Cleanser vs cleanser. Sunscreen vs sunscreen. Shampoo vs shampoo. Conditioner vs conditioner.
 - Never swap a razor, shaving foam, aftershave, shampoo, or makeup against a face cream, serum, or cleanser.
 - If the scan is shave, makeup, body wash, or not comparable, return {"skip":true}.
-- Pick a real cheaper product sold in drugstores / pharmacies / Olive Young / Stylevana / ordinary EU or US shops
+- Pick a real cheaper product sold in drugstores / pharmacies / Olive Young / Stylevana / ordinary EU or US shops. Never upsell. If nothing cheaper exists, return {"skip":true}.
 - Match useful INCI jobs (niacinamide, hyaluronic, ceramide, BHA, cica, urea, etc.)
 - Skin first, then goal. Oily: no heavy cream. Dry: no foaming cleanser. Sensitive: fragrance-light.
 - Low spend: cheaper option
@@ -280,13 +321,16 @@ ${catalogPromptBlock()}`;
       if (!known.kinds.includes(scannedKind) && !(scannedKind === 'toner' && known.kinds.includes('serum'))) {
         return null;
       }
+      if (!isPriceSave(priceOf(known), input)) return null;
       return toSuggestion(known, detectActives(blobOf(input.ingredients, input.productName)), input);
     }
+    const estimatedPrice = dupePrice(String(parsed.estimatedPrice || '12'), input.locale);
+    if (!isPriceSave(priceOf({ estimatedPrice }), input)) return null;
     return {
       id: null,
       brand,
       name,
-      estimatedPrice: dupePrice(String(parsed.estimatedPrice || '12'), input.locale),
+      estimatedPrice,
       blurb: String(parsed.blurb || copy(input.locale, 'dupe_generic', {
         skin: copy(input.locale, `skin_${input.skinType}`),
         goal: copy(input.locale, `goal_${input.mainGoal}`),
@@ -309,6 +353,6 @@ export async function suggestDupe(input: SuggestInput): Promise<DupeSuggestion |
   const kind = resolveKind(input);
   if (!isDupeKind(kind)) return null;
   const fromModel = await askModel(input);
-  if (fromModel) return fromModel;
+  if (fromModel && isPriceSave(priceOf(fromModel), input)) return fromModel;
   return catalogFallback(input);
 }

@@ -94,6 +94,22 @@ assert(
   `oily+pores should get niacinamide, not a heavy cream (${oilyDupe?.brand} ${oilyDupe?.name})`
 );
 
+const ceraveOilyDupe = catalogFallback({
+  productName: 'CeraVe Moisturizing Cream',
+  ingredients: ['Aqua', 'Glycerin', 'Ceramide NP', 'Dimethicone', 'Sodium Hyaluronate'],
+  skinType: 'oily',
+  mainGoal: 'pores',
+  spendBand: 'mid',
+});
+if (ceraveOilyDupe) {
+  const n = Number(String(ceraveOilyDupe.estimatedPrice).replace(/[^\d]/g, ''));
+  assert(n <= 15, `CeraVe cream must not get a pricier SMART SAVE (${ceraveOilyDupe.brand} ${ceraveOilyDupe.name} ${ceraveOilyDupe.estimatedPrice})`);
+  assert(
+    !/toleriane|hydro boost|tolerance control/i.test(`${ceraveOilyDupe.brand} ${ceraveOilyDupe.name}`),
+    `CeraVe cream must not upsell (${ceraveOilyDupe.brand} ${ceraveOilyDupe.name})`
+  );
+}
+
 const dryDupe = catalogFallback({
   productName: 'Night Cream',
   ingredients: ['Aqua', 'Ceramide NP', 'Glycerin', 'Sodium Hyaluronate'],
