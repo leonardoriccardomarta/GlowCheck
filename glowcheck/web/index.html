@@ -399,28 +399,33 @@
         root.style.height = h + 'px';
         root.style.maxHeight = h + 'px';
       }
+      function isLoginRoute() {
+        return /LoginScreen/i.test(location.pathname + location.hash);
+      }
       function sizeSoon() {
         lastH = 0;
         sizeRoot();
-        [80, 200, 480, 900, 1800, 2800].forEach(function (ms) {
+        [80, 200, 600].forEach(function (ms) {
           setTimeout(sizeRoot, ms);
         });
-        setTimeout(function () {
-          sizeRoot();
-          window.dispatchEvent(new Event('resize'));
-        }, 700);
       }
-      sizeSoon();
-      window.addEventListener('pageshow', sizeSoon);
+      window.addEventListener('pageshow', function () {
+        if (isLoginRoute()) sizeSoon();
+      });
       window.addEventListener('orientationchange', sizeSoon);
       window.addEventListener('flutter-first-frame', function () {
-        sizeSoon();
         var boot = document.getElementById('glow-boot');
-        if (!boot) return;
-        boot.classList.add('is-gone');
-        setTimeout(function () {
-          if (boot && boot.parentNode) boot.parentNode.removeChild(boot);
-        }, 300);
+        if (boot) {
+          boot.classList.add('is-gone');
+          setTimeout(function () {
+            if (boot && boot.parentNode) boot.parentNode.removeChild(boot);
+          }, 300);
+        }
+        if (isLoginRoute()) {
+          sizeSoon();
+          return;
+        }
+        setTimeout(sizeRoot, 1700);
       });
     })();
     if ('serviceWorker' in navigator) {
