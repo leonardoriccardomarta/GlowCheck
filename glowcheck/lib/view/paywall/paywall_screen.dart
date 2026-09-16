@@ -51,6 +51,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
         });
         return;
       }
+      if (!GlowStore.instance.hasAccount) {
+        await GlowStore.instance.markNeedsAuthAfterPay();
+      }
       Navigator.pop(context, true);
     } catch (e) {
       setState(() => error = e.toString().replaceFirst('Exception: ', ''));
