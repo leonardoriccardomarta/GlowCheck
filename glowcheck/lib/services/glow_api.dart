@@ -191,6 +191,10 @@ class GlowApi {
     if (json is Map && json['ok'] == true && json['url'] is String) {
       return json['url'] as String;
     }
+    final detail = json is Map ? json['detail'] : null;
+    if (detail is String && detail.trim().isNotEmpty) {
+      throw Exception(detail.trim());
+    }
     throw Exception(GlowL10n.t('paywall_store_err'));
   }
 

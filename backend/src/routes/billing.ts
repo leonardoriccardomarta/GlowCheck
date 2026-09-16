@@ -72,6 +72,7 @@ billingRouter.post('/checkout', async (req, res) => {
       locale: checkoutLocale(locale),
       submit_type: 'pay',
       allow_promotion_codes: true,
+      payment_method_types: ['card'],
       metadata: { plan: LIFETIME_PLAN },
       line_items: [
         {
@@ -92,8 +93,13 @@ billingRouter.post('/checkout', async (req, res) => {
     }
     return res.json({ ok: true, url: session.url, sessionId: session.id });
   } catch (error) {
-    console.error(error);
-    return res.status(502).json({ ok: false, error: 'CHECKOUT_FAILED' });
+    const detail = error instanceof Error ? error.message : 'CHECKOUT_FAILED';
+    console.error('checkout failed', detail);
+    return res.status(502).json({
+      ok: false,
+      error: 'CHECKOUT_FAILED',
+      detail: detail.slice(0, 300),
+    });
   }
 });
 
