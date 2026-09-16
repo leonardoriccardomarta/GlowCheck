@@ -63,11 +63,12 @@
       flex-direction: column;
       justify-content: space-between;
       box-sizing: border-box;
-      padding: calc(28px + env(safe-area-inset-top, 0px)) 28px calc(36px + env(safe-area-inset-bottom, 0px));
+      padding: 28px 28px 36px;
       background: #F3F1ED;
       font-family: 'Poppins', sans-serif;
       pointer-events: none;
-      transition: opacity 280ms ease;
+      -webkit-font-smoothing: antialiased;
+      transition: opacity 160ms linear;
     }
     #glow-boot.is-gone {
       opacity: 0;
@@ -79,11 +80,19 @@
       letter-spacing: 0.6px;
     }
     .glow-boot-mark {
+      display: flex;
+      align-items: center;
+      justify-content: center;
       width: 58px;
       height: 58px;
       border-radius: 50%;
-      background: #00E676 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23111111' d='M9 3.2l.9-1.1A2 2 0 0 1 11.4 1.5h1.2a2 2 0 0 1 1.5.6L15 3.2H19a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2h4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'/%3E%3C/svg%3E") center / 26px no-repeat;
+      background: #00E676;
       margin-bottom: 22px;
+    }
+    .glow-boot-mark svg {
+      display: block;
+      width: 26px;
+      height: 26px;
     }
     .glow-boot-title {
       font-size: 34px;
@@ -134,7 +143,7 @@
       font-family: 'Poppins';
       font-style: normal;
       font-weight: 400;
-      font-display: swap;
+      font-display: optional;
       src: url('assets/fonts/Poppins-Regular.ttf') format('truetype'),
            url('assets/assets/fonts/Poppins-Regular.ttf') format('truetype');
     }
@@ -142,7 +151,7 @@
       font-family: 'Poppins';
       font-style: normal;
       font-weight: 700;
-      font-display: swap;
+      font-display: optional;
       src: url('assets/fonts/Poppins-Bold.ttf') format('truetype'),
            url('assets/assets/fonts/Poppins-Bold.ttf') format('truetype');
     }
@@ -349,7 +358,11 @@
   <div id="glow-boot">
     <div class="glow-boot-kicker">GlowCheck</div>
     <div>
-      <div class="glow-boot-mark"></div>
+      <div class="glow-boot-mark" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="26" height="26">
+          <path fill="#111111" d="M9 3.2l.9-1.1A2 2 0 0 1 11.4 1.5h1.2a2 2 0 0 1 1.5.6L15 3.2H19a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2h4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/>
+        </svg>
+      </div>
       <p class="glow-boot-title">Your bottle.<br>Your skin.</p>
       <p class="glow-boot-tag">INCI vs your skin</p>
     </div>
@@ -360,6 +373,22 @@
     (function () {
       var lastH = 0;
       var probe;
+      var copy = {
+        it: ['Il tuo flacone.<br>La tua pelle.', 'INCI sulla tua pelle'],
+        en: ['Your bottle.<br>Your skin.', 'INCI vs your skin'],
+        es: ['Tu bote.<br>Tu piel.', 'INCI frente a tu piel'],
+        fr: ['Votre flacon.<br>Votre peau.', 'INCI face à votre peau'],
+        de: ['Deine Flasche.<br>Deine Haut.', 'INCI zu deiner Haut']
+      };
+      try {
+        var raw = localStorage.getItem('flutter.glowcheck.v1') || localStorage.getItem('glowcheck.v1');
+        var code = raw ? (JSON.parse(raw).localeCode || 'en') : 'en';
+        var pair = copy[code] || copy.en;
+        var title = document.querySelector('.glow-boot-title');
+        var tag = document.querySelector('.glow-boot-tag');
+        if (title) title.innerHTML = pair[0];
+        if (tag) tag.textContent = pair[1];
+      } catch (e) {}
       function smallH() {
         var inner = window.innerHeight || 0;
         var vis = 0;
@@ -414,18 +443,23 @@
       });
       window.addEventListener('orientationchange', sizeSoon);
       window.addEventListener('flutter-first-frame', function () {
-        var boot = document.getElementById('glow-boot');
-        if (boot) {
+        function hideBoot() {
+          var boot = document.getElementById('glow-boot');
+          if (!boot) return;
           boot.classList.add('is-gone');
           setTimeout(function () {
             if (boot && boot.parentNode) boot.parentNode.removeChild(boot);
-          }, 300);
+          }, 200);
         }
         if (isLoginRoute()) {
+          hideBoot();
           sizeSoon();
           return;
         }
-        setTimeout(sizeRoot, 1700);
+        setTimeout(function () {
+          hideBoot();
+          sizeRoot();
+        }, 1550);
       });
     })();
     if ('serviceWorker' in navigator) {

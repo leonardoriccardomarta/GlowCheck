@@ -61,6 +61,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         padding: const EdgeInsets.fromLTRB(28, 28, 28, 36),
         child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
                 'GlowCheck',
@@ -71,37 +72,40 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   letterSpacing: 0.6,
                 ),
               ),
-              const Spacer(),
-              Container(
-                width: 58,
-                height: 58,
-                decoration: const BoxDecoration(
-                  color: AppColors.neon,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.photo_camera_rounded, color: AppColors.ink, size: 26),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 58,
+                    height: 58,
+                    decoration: const BoxDecoration(
+                      color: AppColors.neon,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.photo_camera_rounded, color: AppColors.ink, size: 26),
+                  ),
+                  const SizedBox(height: 22),
+                  Text(
+                    GlowL10n.t('start_title'),
+                    style: const TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w800,
+                      height: 1.08,
+                      letterSpacing: -0.6,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    GlowL10n.t('splash_tag'),
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 16,
+                      height: 1.4,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 22),
-              Text(
-                GlowL10n.t('start_title'),
-                style: const TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.w800,
-                  height: 1.08,
-                  letterSpacing: -0.6,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                GlowL10n.t('splash_tag'),
-                style: const TextStyle(
-                  color: AppColors.muted,
-                  fontSize: 16,
-                  height: 1.4,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const Spacer(),
               AnimatedBuilder(
                 animation: _motion,
                 builder: (context, _) {
