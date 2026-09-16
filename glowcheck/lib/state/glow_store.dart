@@ -238,10 +238,11 @@ class GlowStore extends ChangeNotifier {
     accountProvider = provider;
     accountToken = token;
     if (provider != 'email') accountPassword = null;
+    final keepPaid = isPro != true && this.isPro && stripeSessionId != null && stripeSessionId!.isNotEmpty;
     if (isPro == true) {
       this.isPro = true;
       proPlan = proPlan ?? 'lifetime';
-    } else if (isPro == false) {
+    } else if (isPro == false && !keepPaid) {
       this.isPro = false;
       proPlan = null;
     }

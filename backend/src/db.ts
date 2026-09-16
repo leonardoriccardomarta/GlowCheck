@@ -40,6 +40,13 @@ export async function ensureDb() {
         )
       `;
       await client`CREATE INDEX IF NOT EXISTS shelf_items_user_at ON shelf_items (user_id, item_at DESC)`;
+      await client`
+        CREATE TABLE IF NOT EXISTS paid_sessions (
+          session_id TEXT PRIMARY KEY,
+          user_id TEXT,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `;
     })().catch((error) => {
       ready = null;
       throw error;

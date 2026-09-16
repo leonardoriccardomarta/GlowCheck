@@ -9,6 +9,7 @@ import '../config/app_env.dart';
 import '../l10n/glow_l10n.dart';
 import '../state/glow_store.dart';
 import 'glow_api.dart';
+import 'glow_billing.dart';
 
 class GlowAuth {
   GlowAuth._();
@@ -37,7 +38,7 @@ class GlowAuth {
         token: user['token'] as String?,
         isPro: user['isPro'] == true,
       );
-      await GlowApi.pullAndMergeShelf();
+      await _afterSession();
       return;
     }
     await GlowStore.instance.signUp(name: name, email: email, password: password);
@@ -59,7 +60,7 @@ class GlowAuth {
         token: user['token'] as String?,
         isPro: user['isPro'] == true,
       );
-      await GlowApi.pullAndMergeShelf();
+      await _afterSession();
       return;
     }
     await GlowStore.instance.signInEmail(email: email, password: password);
@@ -86,7 +87,7 @@ class GlowAuth {
         token: user['token'] as String?,
         isPro: user['isPro'] == true,
       );
-      await GlowApi.pullAndMergeShelf();
+      await _afterSession();
       return;
     }
     await GlowStore.instance.signInSocial(provider);
@@ -122,7 +123,7 @@ class GlowAuth {
       token: user['token'] as String?,
       isPro: user['isPro'] == true,
     );
-    await GlowApi.pullAndMergeShelf();
+    await _afterSession();
   }
 
   static Future<void> _appleNative() async {
@@ -153,7 +154,7 @@ class GlowAuth {
         token: user['token'] as String?,
         isPro: user['isPro'] == true,
       );
-      await GlowApi.pullAndMergeShelf();
+      await _afterSession();
       return;
     }
     await GlowStore.instance.signInSocial(
@@ -190,6 +191,11 @@ class GlowAuth {
       };
     }
     throw Exception(GlowL10n.t('auth_missing'));
+  }
+
+  static Future<void> _afterSession() async {
+    await GlowBilling.attachPaidToAccount();
+    await GlowApi.pullAndMergeShelf();
   }
 
   static String _authError(Map<String, dynamic> json) {

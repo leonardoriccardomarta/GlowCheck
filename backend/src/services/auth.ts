@@ -87,7 +87,8 @@ export async function registerUser(input: { name: string; email: string; passwor
       SET
         name = ${input.name.trim()},
         provider = 'email',
-        password_hash = ${hashPassword(input.password)}
+        password_hash = ${hashPassword(input.password)},
+        is_pro = FALSE
       WHERE email = ${email}
       RETURNING id, email, name, provider, password_hash, is_pro, used_free
     `;
@@ -152,6 +153,17 @@ export async function socialUser(input: {
     if (existing.provider === 'email' && existing.passwordHash) {
       throw new Error('An account with this email already exists.');
     }
+    if (existing.provider === 'email' && !existing.passwordHash) {
+      await sqlClient()`
+        UPDATE users
+        SET provider = ${input.provider}, name = ${name}, is_pro = FALSE
+        WHERE email = ${email}
+      `;
+      existing.provider = input.provider;
+      existing.name = name;
+      existing.isPro = false;
+      return sessionOf(existing);
+    }
     if (existing.provider !== input.provider) {
       await sqlClient()`
         UPDATE users
@@ -209,10 +221,6 @@ export async function verifyToken(token: string): Promise<StoredUser | null> {
     const email = data.email.trim().toLowerCase();
     const existing = await findByEmail(email);
     if (existing) {
-      if (data.isPro && !existing.isPro) {
-        await sqlClient()`UPDATE users SET is_pro = TRUE WHERE email = ${email}`;
-        existing.isPro = true;
-      }
       return existing;
     }
     const provider = asProvider(data.provider);
@@ -223,10 +231,10 @@ export async function verifyToken(token: string): Promise<StoredUser | null> {
         ${email},
         ${email.split('@')[0] || 'GlowCheck'},
         ${provider},
-        ${Boolean(data.isPro)}
+        FALSE
       )
       ON CONFLICT (email) DO UPDATE SET
-        is_pro = users.is_pro OR EXCLUDED.is_pro
+        name = users.name
       RETURNING id, email, name, provider, password_hash, is_pro, used_free
     `;
     return rows[0] ? rowToUser(rows[0]) : null;
@@ -246,21 +254,30 @@ export async function userFromRequest(req: { headers: { authorization?: string }
   return verifyToken(header.slice(7).trim());
 }
 
-export async function markPro(email: string) {
-  const key = email.trim().toLowerCase();
-  if (!key.includes('@')) return;
+export async function markProById(id: string) {
+  if (!id.trim()) return;
   await ensureDb();
+  await sqlClient()`UPDATE users SET is_pro = TRUE WHERE id = ${id}`;
+}
+
+export async function recordPaidSession(sessionId: string, userId?: string | null): Promise<boolean> {
+  if (!sessionId.trim()) return false;
+  await ensureDb();
+  const claimedId = userId?.trim() || null;
   await sqlClient()`
-    INSERT INTO users (id, email, name, provider, is_pro)
-    VALUES (
-      ${randomBytes(8).toString('hex')},
-      ${key},
-      ${key.split('@')[0] || 'GlowCheck'},
-      'pending',
-      TRUE
-    )
-    ON CONFLICT (email) DO UPDATE SET is_pro = TRUE
+    INSERT INTO paid_sessions (session_id, user_id)
+    VALUES (${sessionId}, ${claimedId})
+    ON CONFLICT (session_id) DO UPDATE SET
+      user_id = COALESCE(paid_sessions.user_id, EXCLUDED.user_id)
   `;
+  if (!claimedId) return false;
+  const rows = await sqlClient()`
+    SELECT user_id FROM paid_sessions WHERE session_id = ${sessionId} LIMIT 1
+  `;
+  const holder = rows[0]?.user_id ? String(rows[0].user_id) : null;
+  if (holder !== claimedId) return false;
+  await markProById(claimedId);
+  return true;
 }
 
 export async function markFreeUsed(user: StoredUser) {

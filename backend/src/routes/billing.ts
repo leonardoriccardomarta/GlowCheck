@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import { Router } from 'express';
 import { z } from 'zod';
-import { markPro } from '../services/auth';
+import { recordPaidSession, userFromRequest } from '../services/auth';
 import {
   LIFETIME_AMOUNT,
   LIFETIME_CURRENCY,
@@ -24,7 +24,6 @@ function checkoutLocale(locale?: string): Stripe.Checkout.SessionCreateParams.Lo
 const checkoutSchema = z.object({
   successUrl: z.string().url().max(500),
   cancelUrl: z.string().url().max(500),
-  email: z.string().email().max(120).optional(),
   locale: z.string().max(8).optional(),
 });
 
@@ -50,7 +49,7 @@ billingRouter.post('/checkout', async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ ok: false, error: 'INVALID_CHECKOUT' });
   }
-  const { successUrl, cancelUrl, email, locale } = parsed.data;
+  const { successUrl, cancelUrl, locale } = parsed.data;
   if (!allowedReturnUrl(successUrl) || !allowedReturnUrl(cancelUrl)) {
     return res.status(400).json({ ok: false, error: 'INVALID_RETURN_URL' });
   }
@@ -63,16 +62,19 @@ billingRouter.post('/checkout', async (req, res) => {
     return res.status(503).json({ ok: false, error: 'STRIPE_NOT_CONFIGURED' });
   }
 
+  const user = await userFromRequest(req);
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       success_url: successUrl,
       cancel_url: cancelUrl,
-      customer_email: email || undefined,
       locale: checkoutLocale(locale),
       submit_type: 'pay',
       allow_promotion_codes: true,
-      metadata: { plan: LIFETIME_PLAN },
+      metadata: {
+        plan: LIFETIME_PLAN,
+        ...(user?.id ? { userId: user.id } : {}),
+      },
       line_items: [
         {
           quantity: 1,
@@ -119,15 +121,15 @@ billingRouter.post('/confirm', async (req, res) => {
   try {
     const session = await stripe.checkout.sessions.retrieve(parsed.data.sessionId);
     const unlocked = sessionPaid(session);
-    const email = session.customer_details?.email || session.customer_email || null;
-    if (unlocked && email) await markPro(email);
+    const user = await userFromRequest(req);
+    const attached = unlocked ? await recordPaidSession(session.id, user?.id ?? null) : false;
     return res.json({
       ok: true,
       unlocked,
       plan: unlocked ? LIFETIME_PLAN : null,
-      email: unlocked ? email : null,
+      email: null,
       token: null,
-      isPro: unlocked,
+      isPro: attached,
     });
   } catch (error) {
     console.error(error);

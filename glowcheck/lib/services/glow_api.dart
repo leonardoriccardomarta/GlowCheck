@@ -167,7 +167,6 @@ class GlowApi {
   static Future<String> createCheckout({
     required String successUrl,
     required String cancelUrl,
-    String? email,
     String? locale,
   }) async {
     late http.Response response;
@@ -179,7 +178,6 @@ class GlowApi {
             body: jsonEncode({
               'successUrl': successUrl,
               'cancelUrl': cancelUrl,
-              if (email != null && email.contains('@')) 'email': email,
               if (locale != null && locale.isNotEmpty) 'locale': locale,
             }),
           )
@@ -198,7 +196,7 @@ class GlowApi {
     throw Exception(GlowL10n.t('paywall_store_err'));
   }
 
-  static Future<({bool unlocked, String? email, String? token})> confirmCheckout(String sessionId) async {
+  static Future<({bool unlocked, bool attached})> confirmCheckout(String sessionId) async {
     try {
       final response = await _client
           .post(
@@ -207,20 +205,14 @@ class GlowApi {
             body: jsonEncode({'sessionId': sessionId}),
           )
           .timeout(const Duration(seconds: 20));
-      if (response.statusCode != 200) return (unlocked: false, email: null, token: null);
+      if (response.statusCode != 200) return (unlocked: false, attached: false);
       final json = jsonDecode(response.body);
       if (json is! Map || json['unlocked'] != true) {
-        return (unlocked: false, email: null, token: null);
+        return (unlocked: false, attached: false);
       }
-      final email = json['email'];
-      final token = json['token'];
-      return (
-        unlocked: true,
-        email: email is String && email.contains('@') ? email : null,
-        token: token is String && token.isNotEmpty ? token : null,
-      );
+      return (unlocked: true, attached: json['isPro'] == true);
     } catch (_) {
-      return (unlocked: false, email: null, token: null);
+      return (unlocked: false, attached: false);
     }
   }
 

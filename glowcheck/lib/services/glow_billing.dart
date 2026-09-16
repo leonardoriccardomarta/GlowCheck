@@ -46,7 +46,7 @@ class GlowBilling {
       await GlowStore.instance.setStripeSessionId(sessionId);
       final result = await GlowApi.confirmCheckout(sessionId);
       if (result.unlocked) {
-        await _applyPaid(result, sessionId);
+        await _applyPaid(sessionId);
       }
       await GlowStore.instance.markHomeInstallHint();
       stripCheckoutQuery();
@@ -94,7 +94,6 @@ class GlowBilling {
       final url = await GlowApi.createCheckout(
         successUrl: '$origin/?stripe=success&session_id={CHECKOUT_SESSION_ID}',
         cancelUrl: '$origin/?stripe=cancel',
-        email: GlowStore.instance.accountEmail,
         locale: GlowStore.instance.localeCode,
       );
       goToCheckout(url);
@@ -107,24 +106,23 @@ class GlowBilling {
     return PurchaseOutcome.needsStore;
   }
 
-  static Future<void> _applyPaid(({bool unlocked, String? email, String? token}) result, String sessionId) async {
+  static Future<void> attachPaidToAccount() async {
+    final sessionId = GlowStore.instance.stripeSessionId;
+    if (sessionId == null || sessionId.isEmpty) return;
+    if (!GlowStore.instance.hasAccount) return;
+    final result = await GlowApi.confirmCheckout(sessionId);
+    if (result.attached) {
+      await GlowStore.instance.unlockPro(plan: lifetimeId, stripeSession: sessionId);
+    }
+  }
+
+  static Future<void> _applyPaid(String sessionId) async {
     await GlowStore.instance.unlockPro(plan: lifetimeId, stripeSession: sessionId);
-    final paidEmail = result.email?.trim().toLowerCase();
-    final current = GlowStore.instance.accountEmail;
-    if (GlowStore.instance.hasAccount && paidEmail != null && current == paidEmail) {
-      await GlowStore.instance.applySession(
-        name: GlowStore.instance.accountName ?? paidEmail.split('@').first,
-        email: paidEmail,
-        provider: GlowStore.instance.accountProvider ?? 'email',
-        token: GlowStore.instance.accountToken,
-        isPro: true,
-      );
+    if (GlowStore.instance.hasAccount) {
       await GlowApi.pullAndMergeShelf();
       return;
     }
-    if (!GlowStore.instance.hasAccount) {
-      await GlowStore.instance.markNeedsAuthAfterPay();
-    }
+    await GlowStore.instance.markNeedsAuthAfterPay();
   }
 
   static Future<PurchaseOutcome> restore() async {
@@ -136,7 +134,7 @@ class GlowBilling {
       if (sessionId != null && sessionId.isNotEmpty && AppEnv.stripeLive) {
         final result = await GlowApi.confirmCheckout(sessionId);
         if (result.unlocked) {
-          await _applyPaid(result, sessionId);
+          await _applyPaid(sessionId);
           return PurchaseOutcome.unlocked;
         }
         return PurchaseOutcome.nothingToRestore;
