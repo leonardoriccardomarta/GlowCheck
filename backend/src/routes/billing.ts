@@ -80,9 +80,11 @@ billingRouter.post('/checkout', async (req, res) => {
           price_data: {
             currency: LIFETIME_CURRENCY,
             unit_amount: LIFETIME_AMOUNT,
+            tax_behavior: 'inclusive',
             product_data: {
               name: 'GlowCheck Accesso a vita',
               description: 'Scansioni illimitate. Una tantum. Nessun abbonamento.',
+              tax_code: 'txcd_10103000',
             },
           },
         },
