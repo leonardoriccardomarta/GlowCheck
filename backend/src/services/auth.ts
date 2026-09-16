@@ -77,6 +77,25 @@ export async function registerUser(input: { name: string; email: string; passwor
     throw new Error('Name, email and a password of at least 6 characters.');
   }
   await ensureDb();
+  const existing = await findByEmail(email);
+  if (existing) {
+    if (existing.passwordHash || existing.provider === 'google' || existing.provider === 'apple') {
+      throw new Error('An account with this email already exists.');
+    }
+    const claimed = await sqlClient()`
+      UPDATE users
+      SET
+        name = ${input.name.trim()},
+        provider = 'email',
+        password_hash = ${hashPassword(input.password)}
+      WHERE email = ${email}
+      RETURNING id, email, name, provider, password_hash, is_pro, used_free
+    `;
+    if (!claimed[0]) {
+      throw new Error('An account with this email already exists.');
+    }
+    return sessionOf(rowToUser(claimed[0]));
+  }
   const rows = await sqlClient()`
     INSERT INTO users (id, email, name, provider, password_hash)
     VALUES (
@@ -132,6 +151,15 @@ export async function socialUser(input: {
   if (existing) {
     if (existing.provider === 'email' && existing.passwordHash) {
       throw new Error('An account with this email already exists.');
+    }
+    if (existing.provider !== input.provider) {
+      await sqlClient()`
+        UPDATE users
+        SET provider = ${input.provider}, name = ${name}
+        WHERE email = ${email}
+      `;
+      existing.provider = input.provider;
+      existing.name = name;
     }
     return sessionOf(existing);
   }
@@ -228,7 +256,7 @@ export async function markPro(email: string) {
       ${randomBytes(8).toString('hex')},
       ${key},
       ${key.split('@')[0] || 'GlowCheck'},
-      'email',
+      'pending',
       TRUE
     )
     ON CONFLICT (email) DO UPDATE SET is_pro = TRUE

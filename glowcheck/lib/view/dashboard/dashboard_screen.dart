@@ -53,14 +53,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _maybeInstallHint() async {
     if (!mounted || !kIsWeb) return;
-    if (!GlowStore.instance.pendingHomeInstallHint) return;
-    if (isStandaloneDisplay() || (!isIosWeb() && !isAndroidWeb())) {
-      await GlowStore.instance.consumeHomeInstallHint();
-      return;
+    if (GlowStore.instance.pendingHomeInstallHint) {
+      if (isStandaloneDisplay() || (!isIosWeb() && !isAndroidWeb())) {
+        await GlowStore.instance.consumeHomeInstallHint();
+      } else {
+        await GlowStore.instance.consumeHomeInstallHint();
+        if (!mounted) return;
+        await showGlowInstallHint(context);
+      }
     }
-    await GlowStore.instance.consumeHomeInstallHint();
     if (!mounted) return;
-    await showGlowInstallHint(context);
+    await _maybeAuthAfterPay();
+  }
+
+  Future<void> _maybeAuthAfterPay() async {
+    final store = GlowStore.instance;
+    if (!store.needsAuthAfterPay || store.hasAccount) return;
+    if (!mounted) return;
+    await GlowFunnel.ensureSignedIn(context);
   }
 
   void goTab(int index) {

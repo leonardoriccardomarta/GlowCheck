@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import { Router } from 'express';
 import { z } from 'zod';
-import { issueSession, markPro } from '../services/auth';
+import { markPro } from '../services/auth';
 import {
   LIFETIME_AMOUNT,
   LIFETIME_CURRENCY,
@@ -121,13 +121,12 @@ billingRouter.post('/confirm', async (req, res) => {
     const unlocked = sessionPaid(session);
     const email = session.customer_details?.email || session.customer_email || null;
     if (unlocked && email) await markPro(email);
-    const issued = unlocked && email ? await issueSession(email) : null;
     return res.json({
       ok: true,
       unlocked,
       plan: unlocked ? LIFETIME_PLAN : null,
       email: unlocked ? email : null,
-      token: issued?.token ?? null,
+      token: null,
       isPro: unlocked,
     });
   } catch (error) {

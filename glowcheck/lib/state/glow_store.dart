@@ -31,6 +31,7 @@ class GlowStore extends ChangeNotifier {
 
   bool highlightFirstScan = false;
   bool pendingHomeInstallHint = false;
+  bool needsAuthAfterPay = false;
 
   bool get hasProfile => skinType != null && mainGoal != null;
 
@@ -57,6 +58,7 @@ class GlowStore extends ChangeNotifier {
       proPlan = map['proPlan'] as String?;
       stripeSessionId = map['stripeSessionId'] as String?;
       pendingHomeInstallHint = map['pendingHomeInstallHint'] == true;
+      needsAuthAfterPay = map['needsAuthAfterPay'] == true;
       freeScansRemaining = (map['freeScansRemaining'] as num?)?.toInt() ?? 1;
       history
         ..clear()
@@ -95,6 +97,7 @@ class GlowStore extends ChangeNotifier {
         'proPlan': proPlan,
         'stripeSessionId': stripeSessionId,
         'pendingHomeInstallHint': pendingHomeInstallHint,
+        'needsAuthAfterPay': needsAuthAfterPay,
         'freeScansRemaining': freeScansRemaining,
         'pinned': pinned.toList(),
         'history': history.map((item) => item.toJson()).toList(),
@@ -242,6 +245,7 @@ class GlowStore extends ChangeNotifier {
       this.isPro = false;
       proPlan = null;
     }
+    needsAuthAfterPay = false;
     notifyListeners();
     await _persist();
   }
@@ -262,6 +266,19 @@ class GlowStore extends ChangeNotifier {
   Future<void> consumeHomeInstallHint() async {
     if (!pendingHomeInstallHint) return;
     pendingHomeInstallHint = false;
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> markNeedsAuthAfterPay() async {
+    needsAuthAfterPay = true;
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> consumeNeedsAuthAfterPay() async {
+    if (!needsAuthAfterPay) return;
+    needsAuthAfterPay = false;
     notifyListeners();
     await _persist();
   }

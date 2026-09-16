@@ -74,7 +74,7 @@ class _GlowLoginSheetState extends State<GlowLoginSheet> {
             ),
             const SizedBox(height: 18),
             Text(
-              GlowL10n.t('hook_title'),
+              GlowL10n.t(GlowStore.instance.needsAuthAfterPay ? 'hook_after_pay' : 'hook_title'),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 22,

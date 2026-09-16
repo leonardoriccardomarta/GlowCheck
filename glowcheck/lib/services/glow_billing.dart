@@ -109,18 +109,21 @@ class GlowBilling {
 
   static Future<void> _applyPaid(({bool unlocked, String? email, String? token}) result, String sessionId) async {
     await GlowStore.instance.unlockPro(plan: lifetimeId, stripeSession: sessionId);
-    final email = result.email ?? GlowStore.instance.accountEmail;
-    if (result.token != null && email != null && email.contains('@')) {
+    final paidEmail = result.email?.trim().toLowerCase();
+    final current = GlowStore.instance.accountEmail;
+    if (GlowStore.instance.hasAccount && paidEmail != null && current == paidEmail) {
       await GlowStore.instance.applySession(
-        name: GlowStore.instance.accountName ?? email.split('@').first,
-        email: email,
+        name: GlowStore.instance.accountName ?? paidEmail.split('@').first,
+        email: paidEmail,
         provider: GlowStore.instance.accountProvider ?? 'email',
-        token: result.token,
+        token: GlowStore.instance.accountToken,
         isPro: true,
       );
       await GlowApi.pullAndMergeShelf();
-    } else if (result.email != null) {
-      await GlowStore.instance.applyStripeAccount(result.email!);
+      return;
+    }
+    if (!GlowStore.instance.hasAccount) {
+      await GlowStore.instance.markNeedsAuthAfterPay();
     }
   }
 
