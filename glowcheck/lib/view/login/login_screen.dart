@@ -48,6 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _skip() {
+    if (GlowStore.instance.mustClaimPurchase) return;
     if (!mounted) return;
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop(false);
@@ -120,7 +121,9 @@ class _LoginScreenState extends State<LoginScreen> {
       builder: (context, _) => Scaffold(
       backgroundColor: AppColors.canvas,
       resizeToAvoidBottomInset: false,
-      body: SafeArea(
+      body: WillPopScope(
+        onWillPop: () async => !GlowStore.instance.mustClaimPurchase || Navigator.of(context).canPop(),
+        child: SafeArea(
         child: Column(
         children: [
           if (busy)
@@ -165,7 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              GlowL10n.t('login_note'),
+              GlowL10n.t(GlowStore.instance.mustClaimPurchase ? 'hook_after_pay' : 'login_note'),
               style: const TextStyle(color: AppColors.muted, fontSize: 14, height: 1.4),
             ),
             const SizedBox(height: 24),
@@ -213,13 +216,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w600),
               ),
             ),
-            TextButton(
-              onPressed: _skip,
-              child: Text(
-                GlowL10n.t('login_guest'),
-                style: const TextStyle(color: AppColors.muted, fontWeight: FontWeight.w700),
+            if (!GlowStore.instance.mustClaimPurchase)
+              TextButton(
+                onPressed: _skip,
+                child: Text(
+                  GlowL10n.t('login_guest'),
+                  style: const TextStyle(color: AppColors.muted, fontWeight: FontWeight.w700),
+                ),
               ),
-            ),
           ],
                 ),
               ),

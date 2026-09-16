@@ -47,8 +47,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     selectTab = widget.initialTab;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future<void>.delayed(const Duration(milliseconds: 420), _maybeInstallHint);
+      Future<void>.delayed(const Duration(milliseconds: 420), _afterOpen);
     });
+  }
+
+  Future<void> _afterOpen() async {
+    await _maybeAuthAfterPay();
+    if (!mounted) return;
+    await _maybeInstallHint();
   }
 
   Future<void> _maybeInstallHint() async {
@@ -62,13 +68,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         await showGlowInstallHint(context);
       }
     }
-    if (!mounted) return;
-    await _maybeAuthAfterPay();
   }
 
   Future<void> _maybeAuthAfterPay() async {
-    final store = GlowStore.instance;
-    if (!store.needsAuthAfterPay || store.hasAccount) return;
+    if (!GlowStore.instance.mustClaimPurchase) return;
     if (!mounted) return;
     await GlowFunnel.ensureSignedIn(context);
   }

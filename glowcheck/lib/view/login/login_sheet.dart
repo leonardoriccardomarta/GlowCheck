@@ -1,21 +1,29 @@
 import 'package:fitnessapp/common_widgets/glow_ui.dart';
 import 'package:fitnessapp/l10n/glow_l10n.dart';
 import 'package:fitnessapp/services/glow_auth.dart';
+import 'package:fitnessapp/state/glow_store.dart';
 import 'package:fitnessapp/view/login/login_screen.dart';
 import 'package:flutter/material.dart';
 
-Future<bool?> showGlowLoginSheet(BuildContext context) {
+Future<bool?> showGlowLoginSheet(BuildContext context, {bool required = false}) {
   return showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
+    isDismissible: !required,
+    enableDrag: !required,
     backgroundColor: Colors.transparent,
-    builder: (context) => const GlowLoginSheet(),
+    builder: (context) => WillPopScope(
+      onWillPop: () async => !required,
+      child: GlowLoginSheet(locked: required),
+    ),
   );
 }
 
 class GlowLoginSheet extends StatefulWidget {
-  const GlowLoginSheet({Key? key}) : super(key: key);
+  const GlowLoginSheet({Key? key, this.locked = false}) : super(key: key);
+
+  final bool locked;
 
   @override
   State<GlowLoginSheet> createState() => _GlowLoginSheetState();
@@ -64,17 +72,20 @@ class _GlowLoginSheetState extends State<GlowLoginSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE6E2DC),
-                borderRadius: BorderRadius.circular(99),
+            if (!widget.locked) ...[
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE6E2DC),
+                  borderRadius: BorderRadius.circular(99),
+                ),
               ),
-            ),
-            const SizedBox(height: 18),
+              const SizedBox(height: 18),
+            ] else
+              const SizedBox(height: 8),
             Text(
-              GlowL10n.t(GlowStore.instance.needsAuthAfterPay ? 'hook_after_pay' : 'hook_title'),
+              GlowL10n.t(GlowStore.instance.mustClaimPurchase ? 'hook_after_pay' : 'hook_title'),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 22,

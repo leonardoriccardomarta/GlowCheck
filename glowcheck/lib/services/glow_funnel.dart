@@ -8,17 +8,22 @@ class GlowFunnel {
 
   static Future<bool> ensureSignedIn(BuildContext context) async {
     if (GlowStore.instance.hasAccount) return true;
-    final ok = await showGlowLoginSheet(context);
+    final ok = await showGlowLoginSheet(
+      context,
+      required: GlowStore.instance.mustClaimPurchase,
+    );
     return ok == true && GlowStore.instance.hasAccount;
   }
 
   static Future<bool> ensureCanScan(BuildContext context) async {
-    if (GlowStore.instance.canScan) return true;
-    if (!context.mounted) return false;
-    await Navigator.of(context, rootNavigator: true).pushNamed(PaywallScreen.routeName);
-    if (!context.mounted) return GlowStore.instance.canScan;
-    if (GlowStore.instance.canScan && !GlowStore.instance.hasAccount) {
-      await ensureSignedIn(context);
+    if (!GlowStore.instance.canScan) {
+      if (!context.mounted) return false;
+      await Navigator.of(context, rootNavigator: true).pushNamed(PaywallScreen.routeName);
+    }
+    if (!context.mounted) return GlowStore.instance.canScan && GlowStore.instance.hasAccount;
+    if (GlowStore.instance.mustClaimPurchase) {
+      final ok = await ensureSignedIn(context);
+      if (!ok) return false;
     }
     return GlowStore.instance.canScan;
   }

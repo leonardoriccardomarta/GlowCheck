@@ -38,6 +38,8 @@ class GlowStore extends ChangeNotifier {
   bool get hasAccount =>
       accountEmail != null && accountEmail!.isNotEmpty;
 
+  bool get mustClaimPurchase => isPro && !hasAccount;
+
   ScanResult? get latest => history.isEmpty ? null : history.first;
 
   Future<void> load() async {
