@@ -52,6 +52,6 @@ export function sessionPaid(session: Stripe.Checkout.Session) {
   if (session.mode && session.mode !== 'payment') return false;
   if (session.payment_status !== 'paid') return false;
   if (session.currency && session.currency !== LIFETIME_CURRENCY) return false;
-  if (session.amount_total != null && session.amount_total < LIFETIME_AMOUNT) return false;
+  if (session.amount_subtotal != null && session.amount_subtotal < LIFETIME_AMOUNT) return false;
   return true;
 }
