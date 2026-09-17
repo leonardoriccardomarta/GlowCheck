@@ -11,6 +11,7 @@ import {
 import { farmLookup, farmScores } from '../services/farmCatalog';
 import { farmPairs, farmScript, farmWhy } from '../services/farmCopy';
 import { allowedFarmImage, farmHeroImage } from '../services/farmHero';
+import { farmCoverImage } from '../services/farmCover';
 import { markFarmUsed, unusedFarmIdeas } from '../services/farmUsed';
 
 export const adminRouter = Router();
@@ -130,6 +131,26 @@ adminRouter.post('/farm/hero', requireAdmin, async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.json({ ok: true, url: parsed.data.fallback || null, urls: parsed.data.fallback ? [parsed.data.fallback] : [] });
+  }
+});
+
+adminRouter.post('/farm/cover', requireAdmin, async (req, res) => {
+  const parsed = z
+    .object({
+      imageUrl: z.string().url().max(1200),
+      name: z.string().min(2).max(160),
+    })
+    .safeParse(req.body);
+  if (!parsed.success || !allowedFarmImage(parsed.data.imageUrl)) {
+    return res.status(400).json({ ok: false, error: 'INVALID_COVER' });
+  }
+  try {
+    const buf = await farmCoverImage(parsed.data.imageUrl, parsed.data.name);
+    if (!buf) return res.json({ ok: true, image: null });
+    return res.json({ ok: true, image: `data:image/png;base64,${buf.toString('base64')}` });
+  } catch (error) {
+    console.error(error);
+    return res.json({ ok: true, image: null });
   }
 });
 

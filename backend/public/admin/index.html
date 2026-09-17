@@ -406,6 +406,7 @@
       }).catch(() => ({ url: product.imageUrl, urls: [product.imageUrl] }));
       const candidates = [...new Set([...(hero.urls || []), hero.url, product.imageUrl].filter(Boolean))];
       let img = null;
+      let pickedUrl = product.imageUrl || null;
       let bestPack = -1;
       for (const url of candidates.slice(0, 8)) {
         const next = await farmImage(url).catch(() => null);
@@ -416,17 +417,30 @@
         if (packScore > bestPack || (packScore === bestPack && !img)) {
           bestPack = packScore;
           img = next;
+          pickedUrl = url;
           if (packScore === 2) break;
         }
       }
       if (!img) {
         for (const url of candidates) {
           img = await farmImage(url).catch(() => null);
-          if (img) break;
+          if (img) {
+            pickedUrl = url;
+            break;
+          }
         }
       }
-      $('status').innerHTML = 'Building the cover…';
-      const cover = drawCover(img);
+      $('status').innerHTML = 'Generating the magazine cover…';
+      let cover = drawCover(img);
+      if (pickedUrl) {
+        try {
+          const made = await api('/admin/farm/cover', {
+            imageUrl: pickedUrl,
+            name: [product.brand, product.name].filter(Boolean).join(' '),
+          });
+          if (made.image) cover = await loadImg(made.image).then((pic) => drawCover(pic));
+        } catch (e) {}
+      }
       const cta = await drawCta();
       const ranked = [...scores].sort((a, b) => b.score - a.score);
       const scans = {};
