@@ -4,6 +4,9 @@ const UA =
 const BAD_PHOTO =
   /skyline|skyscraper|cityscape|nightscape|downtown|architecture|building|tower|hotel|apartment|wikimedia|wikipedia|pexels|unsplash|flickr|gettyimages|shutterstock|city-night|urban|landscape|screenshot|meme/i;
 
+const AD_PHOTO =
+  /banner|campaign|collage|infographic|promo|advert|coupon|og-image|facebook|instagram|social-share|before-after|comparison|4x|reparac|mais\s|%off|percent.off|testimonial|key.?visual|billboard|claim|eficac|effetiv|effettiv|clinically.proven|vs\.|versus|beforeafter|advertorial|magazine-ad|print-ad|social.?ad/i;
+
 const STUDIO_HOST =
   /sephora|ulta|lookfantastic|cultbeauty|notino|douglas|perfumesclub|perfume'?s.?club|laroche-posay|loreal|nocibe|marionnaud|boots\.com|superdrug|spacenk|bluemercury|dermstore|skinstore|feelunique|cocooncenter|atida|docmorris|shopify|cloudinary|scene7|demandware|sfcc|woocommerce/i;
 
@@ -77,19 +80,25 @@ function searchQueries(query: string) {
   const q = query.replace(/\s+/g, ' ').trim();
   const words = q.split(' ');
   const short = words.slice(0, Math.min(5, words.length)).join(' ');
-  return [...new Set([q, short, `${short} product`])];
+  return [...new Set([`${short} product white background`, `${short} packshot`, short, q])];
 }
 
 function scoreHit(hit: HeroHit, query: string) {
   const blob = `${hit.url} ${hit.title}`.toLowerCase();
-  if (BAD_PHOTO.test(blob) || !hit.url.startsWith('https://') || /\.svg(\?|$)/i.test(hit.url)) return -999;
+  if (BAD_PHOTO.test(blob) || AD_PHOTO.test(blob) || !hit.url.startsWith('https://') || /\.svg(\?|$)/i.test(hit.url)) {
+    return -999;
+  }
   if (!allowedFarmImage(hit.url)) return -999;
   let n = 0;
-  const area = (hit.width || 800) * (hit.height || 800);
-  n += Math.min(area / 80000, 55);
+  const w = hit.width || 800;
+  const h = hit.height || 800;
+  n += Math.min((w * h) / 80000, 55);
+  const aspect = w / h;
+  if (aspect > 1.5) n -= 45;
+  if (aspect >= 0.55 && aspect <= 1.2) n += 28;
   if (STUDIO_HOST.test(blob)) n += 55;
   if (CATALOG_HOST.test(blob)) n -= 90;
-  if (/packshot|pack-shot|white-bg|on white|product-image|studio/.test(blob)) n += 12;
+  if (/packshot|pack-shot|white-bg|on white|product-image|studio|demandware|scene7/.test(blob)) n += 18;
   const tokens = queryTokens(query);
   n += tokens.filter((token) => blob.includes(token)).length * 10;
   if (tokens.length && !tokens.some((token) => blob.includes(token))) n -= 15;
@@ -107,14 +116,27 @@ function pickBest(hits: HeroHit[], query: string, fallback?: string | null) {
     seen.add(key);
     ranked.push({ hit, score });
   }
-  ranked.sort((a, b) => b.score - a.score);
-  const studio = ranked.find((row) => row.score >= 40 && !CATALOG_HOST.test(row.hit.url));
-  return studio?.hit.url || ranked[0]?.hit.url || fallback || null;
+  ranked.sort((a, b) => {
+    const aspect = (h: HeroHit) => (h.width || 800) / (h.height || 800);
+    const pack = (h: HeroHit) => {
+      const a = aspect(h);
+      return a >= 0.55 && a <= 1.22 ? 30 : a > 1.45 ? -40 : 0;
+    };
+    return b.score + pack(b.hit) - (a.score + pack(a.hit));
+  });
+  const urls = ranked
+    .filter((row) => {
+      const a = (row.hit.width || 800) / (row.hit.height || 800);
+      return a <= 1.45;
+    })
+    .map((row) => row.hit.url);
+  if (fallback && !urls.includes(fallback)) urls.push(fallback);
+  return urls;
 }
 
 async function googleImages(query: string): Promise<HeroHit[]> {
   const html = await timedText(
-    `https://www.google.com/search?tbm=isch&udm=2&hl=en&gl=us&safe=active&tbs=isz:l,itp:photo&q=${encodeURIComponent(query)}`,
+    `https://www.google.com/search?tbm=isch&udm=2&hl=en&gl=us&safe=active&tbs=isz:l,itp:photo,iar:s&q=${encodeURIComponent(query)}`,
   );
   if (!html) return [];
   const hits: HeroHit[] = [];
@@ -176,15 +198,19 @@ async function duckImages(query: string): Promise<HeroHit[]> {
   }
 }
 
-export async function farmHeroImage(query: string, fallback?: string | null): Promise<string | null> {
+export async function farmHeroImage(
+  query: string,
+  fallback?: string | null,
+): Promise<{ url: string | null; urls: string[] }> {
   const q = query.replace(/\s+/g, ' ').trim();
-  if (q.length < 2) return fallback || null;
+  if (q.length < 2) return { url: fallback || null, urls: fallback ? [fallback] : [] };
   const queries = searchQueries(q);
   const jobs: Promise<HeroHit[]>[] = [];
-  for (const term of queries.slice(0, 2)) {
+  for (const term of queries.slice(0, 3)) {
     jobs.push(googleImages(term), bingImages(term), duckImages(term));
   }
   const packs = await Promise.allSettled(jobs);
   const hits = packs.flatMap((row) => (row.status === 'fulfilled' ? row.value : []));
-  return pickBest(hits, q, fallback);
+  const urls = pickBest(hits, q, fallback);
+  return { url: urls[0] || fallback || null, urls };
 }

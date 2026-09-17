@@ -253,14 +253,10 @@
     function drawCover(img) {
       const c = makeCanvas();
       const ctx = c.getContext('2d');
-      ctx.fillStyle = '#111111';
+      ctx.fillStyle = '#F3F1ED';
       ctx.fillRect(0, 0, W, H);
       if (!img) return c;
-      ctx.save();
-      ctx.filter = 'blur(42px) saturate(1.18) brightness(0.88)';
-      drawImageCover(ctx, img, -60, -60, W + 120, H + 120);
-      ctx.restore();
-      drawImageContain(ctx, img, 24, 24, W - 48, H - 48);
+      drawImageCover(ctx, img, 0, 0, W, H);
       return c;
     }
 
@@ -272,29 +268,28 @@
     }
 
     async function drawCta(scanCanvas) {
-      const cta = await loadImg('/admin/cta.png?v=3');
+      const cta = await loadImg('/admin/cta.png?v=5');
       const c = makeCanvas();
       const ctx = c.getContext('2d');
       ctx.drawImage(cta, 0, 0, W, H);
-      const sx = W * 0.325, sy = H * 0.305, sw = W * 0.35, sh = H * 0.53;
+      const s = W / 720;
+      const sx = 210 * s, sy = 422 * s, sw = 300 * s, sh = 316 * s;
       const slot = document.createElement('canvas');
       slot.width = Math.max(1, Math.round(sw));
       slot.height = Math.max(1, Math.round(sh));
       const slotCtx = slot.getContext('2d');
-      const pad = Math.round(10 * (W / 1080));
-      const rad = Math.round(28 * (W / 1080));
       slotCtx.beginPath();
-      slotCtx.roundRect(pad, pad, slot.width - pad * 2, slot.height - pad * 2, rad);
+      slotCtx.roundRect(0, 0, slot.width, slot.height, 38 * s);
       slotCtx.clip();
-      const scale = Math.min(
-        (slot.width - pad * 2) / scanCanvas.width,
-        (slot.height - pad * 2) / scanCanvas.height
-      );
-      const dw = scanCanvas.width * scale, dh = scanCanvas.height * scale;
+      const srcW = scanCanvas.width;
+      const srcH = scanCanvas.height * 0.54;
+      const scale = Math.max(slot.width / srcW, slot.height / srcH);
+      const dw = srcW * scale, dh = srcH * scale;
       slotCtx.drawImage(
         scanCanvas,
-        pad + (slot.width - pad * 2 - dw) / 2,
-        pad + (slot.height - pad * 2 - dh) / 2,
+        0, 0, srcW, srcH,
+        (slot.width - dw) / 2,
+        0,
         dw,
         dh
       );
@@ -381,11 +376,23 @@
       const hero = await api('/admin/farm/hero', {
         query: [product.brand, product.name].filter(Boolean).join(' '),
         fallback: product.imageUrl,
-      }).catch(() => ({ url: product.imageUrl }));
-      const img = await farmImage(hero.url || product.imageUrl).catch(() => null)
-        || (product.imageUrl && product.imageUrl !== hero.url
-          ? await farmImage(product.imageUrl).catch(() => null)
-          : null);
+      }).catch(() => ({ url: product.imageUrl, urls: [product.imageUrl] }));
+      const candidates = [...new Set([...(hero.urls || []), hero.url, product.imageUrl].filter(Boolean))];
+      let img = null;
+      for (const url of candidates) {
+        const next = await farmImage(url).catch(() => null);
+        if (!next) continue;
+        const aspect = next.width / next.height;
+        if (aspect > 1.35) continue;
+        img = next;
+        break;
+      }
+      if (!img) {
+        for (const url of candidates) {
+          img = await farmImage(url).catch(() => null);
+          if (img) break;
+        }
+      }
       const ranked = [...scores].sort((a, b) => b.score - a.score);
       const best = ranked[0];
       const worst = ranked[ranked.length - 1];

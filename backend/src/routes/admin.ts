@@ -116,11 +116,12 @@ adminRouter.post('/farm/hero', requireAdmin, async (req, res) => {
     return res.status(400).json({ ok: false, error: 'INVALID_HERO' });
   }
   try {
-    const url = (await farmHeroImage(parsed.data.query, parsed.data.fallback)) || parsed.data.fallback || null;
-    return res.json({ ok: true, url });
+    const hero = await farmHeroImage(parsed.data.query, parsed.data.fallback);
+    const urls = [...new Set((hero.urls || []).filter(Boolean))].slice(0, 8);
+    return res.json({ ok: true, url: hero.url || parsed.data.fallback || null, urls });
   } catch (error) {
     console.error(error);
-    return res.json({ ok: true, url: parsed.data.fallback || null });
+    return res.json({ ok: true, url: parsed.data.fallback || null, urls: parsed.data.fallback ? [parsed.data.fallback] : [] });
   }
 });
 
