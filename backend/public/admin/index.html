@@ -253,10 +253,16 @@
     function drawCover(img) {
       const c = makeCanvas();
       const ctx = c.getContext('2d');
-      ctx.fillStyle = '#F3F1ED';
+      ctx.fillStyle = '#111111';
       ctx.fillRect(0, 0, W, H);
       if (!img) return c;
-      drawImageCover(ctx, img, 0, 0, W, H);
+      ctx.save();
+      ctx.filter = 'blur(52px) saturate(1.28) brightness(0.78)';
+      drawImageCover(ctx, img, -90, -90, W + 180, H + 180);
+      ctx.restore();
+      const padX = Math.round(W * 0.08);
+      const padY = Math.round(H * 0.08);
+      drawImageContain(ctx, img, padX, padY, W - padX * 2, H - padY * 2);
       return c;
     }
 
