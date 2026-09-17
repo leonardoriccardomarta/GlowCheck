@@ -245,87 +245,33 @@
       return c;
     }
 
-    function opaqueStats(cut) {
-      const ctx = cut.getContext('2d', { willReadFrequently: true });
-      const { data, width, height } = ctx.getImageData(0, 0, cut.width, cut.height);
-      let minX = width, minY = height, maxX = 0, maxY = 0, found = 0;
-      let r = 0, g = 0, b = 0, n = 0;
-      for (let y = 0; y < height; y += 2) {
-        for (let x = 0; x < width; x += 2) {
-          const i = (y * width + x) * 4;
-          if (data[i + 3] < 140) continue;
-          found++;
-          if (x < minX) minX = x;
-          if (y < minY) minY = y;
-          if (x > maxX) maxX = x;
-          if (y > maxY) maxY = y;
-          const sat = Math.max(data[i], data[i + 1], data[i + 2]) - Math.min(data[i], data[i + 1], data[i + 2]);
-          if (sat > 18) { r += data[i]; g += data[i + 1]; b += data[i + 2]; n++; }
-        }
-      }
-      return {
-        found,
-        bbox: found ? { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 } : null,
-        accent: n ? [r / n, g / n, b / n] : [48, 48, 52],
-      };
+    function drawImageCover(ctx, img, x, y, w, h) {
+      const scale = Math.max(w / img.width, h / img.height);
+      const dw = img.width * scale, dh = img.height * scale;
+      ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
     }
 
-    let cutoutFn = null;
-    async function cutoutBottle(img) {
-      try {
-        if (!cutoutFn) {
-          const mod = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.8/+esm');
-          cutoutFn = mod.removeBackground;
-        }
-        const blob = await new Promise((resolve) => toCanvas(img).toBlob(resolve, 'image/png'));
-        return await loadImg(URL.createObjectURL(await cutoutFn(blob, {
-          output: { format: 'image/png' },
-          publicPath: 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.8/dist/',
-        })));
-      } catch {
-        return null;
-      }
-    }
-
-    async function drawCover(img) {
+    function drawCover(img) {
       const c = makeCanvas();
       const ctx = c.getContext('2d');
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
-      ctx.fillStyle = '#070708';
+      ctx.fillStyle = '#111111';
       ctx.fillRect(0, 0, W, H);
       if (!img) return c;
-      const cut = await cutoutBottle(img);
-      const source = cut || img;
-      const stats = cut ? opaqueStats(toCanvas(cut)) : null;
-      const accent = stats ? stats.accent : [42, 42, 46];
-      const [ar, ag, ab] = accent;
-      const grad = ctx.createLinearGradient(0, 0, 0, H);
-      grad.addColorStop(0, 'rgb(' + Math.round(ar * 0.1) + ',' + Math.round(ag * 0.1) + ',' + Math.round(ab * 0.1) + ')');
-      grad.addColorStop(0.42, 'rgb(' + Math.round(ar * 0.2) + ',' + Math.round(ag * 0.2) + ',' + Math.round(ab * 0.2) + ')');
-      grad.addColorStop(1, '#050506');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, W, H);
-      const glow = ctx.createRadialGradient(W / 2, H * 0.62, 20, W / 2, H * 0.64, W * 0.58);
-      glow.addColorStop(0, 'rgba(' + Math.round(ar) + ',' + Math.round(ag) + ',' + Math.round(ab) + ',0.32)');
-      glow.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, 0, W, H);
-      const box = stats && stats.bbox ? stats.bbox : { x: 0, y: 0, w: source.width, h: source.height };
-      const maxW = W * 0.78;
-      const maxH = H * 0.56;
-      const scale = Math.min(maxW / box.w, maxH / box.h);
-      const dw = box.w * scale, dh = box.h * scale;
-      const dx = (W - dw) / 2;
-      const dy = H * 0.3 + (H * 0.62 - dh) / 2;
       ctx.save();
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.filter = 'blur(32px)';
-      ctx.beginPath();
-      ctx.ellipse(W / 2, dy + dh - 6, dw * 0.34, Math.max(18, dh * 0.045), 0, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.filter = 'blur(28px) saturate(1.35) brightness(0.72)';
+      drawImageCover(ctx, img, -40, -40, W + 80, H + 80);
       ctx.restore();
-      ctx.drawImage(source, box.x, box.y, box.w, box.h, dx, dy, dw, dh);
+      ctx.save();
+      ctx.filter = 'contrast(1.12) saturate(1.14) brightness(1.03)';
+      drawImageCover(ctx, img, 0, 0, W, H);
+      ctx.restore();
+      const vig = ctx.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.28, W / 2, H * 0.52, Math.min(W, H) * 0.9);
+      vig.addColorStop(0, 'rgba(0,0,0,0)');
+      vig.addColorStop(1, 'rgba(0,0,0,0.28)');
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, W, H);
       return c;
     }
 
@@ -335,21 +281,6 @@
       c.height = src.height;
       c.getContext('2d').drawImage(src, 0, 0);
       return c;
-    }
-
-    function toCanvas(img) {
-      const c = document.createElement('canvas');
-      c.width = img.width;
-      c.height = img.height;
-      c.getContext('2d').drawImage(img, 0, 0);
-      return c;
-    }
-
-    function roundFill(ctx, x, y, w, h, r, color) {
-      ctx.beginPath();
-      ctx.roundRect(x, y, w, h, r);
-      ctx.fillStyle = color;
-      ctx.fill();
     }
 
     async function drawCta() {
@@ -494,8 +425,8 @@
           if (img) break;
         }
       }
-      $('status').innerHTML = 'Cutting the bottle onto a studio slide…';
-      const cover = await drawCover(img);
+      $('status').innerHTML = 'Building the cover…';
+      const cover = drawCover(img);
       const cta = await drawCta();
       const ranked = [...scores].sort((a, b) => b.score - a.score);
       const scans = {};

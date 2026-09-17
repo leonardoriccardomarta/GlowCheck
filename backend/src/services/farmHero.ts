@@ -2,7 +2,7 @@ const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
 const BAD_PHOTO =
-  /skyline|skyscraper|cityscape|nightscape|downtown|architecture|building|tower|hotel|apartment|wikimedia|wikipedia|pexels|unsplash|flickr|gettyimages|shutterstock|city-night|urban|landscape|screenshot|meme/i;
+  /skyline|skyscraper|cityscape|nightscape|downtown|architecture|building|tower|hotel|apartment|wikimedia|wikipedia|pexels|unsplash|flickr|gettyimages|shutterstock|alamy|dreamstime|depositphotos|adobestock|istockphoto|city-night|urban|landscape|screenshot|meme|watermark/i;
 
 const AD_PHOTO =
   /banner|campaign|collage|infographic|promo|advert|coupon|og-image|facebook|instagram|social-share|before-after|comparison|4x|reparac|mais\s|%off|percent.off|testimonial|key.?visual|billboard|claim|eficac|effetiv|effettiv|clinically.proven|vs\.|versus|beforeafter|advertorial|magazine-ad|print-ad|social.?ad|lifestyle|flat.?lay|moodboard|gift.?set|value.?set|routine.?kit|\bduo\b|\btrio\b|\bkit\b|smiling|couple|family|model-|models|light.?weight|absorption|refreshing water|quick absorption|press.?kit|lookbook/i;
