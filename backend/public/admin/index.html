@@ -277,15 +277,19 @@
       const ctx = c.getContext('2d');
       ctx.drawImage(cta, 0, 0, W, H);
       const s = W / 720;
-      const sx = 218 * s, sy = 322 * s, sw = 284 * s, sh = 778 * s;
-      ctx.save();
-      ctx.beginPath();
-      ctx.roundRect(sx, sy, sw, sh, 42 * s);
-      ctx.clip();
-      const scale = Math.max(sw / scanCanvas.width, sh / scanCanvas.height);
+      const sx = 226 * s, sy = 338 * s, sw = 268 * s, sh = 752 * s;
+      const rad = 36 * s;
+      const slot = document.createElement('canvas');
+      slot.width = Math.round(sw);
+      slot.height = Math.round(sh);
+      const slotCtx = slot.getContext('2d');
+      slotCtx.beginPath();
+      slotCtx.roundRect(0, 0, slot.width, slot.height, rad);
+      slotCtx.clip();
+      const scale = Math.max(slot.width / scanCanvas.width, slot.height / scanCanvas.height);
       const dw = scanCanvas.width * scale, dh = scanCanvas.height * scale;
-      ctx.drawImage(scanCanvas, sx + (sw - dw) / 2, sy + (sh - dh) / 2, dw, dh);
-      ctx.restore();
+      slotCtx.drawImage(scanCanvas, (slot.width - dw) / 2, (slot.height - dh) / 2, dw, dh);
+      ctx.drawImage(slot, sx, sy, sw, sh);
       return c;
     }
 
