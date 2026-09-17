@@ -244,10 +244,61 @@
       ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
     }
 
-    function drawImageContain(ctx, img, x, y, w, h) {
-      const scale = Math.min(w / img.width, h / img.height);
-      const dw = img.width * scale, dh = img.height * scale;
-      ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+    function luma(r, g, b) { return 0.299 * r + 0.587 * g + 0.114 * b; }
+
+    function analyzeHero(img) {
+      const tw = 160;
+      const th = Math.max(1, Math.round(img.height * (tw / img.width)));
+      const c = document.createElement('canvas');
+      c.width = tw;
+      c.height = th;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, tw, th);
+      const { data } = ctx.getImageData(0, 0, tw, th);
+      let br = 0, bg = 0, bb = 0, bn = 0;
+      const take = (i) => { br += data[i]; bg += data[i + 1]; bb += data[i + 2]; bn++; };
+      for (let x = 0; x < tw; x += 2) {
+        take(x * 4);
+        take(((th - 1) * tw + x) * 4);
+      }
+      for (let y = 0; y < th; y += 2) {
+        take(y * tw * 4);
+        take((y * tw + tw - 1) * 4);
+      }
+      const bgc = [br / bn, bg / bn, bb / bn];
+      const bgL = luma(bgc[0], bgc[1], bgc[2]);
+      const thresh = bgL > 210 ? 26 : 42;
+      let minX = tw, minY = th, maxX = 0, maxY = 0, found = 0;
+      for (let y = 0; y < th; y++) {
+        for (let x = 0; x < tw; x++) {
+          const i = (y * tw + x) * 4;
+          const dist = Math.hypot(data[i] - bgc[0], data[i + 1] - bgc[1], data[i + 2] - bgc[2]);
+          const sat = Math.max(data[i], data[i + 1], data[i + 2]) - Math.min(data[i], data[i + 1], data[i + 2]);
+          if (dist > thresh || (bgL > 210 && sat > 28)) {
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+            found++;
+          }
+        }
+      }
+      const sx = img.width / tw, sy = img.height / th;
+      const inflate = bgL > 210 ? 0.34 : 0.1;
+      let bx = minX * sx, by = minY * sy, bw = (maxX - minX + 1) * sx, bh = (maxY - minY + 1) * sy;
+      if (bgL > 210) {
+        by -= bh * 0.18;
+        bh += bh * 0.36;
+      }
+      bx = Math.max(0, bx - bw * inflate);
+      by = Math.max(0, by - bh * inflate);
+      bw = Math.min(img.width - bx, bw * (1 + inflate * 2));
+      bh = Math.min(img.height - by, bh * (1 + inflate * 2));
+      return {
+        bgL,
+        area: found / (tw * th),
+        crop: found > 80 ? { x: bx, y: by, w: bw, h: bh } : { x: 0, y: 0, w: img.width, h: img.height },
+      };
     }
 
     function drawCover(img) {
@@ -256,13 +307,47 @@
       ctx.fillStyle = '#111111';
       ctx.fillRect(0, 0, W, H);
       if (!img) return c;
+      const info = analyzeHero(img);
+      const studio = info.bgL < 205 && info.area > 0.28;
       ctx.save();
-      ctx.filter = 'blur(52px) saturate(1.28) brightness(0.78)';
-      drawImageCover(ctx, img, -90, -90, W + 180, H + 180);
+      ctx.filter = 'blur(68px) saturate(1.6) brightness(0.76)';
+      drawImageCover(ctx, img, -140, -140, W + 280, H + 280);
       ctx.restore();
-      const padX = Math.round(W * 0.08);
-      const padY = Math.round(H * 0.08);
-      drawImageContain(ctx, img, padX, padY, W - padX * 2, H - padY * 2);
+      const product = document.createElement('canvas');
+      product.width = W;
+      product.height = H;
+      const pctx = product.getContext('2d');
+      pctx.filter = 'contrast(1.1) saturate(1.12) brightness(1.04)';
+      const crop = info.crop;
+      if (studio) {
+        drawImageCover(pctx, img, 0, 0, W, H);
+      } else {
+        const boxW = W * 0.88, boxH = H * 0.86;
+        const scale = Math.min(boxW / crop.w, boxH / crop.h);
+        const dw = crop.w * scale, dh = crop.h * scale;
+        pctx.drawImage(img, crop.x, crop.y, crop.w, crop.h, (W - dw) / 2, (H - dh) / 2, dw, dh);
+      }
+      pctx.filter = 'none';
+      const inner = studio ? 0.4 : 0.24;
+      const outer = studio ? 0.78 : 0.6;
+      const rg = pctx.createRadialGradient(W / 2, H * 0.48, Math.min(W, H) * inner, W / 2, H * 0.5, Math.min(W, H) * outer);
+      rg.addColorStop(0, 'rgba(0,0,0,1)');
+      rg.addColorStop(0.62, 'rgba(0,0,0,0.94)');
+      rg.addColorStop(1, 'rgba(0,0,0,0)');
+      pctx.globalCompositeOperation = 'destination-in';
+      pctx.fillStyle = rg;
+      pctx.fillRect(0, 0, W, H);
+      ctx.save();
+      ctx.shadowColor = studio ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0.38)';
+      ctx.shadowBlur = studio ? 0 : 52;
+      ctx.shadowOffsetY = studio ? 0 : 16;
+      ctx.drawImage(product, 0, 0);
+      ctx.restore();
+      const vig = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.32, W / 2, H / 2, Math.min(W, H) * 0.88);
+      vig.addColorStop(0, 'rgba(0,0,0,0)');
+      vig.addColorStop(1, 'rgba(0,0,0,0.2)');
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, W, H);
       return c;
     }
 
