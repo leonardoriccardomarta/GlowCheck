@@ -28,6 +28,7 @@ function requireAdmin(req: { headers: { authorization?: string } }, res: { statu
 }
 
 adminRouter.get('/', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(adminDir(), 'index.html'));
 });
 

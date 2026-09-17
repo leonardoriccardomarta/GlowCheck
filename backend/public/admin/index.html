@@ -272,24 +272,33 @@
     }
 
     async function drawCta(scanCanvas) {
-      const cta = await loadImg('/admin/cta.png');
+      const cta = await loadImg('/admin/cta.png?v=3');
       const c = makeCanvas();
       const ctx = c.getContext('2d');
       ctx.drawImage(cta, 0, 0, W, H);
-      const s = W / 720;
-      const sx = 226 * s, sy = 338 * s, sw = 268 * s, sh = 752 * s;
-      const rad = 36 * s;
+      const sx = W * 0.325, sy = H * 0.305, sw = W * 0.35, sh = H * 0.53;
       const slot = document.createElement('canvas');
-      slot.width = Math.round(sw);
-      slot.height = Math.round(sh);
+      slot.width = Math.max(1, Math.round(sw));
+      slot.height = Math.max(1, Math.round(sh));
       const slotCtx = slot.getContext('2d');
+      const pad = Math.round(10 * (W / 1080));
+      const rad = Math.round(28 * (W / 1080));
       slotCtx.beginPath();
-      slotCtx.roundRect(0, 0, slot.width, slot.height, rad);
+      slotCtx.roundRect(pad, pad, slot.width - pad * 2, slot.height - pad * 2, rad);
       slotCtx.clip();
-      const scale = Math.max(slot.width / scanCanvas.width, slot.height / scanCanvas.height);
+      const scale = Math.min(
+        (slot.width - pad * 2) / scanCanvas.width,
+        (slot.height - pad * 2) / scanCanvas.height
+      );
       const dw = scanCanvas.width * scale, dh = scanCanvas.height * scale;
-      slotCtx.drawImage(scanCanvas, (slot.width - dw) / 2, (slot.height - dh) / 2, dw, dh);
-      ctx.drawImage(slot, sx, sy, sw, sh);
+      slotCtx.drawImage(
+        scanCanvas,
+        pad + (slot.width - pad * 2 - dw) / 2,
+        pad + (slot.height - pad * 2 - dh) / 2,
+        dw,
+        dh
+      );
+      ctx.drawImage(slot, sx, sy);
       return c;
     }
 

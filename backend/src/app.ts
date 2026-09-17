@@ -72,6 +72,7 @@ export function createApp() {
   app.use('/shelf', rateLimit, shelfRouter);
   app.use('/billing', rateLimit, billingRouter);
   app.get('/admin', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
     res.sendFile(path.join(webRoot, 'admin', 'index.html'));
   });
   app.use('/admin', rateLimit, adminRouter);
