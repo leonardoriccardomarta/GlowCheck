@@ -1,6 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "public/**"
+    }
+  },
   "rewrites": [
     { "source": "/health", "destination": "/api" },
     { "source": "/analyze", "destination": "/api" },
@@ -8,6 +13,8 @@
     { "source": "/shelf", "destination": "/api" },
     { "source": "/shelf/:path*", "destination": "/api" },
     { "source": "/billing", "destination": "/api" },
-    { "source": "/billing/:path*", "destination": "/api" }
+    { "source": "/billing/:path*", "destination": "/api" },
+    { "source": "/admin", "destination": "/api" },
+    { "source": "/admin/:path*", "destination": "/api" }
   ]
 }

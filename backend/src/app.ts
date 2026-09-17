@@ -8,6 +8,7 @@ import { analyzeRouter } from './routes/analyze';
 import { authRouter } from './routes/auth';
 import { billingRouter } from './routes/billing';
 import { shelfRouter } from './routes/shelf';
+import { adminRouter } from './routes/admin';
 import { stripeWebhook } from './routes/stripeWebhook';
 import { rateLimit } from './middleware/rateLimit';
 import { env } from './config/env';
@@ -55,6 +56,7 @@ export function createApp() {
     auth: 'POST /auth/register /auth/login /auth/social',
     shelf: 'GET|POST /shelf',
     billing: 'GET /billing/ready POST /billing/checkout POST /billing/confirm',
+    admin: 'GET /admin  POST /admin/login  POST /admin/farm/lookup  POST /admin/farm/build',
   };
 
   app.get('/health', (_req, res) => {
@@ -69,6 +71,11 @@ export function createApp() {
   app.use('/analyze', rateLimit, analyzeRouter);
   app.use('/shelf', rateLimit, shelfRouter);
   app.use('/billing', rateLimit, billingRouter);
+  app.get('/admin', (_req, res) => {
+    res.sendFile(path.join(webRoot, 'admin', 'index.html'));
+  });
+  app.use('/admin', rateLimit, adminRouter);
+  app.use('/admin', express.static(path.join(webRoot, 'admin'), { index: false, maxAge: '1h' }));
 
   if (hasWeb) {
     app.use(express.static(webRoot));

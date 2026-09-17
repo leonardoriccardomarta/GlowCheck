@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>GlowCheck Farm</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #111111;
+      --canvas: #f3f1ed;
+      --muted: #6f6a67;
+      --line: #e6e2dc;
+      --card: #ffffff;
+      --neon: #00e676;
+      --red: #ff1744;
+      --amber: #ff9100;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--canvas); color: var(--ink); font-family: Poppins, sans-serif; }
+    body { min-height: 100svh; padding: 22px 18px calc(28px + env(safe-area-inset-bottom)); }
+    h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; margin: 0 0 6px; }
+    p { color: var(--muted); margin: 0 0 18px; font-size: 14px; line-height: 1.4; }
+    input, button {
+      font: inherit;
+      width: 100%;
+      border-radius: 28px;
+      border: 0;
+      min-height: 52px;
+      padding: 0 18px;
+    }
+    input { background: var(--card); margin-bottom: 10px; }
+    button { background: var(--ink); color: #fff; font-weight: 700; cursor: pointer; }
+    button.ghost { background: var(--card); color: var(--ink); }
+    button:disabled { opacity: 0.45; }
+    .row { display: flex; gap: 8px; }
+    .row > * { flex: 1; }
+    .hits { display: grid; gap: 8px; margin: 16px 0; }
+    .hit {
+      display: flex; gap: 12px; align-items: center;
+      background: var(--card); border-radius: 22px; padding: 10px 12px;
+      text-align: left; color: inherit; min-height: 72px;
+    }
+    .hit img, .ph {
+      width: 56px; height: 56px; border-radius: 16px; object-fit: contain; background: var(--canvas); flex: none;
+    }
+    .hit b { display: block; font-size: 14px; }
+    .hit span { color: var(--muted); font-size: 12px; }
+    .slides {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 18px 0;
+    }
+    .slides canvas {
+      width: 100%; height: auto; border-radius: 16px; background: #ddd;
+      box-shadow: 0 10px 24px rgba(0,0,0,.12);
+    }
+    .err { color: var(--red); font-size: 13px; font-weight: 600; margin: 8px 0; }
+    .ok { color: #128a4b; font-size: 13px; font-weight: 600; }
+    #gate, #app { max-width: 720px; margin: 0 auto; }
+    #app { display: none; }
+  </style>
+</head>
+<body>
+  <div id="gate">
+    <h1>GlowCheck Farm</h1>
+    <p>Slideshow factory. Same INCI, four skins, zip for TikTok.</p>
+    <input id="email" type="email" placeholder="Admin email" autocomplete="username" />
+    <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
+    <button id="login">Enter</button>
+    <p id="loginErr" class="err"></p>
+  </div>
+  <div id="app">
+    <h1>TikTok farm</h1>
+    <p>Search a viral product. Preview 9:16. Export zip.</p>
+    <div class="row">
+      <input id="q" placeholder="CeraVe cream or barcode" />
+      <button id="search" style="flex:0.45">Find</button>
+    </div>
+    <div id="hits" class="hits"></div>
+    <p id="status"></p>
+    <div id="board" class="slides" hidden></div>
+    <button id="zip" hidden>Export carousel (.zip)</button>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script>
+    const W = 1080, H = 1920;
+    const INK = '#111111', CANVAS = '#F3F1ED', CARD = '#FFFFFF', MUTED = '#6F6A67', NEON = '#00E676';
+    let token = sessionStorage.getItem('glow_admin') || '';
+    let pack = null;
+
+    const $ = (id) => document.getElementById(id);
+    function scoreColor(n) { return n >= 80 ? NEON : n >= 60 ? '#FF9100' : '#FF1744'; }
+
+    async function api(path, body) {
+      const res = await fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!res.ok || json.ok === false) throw new Error(json.error || 'Request failed');
+      return json;
+    }
+
+    function wrap(ctx, text, x, y, max, size, align) {
+      ctx.textAlign = align || 'center';
+      ctx.font = '800 ' + size + 'px Poppins, sans-serif';
+      const words = String(text).split(' ');
+      let line = '', yy = y;
+      for (const word of words) {
+        const test = line ? line + ' ' + word : word;
+        if (ctx.measureText(test).width > max && line) {
+          ctx.fillText(line, x, yy);
+          line = word;
+          yy += size * 1.12;
+        } else line = test;
+      }
+      if (line) ctx.fillText(line, x, yy);
+      return yy;
+    }
+
+    function round(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, r);
+    }
+
+    function loadImg(src) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+      });
+    }
+
+    async function farmImage(url) {
+      if (!url) return null;
+      const res = await fetch('/admin/farm/image?url=' + encodeURIComponent(url), {
+        headers: { Authorization: 'Bearer ' + token },
+      });
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      return loadImg(URL.createObjectURL(blob));
+    }
+
+    function makeCanvas() {
+      const c = document.createElement('canvas');
+      c.width = W; c.height = H;
+      return c;
+    }
+
+    function drawCover(product, img) {
+      const c = makeCanvas();
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = INK;
+      ctx.fillRect(0, 0, W, H);
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#1c1c1c');
+      g.addColorStop(1, '#111111');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+      if (img) {
+        const maxW = 780, maxH = 980;
+        const scale = Math.min(maxW / img.width, maxH / img.height);
+        const dw = img.width * scale, dh = img.height * scale;
+        ctx.drawImage(img, (W - dw) / 2, 430, dw, dh);
+      } else {
+        ctx.fillStyle = NEON;
+        ctx.beginPath();
+        ctx.arc(W / 2, H / 2, 180, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#ffffff';
+      wrap(ctx, 'POV: same formula. 4 skins.', W / 2, 180, 900, 64);
+      ctx.fillStyle = 'rgba(255,255,255,.62)';
+      ctx.font = '700 22px Poppins, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('GLOWCHECK', W / 2, 120);
+      ctx.fillStyle = '#fff';
+      wrap(ctx, [product.brand, product.name].filter(Boolean).join(' · '), W / 2, 1680, 860, 42);
+      ctx.fillStyle = MUTED;
+      ctx.font = '600 28px Poppins, sans-serif';
+      ctx.fillText('INCI vs your skin', W / 2, 1788);
+      return c;
+    }
+
+    function drawScore(product, row) {
+      const c = makeCanvas();
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = CANVAS;
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = MUTED;
+      ctx.font = '600 22px Poppins, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('GLOWCHECK', 72, 110);
+      round(ctx, 72, 160, W - 144, 980, 48);
+      ctx.fillStyle = INK;
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.55)';
+      ctx.font = '700 22px Poppins, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText((product.name || '').toUpperCase().slice(0, 42), W / 2, 230);
+      const color = scoreColor(row.score);
+      ctx.strokeStyle = 'rgba(255,255,255,.18)';
+      ctx.lineWidth = 22;
+      ctx.beginPath();
+      ctx.arc(W / 2, 520, 168, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(W / 2, 520, 168, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * row.score) / 100);
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.font = '800 120px Poppins, sans-serif';
+      ctx.fillText(String(row.score), W / 2, 560);
+      ctx.fillStyle = color;
+      ctx.font = '800 28px Poppins, sans-serif';
+      ctx.fillText(row.label.toUpperCase(), W / 2, 720);
+      ctx.fillStyle = '#fff';
+      wrap(ctx, row.punch, W / 2, 790, 860, 48);
+      ctx.fillStyle = 'rgba(255,255,255,.7)';
+      ctx.font = '600 28px Poppins, sans-serif';
+      wrap(ctx, row.punchSub, W / 2, 900, 860, 28);
+      const chips = [
+        { l: 'WATCH', v: row.watch, c: '#FF1744' },
+        { l: 'FIT', v: row.fit, c: NEON },
+        { l: 'LISTED', v: row.listed, c: MUTED },
+      ];
+      chips.forEach((chip, i) => {
+        const x = 72 + i * 320;
+        round(ctx, x, 1220, 300, 160, 28);
+        ctx.fillStyle = CARD;
+        ctx.fill();
+        ctx.fillStyle = chip.c;
+        ctx.font = '800 52px Poppins, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(String(chip.v), x + 150, 1298);
+        ctx.fillStyle = MUTED;
+        ctx.font = '700 18px Poppins, sans-serif';
+        ctx.fillText(chip.l, x + 150, 1344);
+      });
+      ctx.fillStyle = INK;
+      ctx.font = '700 28px Poppins, sans-serif';
+      ctx.fillText('glow-check.com', W / 2, 1780);
+      return c;
+    }
+
+    async function render(product, scores) {
+      const img = await farmImage(product.imageUrl).catch(() => null);
+      const cta = await loadImg('/admin/cta.png');
+      const canvases = [
+        { name: '01-cover.png', canvas: drawCover(product, img) },
+        { name: '02-dry.png', canvas: drawScore(product, scores[0]) },
+        { name: '03-oily.png', canvas: drawScore(product, scores[1]) },
+        { name: '04-combination.png', canvas: drawScore(product, scores[2]) },
+        { name: '05-sensitive.png', canvas: drawScore(product, scores[3]) },
+        { name: '06-cta.png', canvas: (() => {
+          const c = makeCanvas();
+          const ctx = c.getContext('2d');
+          ctx.fillStyle = CANVAS;
+          ctx.fillRect(0, 0, W, H);
+          const scale = Math.max(W / cta.width, H / cta.height);
+          const dw = cta.width * scale, dh = cta.height * scale;
+          ctx.drawImage(cta, (W - dw) / 2, (H - dh) / 2, dw, dh);
+          return c;
+        })() },
+      ];
+      pack = { product, canvases };
+      const board = $('board');
+      board.hidden = false;
+      board.innerHTML = '';
+      canvases.forEach((item) => board.appendChild(item.canvas));
+      $('zip').hidden = false;
+    }
+
+    async function build(hit) {
+      $('status').innerHTML = 'Scoring four skins…';
+      $('zip').hidden = true;
+      try {
+        const json = await api('/admin/farm/build', {
+          name: hit.name,
+          brand: hit.brand,
+          imageUrl: hit.imageUrl,
+          ingredients: hit.ingredients,
+        });
+        await render(json.product, json.scores);
+        $('status').innerHTML = '<span class="ok">Ready. 6 slides.</span>';
+      } catch (e) {
+        $('status').innerHTML = '<span class="err">' + e.message + '</span>';
+      }
+    }
+
+    $('login').onclick = async () => {
+      $('loginErr').textContent = '';
+      try {
+        const json = await fetch('/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: $('email').value, password: $('password').value }),
+        }).then((r) => r.json());
+        if (!json.ok) throw new Error(json.error === 'ADMIN_NOT_CONFIGURED' ? 'Set ADMIN_EMAIL and ADMIN_PASSWORD on the API.' : 'Login failed.');
+        token = json.token;
+        sessionStorage.setItem('glow_admin', token);
+        $('gate').style.display = 'none';
+        $('app').style.display = 'block';
+      } catch (e) {
+        $('loginErr').textContent = e.message;
+      }
+    };
+
+    $('search').onclick = async () => {
+      $('hits').innerHTML = '';
+      $('status').textContent = 'Looking up…';
+      try {
+        const json = await api('/admin/farm/lookup', { query: $('q').value });
+        if (!json.products.length) {
+          $('status').innerHTML = '<span class="err">No INCI / photo found.</span>';
+          return;
+        }
+        $('status').textContent = json.products.length + ' products';
+        json.products.forEach((hit) => {
+          const b = document.createElement('button');
+          b.className = 'hit';
+          const ready = hit.ingredients && hit.ingredients.length >= 2;
+          b.disabled = !ready;
+          b.innerHTML = (hit.imageUrl ? '<img alt="" src="' + hit.imageUrl + '">' : '<div class="ph"></div>') +
+            '<div><b>' + hit.name + '</b><span>' + (hit.brand || '') + ' · ' + (hit.ingredients || []).length + ' INCI' + (ready ? '' : ' · missing INCI') + '</span></div>';
+          if (ready) b.onclick = () => build(hit);
+          $('hits').appendChild(b);
+        });
+      } catch (e) {
+        $('status').innerHTML = '<span class="err">' + e.message + '</span>';
+      }
+    };
+
+    $('zip').onclick = async () => {
+      if (!pack || !window.JSZip) return;
+      const zip = new JSZip();
+      for (const item of pack.canvases) {
+        const blob = await new Promise((resolve) => item.canvas.toBlob(resolve, 'image/png'));
+        zip.file(item.name, blob);
+      }
+      const out = await zip.generateAsync({ type: 'blob' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(out);
+      a.download = (pack.product.name || 'glowcheck').replace(/[^\w]+/g, '-').slice(0, 40) + '-carousel.zip';
+      a.click();
+    };
+
+    $('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('search').click(); });
+    if (token) { $('gate').style.display = 'none'; $('app').style.display = 'block'; }
+  </script>
+</body>
+</html>
