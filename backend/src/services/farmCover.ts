@@ -145,6 +145,8 @@ async function downloadImage(url: string) {
   }
 }
 
+const FAL_MODEL = 'fal-ai/flux-1/schnell/redux';
+
 async function fluxRedux(coverPng: Buffer) {
   const key = env.FAL_KEY?.trim();
   if (!key) return null;
@@ -160,22 +162,22 @@ async function fluxRedux(coverPng: Buffer) {
     sync_mode: true,
     num_images: 1,
   };
-  let json = await falJson('https://fal.run/fal-ai/flux/schnell/redux', key, {
+  let json = await falJson(`https://fal.run/${FAL_MODEL}`, key, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
   if (!json?.images?.length) {
     json =
-      (await falJson('https://queue.fal.run/fal-ai/flux/schnell/redux', key, {
+      (await falJson(`https://queue.fal.run/${FAL_MODEL}`, key, {
         method: 'POST',
         body: JSON.stringify({ ...payload, sync_mode: false }),
       })) || json;
   }
   if (json?.request_id && !json.images?.length) {
     const statusUrl =
-      json.status_url || `https://queue.fal.run/fal-ai/flux/schnell/redux/requests/${json.request_id}/status`;
+      json.status_url || `https://queue.fal.run/${FAL_MODEL}/requests/${json.request_id}/status`;
     const resultUrl =
-      json.response_url || `https://queue.fal.run/fal-ai/flux/schnell/redux/requests/${json.request_id}`;
+      json.response_url || `https://queue.fal.run/${FAL_MODEL}/requests/${json.request_id}`;
     for (let i = 0; i < 16; i++) {
       await new Promise((resolve) => setTimeout(resolve, 900));
       const status = await falJson(statusUrl, key);
