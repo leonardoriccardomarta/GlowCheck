@@ -1,5 +1,4 @@
 import sharp from 'sharp';
-import { env } from '../config/env';
 import { allowedFarmImage } from './farmHero';
 
 const UA =
@@ -85,60 +84,10 @@ async function packshotCover(src: Buffer) {
     .toBuffer();
 }
 
-type GeminiPart = { inlineData?: { data?: string } };
-
-async function geminiCover(jpeg: Buffer, name: string) {
-  const key = env.GEMINI_API_KEY?.trim();
-  if (!key) return null;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 22000);
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${key}`,
-      {
-        method: 'POST',
-        signal: controller.signal,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                { inlineData: { mimeType: 'image/jpeg', data: jpeg.toString('base64') } },
-                {
-                  text:
-                    `Vertical 9:16 magazine cover of this exact product (${name}). Keep the real pack identical. Full-bleed editorial studio, large centered bottle, no black bars, no watermark, no extra text.`,
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            responseModalities: ['TEXT', 'IMAGE'],
-            imageConfig: { aspectRatio: '9:16' },
-          },
-        }),
-      },
-    );
-    if (!response.ok) return null;
-    const json = (await response.json()) as { candidates?: { content?: { parts?: GeminiPart[] } }[] };
-    const data = json.candidates?.[0]?.content?.parts?.find((part) => part.inlineData?.data)?.inlineData?.data;
-    return data ? Buffer.from(data, 'base64') : null;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-export async function farmCoverImage(imageUrl: string, name: string): Promise<Buffer | null> {
+export async function farmCoverImage(imageUrl: string, _name?: string): Promise<Buffer | null> {
   const src = await fetchBytes(imageUrl);
   if (!src) return null;
   const rotated = await sharp(src).rotate().toBuffer();
-  const jpeg = await sharp(rotated).resize(1024, 1024, { fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 88 }).toBuffer();
-  const generated = await geminiCover(jpeg, name);
-  if (generated) {
-    return sharp(generated).resize(W, H, { fit: 'cover', position: 'centre' }).png().toBuffer();
-  }
   const luma = await cornerLuma(rotated);
   if (luma > 205) return packshotCover(rotated);
   return fullBleed(rotated);
