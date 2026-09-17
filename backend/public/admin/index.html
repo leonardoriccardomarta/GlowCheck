@@ -430,7 +430,7 @@
           }
         }
       }
-      $('status').innerHTML = 'Generating the magazine cover…';
+      $('status').innerHTML = 'Building the cover…';
       let cover = drawCover(img);
       if (pickedUrl) {
         try {
@@ -438,7 +438,12 @@
             imageUrl: pickedUrl,
             name: [product.brand, product.name].filter(Boolean).join(' '),
           });
-          if (made.image) cover = await loadImg(made.image).then((pic) => drawCover(pic));
+          if (made.image) {
+            const pic = await loadImg(made.image);
+            const c = makeCanvas();
+            c.getContext('2d').drawImage(pic, 0, 0, W, H);
+            cover = c;
+          }
         } catch (e) {}
       }
       const cta = await drawCta();
