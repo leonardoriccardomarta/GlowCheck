@@ -80,9 +80,8 @@
     .circ {
       width: 42px; height: 42px; border-radius: 50%; background: #fff;
       display: flex; align-items: center; justify-content: center;
-      color: #111; font-size: 22px; font-weight: 700; line-height: 1;
     }
-    .circ.heart { font-size: 20px; }
+    .circ svg { display: block; }
     .pname {
       margin: 12px 8px 0; text-align: center; color: rgba(255,255,255,.62);
       font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
@@ -273,49 +272,20 @@
     }
 
     async function drawCta(scanCanvas) {
+      const cta = await loadImg('/admin/cta.png');
       const c = makeCanvas();
       const ctx = c.getContext('2d');
-      ctx.fillStyle = '#F6F1E8';
-      ctx.fillRect(0, 0, W, H);
-
-      const logo = await loadImg('/admin/logo.png').catch(() => null);
-      ctx.fillStyle = INK;
-      ctx.textAlign = 'left';
-      ctx.font = '800 42px Poppins, sans-serif';
-      const word = 'GlowCheck';
-      const textW = ctx.measureText(word).width;
-      const lw = 64;
-      const gap = 14;
-      const start = (W - (lw + gap + textW)) / 2;
-      if (logo) ctx.drawImage(logo, start, 114, lw, lw);
-      ctx.fillText(word, start + lw + gap, 158);
-
-      ctx.textAlign = 'center';
-      ctx.fillStyle = INK;
-      wrap(ctx, 'Stop guessing your skin.', W / 2, 250, 920, 68);
-      ctx.fillStyle = '#6B5E4E';
-      ctx.font = '600 28px Poppins, sans-serif';
-      ctx.fillText('One formula. Four skins. Your match.', W / 2, 430);
-
-      roundFill(ctx, 214, 548, 652, 1164, 80, 'rgba(0,0,0,.10)');
-      roundFill(ctx, 198, 520, 684, 1160, 74, '#111');
-
-      const sx = 218, sy = 548, sw = 644, sh = 1048;
+      ctx.drawImage(cta, 0, 0, W, H);
+      const s = W / 720;
+      const sx = 218 * s, sy = 322 * s, sw = 284 * s, sh = 778 * s;
       ctx.save();
       ctx.beginPath();
-      ctx.roundRect(sx, sy, sw, sh, 54);
+      ctx.roundRect(sx, sy, sw, sh, 42 * s);
       ctx.clip();
       const scale = Math.max(sw / scanCanvas.width, sh / scanCanvas.height);
       const dw = scanCanvas.width * scale, dh = scanCanvas.height * scale;
       ctx.drawImage(scanCanvas, sx + (sw - dw) / 2, sy + (sh - dh) / 2, dw, dh);
       ctx.restore();
-      roundFill(ctx, W / 2 - 72, 562, 144, 28, 14, '#111');
-
-      roundFill(ctx, 140, 1748, W - 280, 92, 46, '#111');
-      ctx.fillStyle = NEON;
-      ctx.font = '700 32px Poppins, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('glow-check.com  >', W / 2, 1806);
       return c;
     }
 
@@ -339,10 +309,10 @@
         '<div class="status"><span>9:41</span><div class="pills"><span class="sig"><i></i></span></div></div>' +
         '<div class="header">' +
           '<div class="nav">' +
-            '<div class="circ">‹</div>' +
+            '<div class="circ"><svg width="20" height="20" viewBox="0 0 24 24"><path fill="#111111" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg></div>' +
             '<div class="right">' +
-              '<div class="circ">⇪</div>' +
-              '<div class="circ heart">♡</div>' +
+              '<div class="circ"><svg width="20" height="20" viewBox="0 0 24 24"><path fill="#111111" d="M16 5l-1.42 1.42-1.59-1.59V16h-1.98V4.83L9.41 6.41 8 5l4-4 4 4zm4 5v11c0 1.1-.9 2-2 2H6c-1.11 0-2-.9-2-2V10c0-1.11.89-2 2-2h3v2H6v11h12V10h-3V8h3c1.1 0 2 .89 2 2z"/></svg></div>' +
+              '<div class="circ"><svg width="20" height="20" viewBox="0 0 24 24"><path fill="#111111" d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"/></svg></div>' +
             '</div>' +
           '</div>' +
           '<div class="pname">' + esc(String(product.name || '').toUpperCase()) + '</div>' +
