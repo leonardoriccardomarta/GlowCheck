@@ -14,10 +14,14 @@ export type FarmScoreRow = {
 };
 
 function shortName(product: { name: string; brand?: string | null }) {
-  const brand = (product.brand || '').trim();
-  const name = product.name.trim();
-  if (brand && name.toLowerCase().startsWith(brand.toLowerCase())) return name;
-  if (brand && name.length > 28) return `${brand} ${name.split(' ').slice(0, 3).join(' ')}`;
+  let name = product.name.replace(/\s+/g, ' ').trim();
+  name = name.replace(/\s*\([^)]*\)/g, '').replace(/\s+\d+\s*ml\b.*/i, '');
+  const brand = (product.brand || '').split(',')[0].trim();
+  if (brand && !name.toLowerCase().includes(brand.toLowerCase().split(' ')[0].toLowerCase()) && name.length > 28) {
+    name = `${brand} ${name}`;
+  }
+  const words = name.split(' ');
+  if (words.length > 5) name = words.slice(0, 5).join(' ');
   return name.length > 36 ? `${name.slice(0, 34)}…` : name;
 }
 
@@ -33,17 +37,30 @@ function skinType(row: FarmScoreRow) {
 
 function overlay(row: FarmScoreRow) {
   const mark = row.score >= 80 ? '✅' : row.score >= 60 ? '⚠️' : '💀';
-  let why = 'clean match, no watch flags';
+  let why = 'Clean match, zero flags';
   if (row.score >= 80 && row.watch === 0 && row.occlusionAlert === 'low') {
-    why = row.id === 'dry' ? 'Pure barrier hydration, zero flags' : 'pure match, zero flags';
-  } else if (row.id === 'oily' && (row.occlusionAlert !== 'low' || row.watch > 0 || row.score < 80)) {
+    why = row.id === 'dry' ? 'Pure barrier hydration, zero flags' : 'Clean match, zero flags';
+  } else if (row.occlusionAlert === 'high' && (row.id === 'oily' || row.id === 'combination')) {
     why = 'Heavy occlusives, risk of clogged pores';
   } else if (row.watch > 0) {
-    why = `${row.watch} watch ingredients on this profile`;
-  } else if (row.occlusionAlert === 'high') {
-    why = 'heavy / occlusive feel vs this profile';
+    why = `${row.watch} watch ingredient${row.watch === 1 ? '' : 's'} on this profile`;
+  } else if (row.score < 80) {
+    why = `Not a perfect match for ${row.label.toLowerCase()} skin`;
   }
   return `${row.label} Skin: ${row.score}/100 ${mark} ${why}`;
+}
+
+export function farmWhy(row: FarmScoreRow) {
+  if (row.watch === 0 && row.score >= 80) {
+    return `No avoid flags vs ${row.label.toLowerCase()} skin.`;
+  }
+  if (row.occlusionAlert === 'high') {
+    return `Heavier / occlusive feel vs ${row.label.toLowerCase()} skin.`;
+  }
+  if (row.watch > 0) {
+    return `${row.watch} avoid flag${row.watch === 1 ? '' : 's'} vs ${row.label.toLowerCase()} skin.`;
+  }
+  return `Mostly compatible with ${row.label.toLowerCase()} skin.`;
 }
 
 export function farmScript(product: Pick<FarmHit, 'name' | 'brand'>, scores: FarmScoreRow[]) {
@@ -59,9 +76,9 @@ export function farmScript(product: Pick<FarmHit, 'name' | 'brand'>, scores: Far
   if (gap >= 12) {
     post_title = `${name} on ${worst.label} Skin? 🚩`;
     slide_1_cover = `Is ${name} actually a match for ${worst.label.toLowerCase()} skin? 🚩👀`;
-  } else if (best.score >= 80 && worst.score >= 70) {
-    post_title = `${name} actually scored ${best.score} 👀`;
-    slide_1_cover = `${name}: ${best.score} on ${best.label.toLowerCase()} skin`;
+  } else if (best.score >= 80) {
+    post_title = `${name} scored ${best.score} 👀`;
+    slide_1_cover = `Same ${name}. ${best.score} vs ${worst.score} depending on your skin.`;
   } else if (worst.score < 60) {
     post_title = `${name} is not a universal 90`;
     slide_1_cover = `I scanned ${name}. It wasn’t a 90 on every skin.`;

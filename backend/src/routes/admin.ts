@@ -9,7 +9,7 @@ import {
   issueAdminToken,
 } from '../services/adminAuth';
 import { farmLookup, farmScores } from '../services/farmCatalog';
-import { farmScript } from '../services/farmCopy';
+import { farmScript, farmWhy } from '../services/farmCopy';
 import { allowedFarmImage, farmHeroImage } from '../services/farmHero';
 import { markFarmUsed, unusedFarmIdeas } from '../services/farmUsed';
 
@@ -80,7 +80,7 @@ adminRouter.post('/farm/build', requireAdmin, (req, res) => {
   const scores = farmScores({
     name: parsed.data.name,
     ingredients: parsed.data.ingredients,
-  });
+  }).map((row) => ({ ...row, why: farmWhy(row) }));
   const product = {
     name: parsed.data.name,
     brand: parsed.data.brand ?? null,
@@ -115,7 +115,7 @@ adminRouter.post('/farm/hero', requireAdmin, async (req, res) => {
     return res.status(400).json({ ok: false, error: 'INVALID_HERO' });
   }
   try {
-    const url = (await farmHeroImage(parsed.data.query)) || parsed.data.fallback || null;
+    const url = (await farmHeroImage(parsed.data.query, parsed.data.fallback)) || parsed.data.fallback || null;
     return res.json({ ok: true, url });
   } catch (error) {
     console.error(error);

@@ -80,8 +80,9 @@
     .circ {
       width: 42px; height: 42px; border-radius: 50%; background: #fff;
       display: flex; align-items: center; justify-content: center;
+      color: #111; font-size: 22px; font-weight: 700; line-height: 1;
     }
-    .circ svg { display: block; }
+    .circ.heart { font-size: 20px; }
     .pname {
       margin: 12px 8px 0; text-align: center; color: rgba(255,255,255,.62);
       font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
@@ -178,7 +179,7 @@
     const $ = (id) => document.getElementById(id);
     function scoreColor(n) { return n >= 80 ? NEON : n >= 60 ? '#FF9100' : '#FF1744'; }
     function esc(s) {
-      return String(s || '').replace(/[&<>"']/g, (ch) => ({
+      return String(s ?? '').replace(/[&<>"']/g, (ch) => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
       }[ch]));
     }
@@ -271,29 +272,23 @@
       ctx.fill();
     }
 
-    function drawCta(scanCanvas) {
+    async function drawCta(scanCanvas) {
       const c = makeCanvas();
       const ctx = c.getContext('2d');
       ctx.fillStyle = '#F6F1E8';
       ctx.fillRect(0, 0, W, H);
 
-      ctx.beginPath();
-      ctx.arc(W / 2 - 148, 148, 30, 0, Math.PI * 2);
-      ctx.fillStyle = NEON;
-      ctx.fill();
-      ctx.strokeStyle = '#111';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.roundRect(W / 2 - 160, 136, 24, 18, 4);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(W / 2 - 148, 145, 5, 0, Math.PI * 2);
-      ctx.stroke();
-
+      const logo = await loadImg('/admin/logo.png').catch(() => null);
       ctx.fillStyle = INK;
       ctx.textAlign = 'left';
       ctx.font = '800 42px Poppins, sans-serif';
-      ctx.fillText('GlowCheck', W / 2 - 104, 164);
+      const word = 'GlowCheck';
+      const textW = ctx.measureText(word).width;
+      const lw = 64;
+      const gap = 14;
+      const start = (W - (lw + gap + textW)) / 2;
+      if (logo) ctx.drawImage(logo, start, 114, lw, lw);
+      ctx.fillText(word, start + lw + gap, 158);
 
       ctx.textAlign = 'center';
       ctx.fillStyle = INK;
@@ -344,10 +339,10 @@
         '<div class="status"><span>9:41</span><div class="pills"><span class="sig"><i></i></span></div></div>' +
         '<div class="header">' +
           '<div class="nav">' +
-            '<div class="circ"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>' +
+            '<div class="circ">‹</div>' +
             '<div class="right">' +
-              '<div class="circ"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 4v10M8 8l4-4 4 4" stroke="#111" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" stroke="#111" stroke-width="2.1" stroke-linecap="round"/></svg></div>' +
-              '<div class="circ"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12.8 5.4 12 6.3l-.8-.9A4.2 4.2 0 0 0 4.6 11c0 4.4 7.4 8.6 7.4 8.6s7.4-4.2 7.4-8.6a4.2 4.2 0 0 0-6.6-5.6Z" stroke="#111" stroke-width="2"/></svg></div>' +
+              '<div class="circ">⇪</div>' +
+              '<div class="circ heart">♡</div>' +
             '</div>' +
           '</div>' +
           '<div class="pname">' + esc(String(product.name || '').toUpperCase()) + '</div>' +
@@ -417,7 +412,7 @@
         { name: '01-cover.png', canvas: drawCover(img), caption: script.slide_1_cover },
         { name: '02-score-' + best.id + '.png', canvas: bestScan, caption: script.slide_2_first_skin_type.overlay_text },
         { name: '03-score-' + worst.id + '.png', canvas: worstScan, caption: script.slide_3_second_skin_type.overlay_text },
-        { name: '04-cta.png', canvas: drawCta(bestScan), caption: script.slide_4_cta },
+        { name: '04-cta.png', canvas: await drawCta(bestScan), caption: script.slide_4_cta },
       ];
       pack = { product, canvases, script, idea, scores };
       const board = $('board');
