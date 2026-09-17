@@ -21,10 +21,9 @@
     body { min-height: 100svh; padding: 22px 18px calc(28px + env(safe-area-inset-bottom)); }
     h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; margin: 0 0 6px; }
     p { color: var(--muted); margin: 0 0 18px; font-size: 14px; line-height: 1.4; }
-    input, button, textarea {
+    input, button {
       font: inherit; width: 100%; border-radius: 28px; border: 0; min-height: 52px; padding: 0 18px;
     }
-    textarea { min-height: 220px; padding: 14px 18px; border-radius: 22px; resize: vertical; background: #fff; font-size: 12px; }
     input { background: var(--card); margin-bottom: 10px; }
     button { background: var(--ink); color: #fff; font-weight: 700; cursor: pointer; }
     button.ghost { background: var(--card); color: var(--ink); }
@@ -57,6 +56,11 @@
     #gate, #app { max-width: 720px; margin: 0 auto; }
     #app { display: none; }
     #copybox { display: none; margin: 12px 0 18px; }
+    .copy-card {
+      background: var(--card); border-radius: 22px; padding: 14px 16px; margin-bottom: 10px;
+    }
+    .copy-card b { display: block; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+    .copy-card p { margin: 6px 0 10px; color: var(--ink); font-size: 14px; line-height: 1.4; }
     #shotHost {
       position: fixed; left: -4200px; top: 0; width: 390px; pointer-events: none;
     }
@@ -157,16 +161,26 @@
     <div id="hits" class="hits"></div>
     <p id="status"></p>
     <div id="copybox">
-      <h2>Title + caption + slide text</h2>
-      <textarea id="copyjson" readonly></textarea>
-      <div class="row" style="margin-top:8px">
-        <button class="ghost" id="useV1">Copy V1</button>
-        <button class="ghost" id="useV2">Copy V2</button>
+      <h2>Title + caption</h2>
+      <div class="copy-card">
+        <b>V1 title</b>
+        <p id="v1title"></p>
+        <button class="ghost" id="copyV1title">Copy V1 title</button>
       </div>
-      <div class="row" style="margin-top:8px">
-        <button class="ghost" id="copytitle">Copy title</button>
-        <button class="ghost" id="copycap">Copy caption</button>
-        <button class="ghost" id="copyjsonbtn">Copy JSON</button>
+      <div class="copy-card">
+        <b>V1 caption</b>
+        <p id="v1cap"></p>
+        <button class="ghost" id="copyV1cap">Copy V1 caption</button>
+      </div>
+      <div class="copy-card">
+        <b>V2 title</b>
+        <p id="v2title"></p>
+        <button class="ghost" id="copyV2title">Copy V2 title</button>
+      </div>
+      <div class="copy-card">
+        <b>V2 caption</b>
+        <p id="v2cap"></p>
+        <button class="ghost" id="copyV2cap">Copy V2 caption</button>
       </div>
     </div>
     <div id="board" class="slides" hidden></div>
@@ -391,11 +405,21 @@
       });
     }
 
-    function setActiveScript(which) {
+    function fillCopy() {
       if (!pack) return;
-      pack.script = which === 2 ? pack.script2 : pack.script1;
-      pack.version = which;
-      $('copyjson').value = JSON.stringify(pack.script, null, 2);
+      $('v1title').textContent = pack.script1.post_title || '';
+      $('v1cap').textContent = pack.script1.tiktok_caption || '';
+      $('v2title').textContent = pack.script2.post_title || '';
+      $('v2cap').textContent = pack.script2.tiktok_caption || '';
+    }
+
+    function copyText(id, text) {
+      if (!text) return;
+      navigator.clipboard.writeText(text);
+      const btn = $(id);
+      const label = btn.textContent;
+      btn.textContent = 'Copied';
+      setTimeout(() => { btn.textContent = label; }, 900);
     }
 
     async function render(product, scores, script1, script2, idea) {
@@ -468,7 +492,7 @@
       )));
       $('zip').hidden = false;
       $('copybox').style.display = 'block';
-      setActiveScript(1);
+      fillCopy();
     }
 
     async function build(hit) {
@@ -576,8 +600,6 @@
         const blob = await new Promise((resolve) => item.canvas.toBlob(resolve, 'image/png'));
         zip.file('v2/' + item.name, blob);
       }
-      zip.file('v1.json', JSON.stringify(pack.script1, null, 2));
-      zip.file('v2.json', JSON.stringify(pack.script2, null, 2));
       const out = await zip.generateAsync({ type: 'blob' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(out);
@@ -588,17 +610,10 @@
       Promise.all(keys.map((key) => api('/admin/farm/used', { key, label: pack.product.name }))).then(loadIdeas);
     };
 
-    $('useV1').onclick = () => setActiveScript(1);
-    $('useV2').onclick = () => setActiveScript(2);
-    $('copytitle').onclick = () => {
-      if (pack && pack.script) navigator.clipboard.writeText(pack.script.post_title);
-    };
-    $('copycap').onclick = () => {
-      if (pack && pack.script) navigator.clipboard.writeText(pack.script.tiktok_caption);
-    };
-    $('copyjsonbtn').onclick = () => {
-      if (pack && pack.script) navigator.clipboard.writeText(JSON.stringify(pack.script, null, 2));
-    };
+    $('copyV1title').onclick = () => { if (pack) copyText('copyV1title', pack.script1.post_title); };
+    $('copyV1cap').onclick = () => { if (pack) copyText('copyV1cap', pack.script1.tiktok_caption); };
+    $('copyV2title').onclick = () => { if (pack) copyText('copyV2title', pack.script2.post_title); };
+    $('copyV2cap').onclick = () => { if (pack) copyText('copyV2cap', pack.script2.tiktok_caption); };
 
     $('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('search').click(); });
     $('q').addEventListener('input', () => {
