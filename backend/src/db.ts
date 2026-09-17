@@ -47,6 +47,13 @@ export async function ensureDb() {
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
       `;
+      await client`
+        CREATE TABLE IF NOT EXISTS farm_used (
+          idea_key TEXT PRIMARY KEY,
+          label TEXT NOT NULL,
+          used_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `;
     })().catch((error) => {
       ready = null;
       throw error;

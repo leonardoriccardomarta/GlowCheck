@@ -160,6 +160,20 @@ export function farmScores(input: { name: string; ingredients: string[] }) {
       fit,
       listed,
       occlusionAlert: scored.occlusionAlert,
+      occlusion:
+        scored.occlusionAlert === 'high'
+          ? 'Heavy / occlusive feel vs your profile'
+          : scored.occlusionAlert === 'medium'
+            ? 'Some occlusive textures on the list'
+            : 'Light occlusion signal',
+      why: scored.whyForYou,
+      watches: scored.ingredients.filter((item) => item.tag === 'watch').slice(0, 3).map((item) => item.name),
+      fits: scored.ingredients.filter((item) => item.tag === 'fit').slice(0, 3).map((item) => item.name),
+      lines: scored.ingredients.slice(0, 5).map((item) => ({
+        name: item.name,
+        tag: item.tag,
+        note: item.note,
+      })),
     };
   });
 }

@@ -9,6 +9,8 @@ import {
   issueAdminToken,
 } from '../services/adminAuth';
 import { allowedFarmImage, farmLookup, farmScores } from '../services/farmCatalog';
+import { farmScript } from '../services/farmCopy';
+import { markFarmUsed, unusedFarmIdeas } from '../services/farmUsed';
 
 export const adminRouter = Router();
 
@@ -78,15 +80,41 @@ adminRouter.post('/farm/build', requireAdmin, (req, res) => {
     name: parsed.data.name,
     ingredients: parsed.data.ingredients,
   });
+  const product = {
+    name: parsed.data.name,
+    brand: parsed.data.brand ?? null,
+    imageUrl: parsed.data.imageUrl ?? null,
+  };
   return res.json({
     ok: true,
-    product: {
-      name: parsed.data.name,
-      brand: parsed.data.brand ?? null,
-      imageUrl: parsed.data.imageUrl ?? null,
-    },
+    product,
     scores,
+    script: farmScript(product, scores),
   });
+});
+
+adminRouter.get('/farm/ideas', requireAdmin, async (_req, res) => {
+  try {
+    const ideas = await unusedFarmIdeas(8);
+    return res.json({ ok: true, ideas });
+  } catch (error) {
+    console.error(error);
+    return res.status(502).json({ ok: false, error: 'IDEAS_FAILED' });
+  }
+});
+
+adminRouter.post('/farm/used', requireAdmin, async (req, res) => {
+  const parsed = z
+    .object({
+      key: z.string().min(2).max(160),
+      label: z.string().min(1).max(160),
+    })
+    .safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ ok: false, error: 'INVALID_USED' });
+  }
+  await markFarmUsed(parsed.data);
+  return res.json({ ok: true });
 });
 
 adminRouter.get('/farm/image', requireAdmin, async (req, res) => {
