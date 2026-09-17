@@ -63,8 +63,21 @@ export function farmWhy(row: FarmScoreRow) {
   return `Mostly compatible with ${row.label.toLowerCase()} skin.`;
 }
 
-export function farmScript(product: Pick<FarmHit, 'name' | 'brand'>, scores: FarmScoreRow[]) {
+export function farmPairs(scores: FarmScoreRow[]) {
   const ranked = [...scores].sort((a, b) => b.score - a.score);
+  const v1: [FarmScoreRow, FarmScoreRow] = [ranked[0], ranked[ranked.length - 1]];
+  const rest = ranked.slice(1, -1);
+  const v2: [FarmScoreRow, FarmScoreRow] =
+    rest.length >= 2 ? [rest[0], rest[1]] : [ranked[0], ranked[Math.min(1, ranked.length - 1)]];
+  return { v1, v2 };
+}
+
+export function farmScript(
+  product: Pick<FarmHit, 'name' | 'brand'>,
+  scores: FarmScoreRow[],
+  pair?: [FarmScoreRow, FarmScoreRow],
+) {
+  const ranked = pair ? [...pair].sort((a, b) => b.score - a.score) : [...scores].sort((a, b) => b.score - a.score);
   const best = ranked[0];
   const worst = ranked[ranked.length - 1];
   const name = shortName(product);
@@ -108,7 +121,7 @@ export function farmScript(product: Pick<FarmHit, 'name' | 'brand'>, scores: Far
       score: worst.score,
       overlay_text: overlay(worst),
     },
-    slide_4_cta: 'Check your shelf for free on glow-check.com 🧴',
+    slide_4_cta: '',
     all_skins: scores.map((row) => ({
       skin_type: skinType(row),
       score: row.score,

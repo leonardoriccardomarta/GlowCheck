@@ -9,7 +9,7 @@ import {
   issueAdminToken,
 } from '../services/adminAuth';
 import { farmLookup, farmScores } from '../services/farmCatalog';
-import { farmScript, farmWhy } from '../services/farmCopy';
+import { farmPairs, farmScript, farmWhy } from '../services/farmCopy';
 import { allowedFarmImage, farmHeroImage } from '../services/farmHero';
 import { markFarmUsed, unusedFarmIdeas } from '../services/farmUsed';
 
@@ -87,11 +87,19 @@ adminRouter.post('/farm/build', requireAdmin, (req, res) => {
     brand: parsed.data.brand ?? null,
     imageUrl: parsed.data.imageUrl ?? null,
   };
+  const pairs = farmPairs(scores);
+  const script = farmScript(product, scores, pairs.v1);
+  const script2 = farmScript(product, scores, pairs.v2);
   return res.json({
     ok: true,
     product,
     scores,
-    script: farmScript(product, scores),
+    script,
+    script2,
+    pairs: {
+      v1: pairs.v1.map((row) => row.id),
+      v2: pairs.v2.map((row) => row.id),
+    },
   });
 });
 

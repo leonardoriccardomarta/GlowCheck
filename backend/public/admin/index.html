@@ -48,6 +48,9 @@
       box-shadow: 0 10px 24px rgba(0,0,0,.12);
     }
     .slide-cap { font-size: 11px; color: var(--muted); margin: 8px 0 0; line-height: 1.35; }
+    .ver-label {
+      grid-column: 1 / -1; margin: 10px 0 0; font-size: 13px; font-weight: 800;
+    }
     .err { color: var(--red); font-size: 13px; font-weight: 600; margin: 8px 0; }
     .ok { color: #128a4b; font-size: 13px; font-weight: 600; }
     h2 { font-size: 15px; margin: 22px 0 8px; }
@@ -144,7 +147,7 @@
   </div>
   <div id="app">
     <h1>TikTok farm</h1>
-    <p>Unused viral ideas with INCI only. Cover is a real pack shot, no text on the photo. Copy lives under the slides.</p>
+    <p>Unused viral ideas with INCI only. Cover is the real bottle on a studio slide. Two carousels per product: same hook + CTA, different skins in the middle.</p>
     <h2>Unused ideas</h2>
     <div id="ideas" class="ideas"></div>
     <div class="row">
@@ -157,13 +160,17 @@
       <h2>Title + caption + slide text</h2>
       <textarea id="copyjson" readonly></textarea>
       <div class="row" style="margin-top:8px">
+        <button class="ghost" id="useV1">Copy V1</button>
+        <button class="ghost" id="useV2">Copy V2</button>
+      </div>
+      <div class="row" style="margin-top:8px">
         <button class="ghost" id="copytitle">Copy title</button>
         <button class="ghost" id="copycap">Copy caption</button>
         <button class="ghost" id="copyjsonbtn">Copy JSON</button>
       </div>
     </div>
     <div id="board" class="slides" hidden></div>
-    <button id="zip" hidden>Export carousel (.zip)</button>
+    <button id="zip" hidden>Export 2 carousels (.zip)</button>
   </div>
   <div id="shotHost"></div>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -238,116 +245,103 @@
       return c;
     }
 
-    function drawImageCover(ctx, img, x, y, w, h) {
-      const scale = Math.max(w / img.width, h / img.height);
-      const dw = img.width * scale, dh = img.height * scale;
-      ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
-    }
-
-    function luma(r, g, b) { return 0.299 * r + 0.587 * g + 0.114 * b; }
-
-    function analyzeHero(img) {
-      const tw = 160;
-      const th = Math.max(1, Math.round(img.height * (tw / img.width)));
-      const c = document.createElement('canvas');
-      c.width = tw;
-      c.height = th;
-      const ctx = c.getContext('2d', { willReadFrequently: true });
-      ctx.drawImage(img, 0, 0, tw, th);
-      const { data } = ctx.getImageData(0, 0, tw, th);
-      let br = 0, bg = 0, bb = 0, bn = 0;
-      const take = (i) => { br += data[i]; bg += data[i + 1]; bb += data[i + 2]; bn++; };
-      for (let x = 0; x < tw; x += 2) {
-        take(x * 4);
-        take(((th - 1) * tw + x) * 4);
-      }
-      for (let y = 0; y < th; y += 2) {
-        take(y * tw * 4);
-        take((y * tw + tw - 1) * 4);
-      }
-      const bgc = [br / bn, bg / bn, bb / bn];
-      const bgL = luma(bgc[0], bgc[1], bgc[2]);
-      const thresh = bgL > 210 ? 26 : 42;
-      let minX = tw, minY = th, maxX = 0, maxY = 0, found = 0;
-      for (let y = 0; y < th; y++) {
-        for (let x = 0; x < tw; x++) {
-          const i = (y * tw + x) * 4;
-          const dist = Math.hypot(data[i] - bgc[0], data[i + 1] - bgc[1], data[i + 2] - bgc[2]);
+    function opaqueStats(cut) {
+      const ctx = cut.getContext('2d', { willReadFrequently: true });
+      const { data, width, height } = ctx.getImageData(0, 0, cut.width, cut.height);
+      let minX = width, minY = height, maxX = 0, maxY = 0, found = 0;
+      let r = 0, g = 0, b = 0, n = 0;
+      for (let y = 0; y < height; y += 2) {
+        for (let x = 0; x < width; x += 2) {
+          const i = (y * width + x) * 4;
+          if (data[i + 3] < 140) continue;
+          found++;
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
           const sat = Math.max(data[i], data[i + 1], data[i + 2]) - Math.min(data[i], data[i + 1], data[i + 2]);
-          if (dist > thresh || (bgL > 210 && sat > 28)) {
-            if (x < minX) minX = x;
-            if (y < minY) minY = y;
-            if (x > maxX) maxX = x;
-            if (y > maxY) maxY = y;
-            found++;
-          }
+          if (sat > 18) { r += data[i]; g += data[i + 1]; b += data[i + 2]; n++; }
         }
       }
-      const sx = img.width / tw, sy = img.height / th;
-      const inflate = bgL > 210 ? 0.34 : 0.1;
-      let bx = minX * sx, by = minY * sy, bw = (maxX - minX + 1) * sx, bh = (maxY - minY + 1) * sy;
-      if (bgL > 210) {
-        by -= bh * 0.18;
-        bh += bh * 0.36;
-      }
-      bx = Math.max(0, bx - bw * inflate);
-      by = Math.max(0, by - bh * inflate);
-      bw = Math.min(img.width - bx, bw * (1 + inflate * 2));
-      bh = Math.min(img.height - by, bh * (1 + inflate * 2));
       return {
-        bgL,
-        area: found / (tw * th),
-        crop: found > 80 ? { x: bx, y: by, w: bw, h: bh } : { x: 0, y: 0, w: img.width, h: img.height },
+        found,
+        bbox: found ? { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 } : null,
+        accent: n ? [r / n, g / n, b / n] : [48, 48, 52],
       };
     }
 
-    function drawCover(img) {
+    let cutoutFn = null;
+    async function cutoutBottle(img) {
+      try {
+        if (!cutoutFn) {
+          const mod = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.8/+esm');
+          cutoutFn = mod.removeBackground;
+        }
+        const blob = await new Promise((resolve) => toCanvas(img).toBlob(resolve, 'image/png'));
+        return await loadImg(URL.createObjectURL(await cutoutFn(blob, {
+          output: { format: 'image/png' },
+          publicPath: 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.8/dist/',
+        })));
+      } catch {
+        return null;
+      }
+    }
+
+    async function drawCover(img) {
       const c = makeCanvas();
       const ctx = c.getContext('2d');
-      ctx.fillStyle = '#111111';
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.fillStyle = '#070708';
       ctx.fillRect(0, 0, W, H);
       if (!img) return c;
-      const info = analyzeHero(img);
-      const studio = info.bgL < 205 && info.area > 0.28;
-      ctx.save();
-      ctx.filter = 'blur(68px) saturate(1.6) brightness(0.76)';
-      drawImageCover(ctx, img, -140, -140, W + 280, H + 280);
-      ctx.restore();
-      const product = document.createElement('canvas');
-      product.width = W;
-      product.height = H;
-      const pctx = product.getContext('2d');
-      pctx.filter = 'contrast(1.1) saturate(1.12) brightness(1.04)';
-      const crop = info.crop;
-      if (studio) {
-        drawImageCover(pctx, img, 0, 0, W, H);
-      } else {
-        const boxW = W * 0.88, boxH = H * 0.86;
-        const scale = Math.min(boxW / crop.w, boxH / crop.h);
-        const dw = crop.w * scale, dh = crop.h * scale;
-        pctx.drawImage(img, crop.x, crop.y, crop.w, crop.h, (W - dw) / 2, (H - dh) / 2, dw, dh);
-      }
-      pctx.filter = 'none';
-      const inner = studio ? 0.4 : 0.24;
-      const outer = studio ? 0.78 : 0.6;
-      const rg = pctx.createRadialGradient(W / 2, H * 0.48, Math.min(W, H) * inner, W / 2, H * 0.5, Math.min(W, H) * outer);
-      rg.addColorStop(0, 'rgba(0,0,0,1)');
-      rg.addColorStop(0.62, 'rgba(0,0,0,0.94)');
-      rg.addColorStop(1, 'rgba(0,0,0,0)');
-      pctx.globalCompositeOperation = 'destination-in';
-      pctx.fillStyle = rg;
-      pctx.fillRect(0, 0, W, H);
-      ctx.save();
-      ctx.shadowColor = studio ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0.38)';
-      ctx.shadowBlur = studio ? 0 : 52;
-      ctx.shadowOffsetY = studio ? 0 : 16;
-      ctx.drawImage(product, 0, 0);
-      ctx.restore();
-      const vig = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.32, W / 2, H / 2, Math.min(W, H) * 0.88);
-      vig.addColorStop(0, 'rgba(0,0,0,0)');
-      vig.addColorStop(1, 'rgba(0,0,0,0.2)');
-      ctx.fillStyle = vig;
+      const cut = await cutoutBottle(img);
+      const source = cut || img;
+      const stats = cut ? opaqueStats(toCanvas(cut)) : null;
+      const accent = stats ? stats.accent : [42, 42, 46];
+      const [ar, ag, ab] = accent;
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, 'rgb(' + Math.round(ar * 0.1) + ',' + Math.round(ag * 0.1) + ',' + Math.round(ab * 0.1) + ')');
+      grad.addColorStop(0.42, 'rgb(' + Math.round(ar * 0.2) + ',' + Math.round(ag * 0.2) + ',' + Math.round(ab * 0.2) + ')');
+      grad.addColorStop(1, '#050506');
+      ctx.fillStyle = grad;
       ctx.fillRect(0, 0, W, H);
+      const glow = ctx.createRadialGradient(W / 2, H * 0.62, 20, W / 2, H * 0.64, W * 0.58);
+      glow.addColorStop(0, 'rgba(' + Math.round(ar) + ',' + Math.round(ag) + ',' + Math.round(ab) + ',0.32)');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
+      const box = stats && stats.bbox ? stats.bbox : { x: 0, y: 0, w: source.width, h: source.height };
+      const maxW = W * 0.78;
+      const maxH = H * 0.56;
+      const scale = Math.min(maxW / box.w, maxH / box.h);
+      const dw = box.w * scale, dh = box.h * scale;
+      const dx = (W - dw) / 2;
+      const dy = H * 0.3 + (H * 0.62 - dh) / 2;
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.filter = 'blur(32px)';
+      ctx.beginPath();
+      ctx.ellipse(W / 2, dy + dh - 6, dw * 0.34, Math.max(18, dh * 0.045), 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      ctx.drawImage(source, box.x, box.y, box.w, box.h, dx, dy, dw, dh);
+      return c;
+    }
+
+    function cloneCanvas(src) {
+      const c = document.createElement('canvas');
+      c.width = src.width;
+      c.height = src.height;
+      c.getContext('2d').drawImage(src, 0, 0);
+      return c;
+    }
+
+    function toCanvas(img) {
+      const c = document.createElement('canvas');
+      c.width = img.width;
+      c.height = img.height;
+      c.getContext('2d').drawImage(img, 0, 0);
       return c;
     }
 
@@ -439,7 +433,41 @@
       return c;
     }
 
-    async function render(product, scores, script, idea) {
+    function slidesOf(cover, cta, a, b, script) {
+      return [
+        { name: '01-cover.png', canvas: cover, caption: script.slide_1_cover },
+        { name: '02-score-' + a.id + '.png', canvas: a.canvas, caption: script.slide_2_first_skin_type.overlay_text },
+        { name: '03-score-' + b.id + '.png', canvas: b.canvas, caption: script.slide_3_second_skin_type.overlay_text },
+        { name: '04-cta.png', canvas: cta, caption: '' },
+      ];
+    }
+
+    function appendSlides(board, label, items) {
+      const h = document.createElement('p');
+      h.className = 'ver-label';
+      h.textContent = label;
+      board.appendChild(h);
+      items.forEach((item) => {
+        const box = document.createElement('div');
+        box.appendChild(item.canvas);
+        if (item.caption) {
+          const cap = document.createElement('p');
+          cap.className = 'slide-cap';
+          cap.textContent = item.caption;
+          box.appendChild(cap);
+        }
+        board.appendChild(box);
+      });
+    }
+
+    function setActiveScript(which) {
+      if (!pack) return;
+      pack.script = which === 2 ? pack.script2 : pack.script1;
+      pack.version = which;
+      $('copyjson').value = JSON.stringify(pack.script, null, 2);
+    }
+
+    async function render(product, scores, script1, script2, idea) {
       $('status').innerHTML = 'Finding a real pack shot…';
       const hero = await api('/admin/farm/hero', {
         query: [product.brand, product.name].filter(Boolean).join(' '),
@@ -453,11 +481,11 @@
         if (!next) continue;
         const aspect = next.width / next.height;
         if (aspect > 1.15 || aspect < 0.38) continue;
-        const pack = aspect <= 0.82 ? 2 : aspect <= 0.95 ? 1 : 0;
-        if (pack > bestPack || (pack === bestPack && !img)) {
-          bestPack = pack;
+        const packScore = aspect <= 0.82 ? 2 : aspect <= 0.95 ? 1 : 0;
+        if (packScore > bestPack || (packScore === bestPack && !img)) {
+          bestPack = packScore;
           img = next;
-          if (pack === 2) break;
+          if (packScore === 2) break;
         }
       }
       if (!img) {
@@ -466,33 +494,31 @@
           if (img) break;
         }
       }
+      $('status').innerHTML = 'Cutting the bottle onto a studio slide…';
+      const cover = await drawCover(img);
+      const cta = await drawCta();
       const ranked = [...scores].sort((a, b) => b.score - a.score);
-      const best = ranked[0];
-      const worst = ranked[ranked.length - 1];
-      const bestScan = await captureScan(product, best);
-      const worstScan = await captureScan(product, worst);
-      const canvases = [
-        { name: '01-cover.png', canvas: drawCover(img), caption: script.slide_1_cover },
-        { name: '02-score-' + best.id + '.png', canvas: bestScan, caption: script.slide_2_first_skin_type.overlay_text },
-        { name: '03-score-' + worst.id + '.png', canvas: worstScan, caption: script.slide_3_second_skin_type.overlay_text },
-        { name: '04-cta.png', canvas: await drawCta(), caption: script.slide_4_cta },
-      ];
-      pack = { product, canvases, script, idea, scores };
+      const scans = {};
+      for (const row of scores) scans[row.id] = await captureScan(product, row);
+      const v1a = ranked[0], v1b = ranked[ranked.length - 1];
+      const rest = ranked.slice(1, -1);
+      const v2a = rest[0] || ranked[0];
+      const v2b = rest[1] || ranked[Math.min(1, ranked.length - 1)];
+      const v1 = slidesOf(cover, cta, { ...v1a, canvas: scans[v1a.id] }, { ...v1b, canvas: scans[v1b.id] }, script1);
+      const v2 = slidesOf(cover, cta, { ...v2a, canvas: scans[v2a.id] }, { ...v2b, canvas: scans[v2b.id] }, script2);
+      pack = { product, idea, scores, script1, script2, script: script1, version: 1, v1, v2 };
       const board = $('board');
       board.hidden = false;
       board.innerHTML = '';
-      canvases.forEach((item) => {
-        const box = document.createElement('div');
-        box.appendChild(item.canvas);
-        const cap = document.createElement('p');
-        cap.className = 'slide-cap';
-        cap.textContent = item.caption || '';
-        box.appendChild(cap);
-        board.appendChild(box);
-      });
+      appendSlides(board, 'Version 1 · ' + v1a.label + ' vs ' + v1b.label, v1);
+      appendSlides(board, 'Version 2 · ' + v2a.label + ' vs ' + v2b.label, v2.map((item) => (
+        item.name === '01-cover.png' || item.name === '04-cta.png'
+          ? { ...item, canvas: cloneCanvas(item.canvas) }
+          : item
+      )));
       $('zip').hidden = false;
       $('copybox').style.display = 'block';
-      $('copyjson').value = JSON.stringify(script, null, 2);
+      setActiveScript(1);
     }
 
     async function build(hit) {
@@ -505,7 +531,7 @@
           imageUrl: hit.imageUrl,
           ingredients: hit.ingredients,
         });
-        await render(json.product, json.scores, json.script, selectedIdea);
+        await render(json.product, json.scores, json.script, json.script2 || json.script, selectedIdea);
         $('status').innerHTML = '<span class="ok">Ready. Real scan screens + copy.</span>';
       } catch (e) {
         $('status').innerHTML = '<span class="err">' + e.message + '</span>';
@@ -592,11 +618,16 @@
     $('zip').onclick = async () => {
       if (!pack || !window.JSZip) return;
       const zip = new JSZip();
-      for (const item of pack.canvases) {
+      for (const item of pack.v1) {
         const blob = await new Promise((resolve) => item.canvas.toBlob(resolve, 'image/png'));
-        zip.file(item.name, blob);
+        zip.file('v1/' + item.name, blob);
       }
-      zip.file('post.json', JSON.stringify(pack.script, null, 2));
+      for (const item of pack.v2) {
+        const blob = await new Promise((resolve) => item.canvas.toBlob(resolve, 'image/png'));
+        zip.file('v2/' + item.name, blob);
+      }
+      zip.file('v1.json', JSON.stringify(pack.script1, null, 2));
+      zip.file('v2.json', JSON.stringify(pack.script2, null, 2));
       const out = await zip.generateAsync({ type: 'blob' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(out);
@@ -607,6 +638,8 @@
       Promise.all(keys.map((key) => api('/admin/farm/used', { key, label: pack.product.name }))).then(loadIdeas);
     };
 
+    $('useV1').onclick = () => setActiveScript(1);
+    $('useV2').onclick = () => setActiveScript(2);
     $('copytitle').onclick = () => {
       if (pack && pack.script) navigator.clipboard.writeText(pack.script.post_title);
     };
