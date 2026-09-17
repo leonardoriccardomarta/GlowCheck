@@ -273,25 +273,10 @@
       ctx.fill();
     }
 
-    async function drawCta(scanCanvas, score) {
-      const cta = await loadImg('/admin/cta.png?v=6');
+    async function drawCta() {
+      const cta = await loadImg('/admin/cta.png?v=7');
       const c = makeCanvas();
-      const ctx = c.getContext('2d');
-      ctx.drawImage(cta, 0, 0, W, H);
-      const s = W / 720;
-      const sx = 214 * s, sy = 424 * s, sw = 292 * s, sh = 312 * s, rad = 32 * s;
-      ctx.save();
-      ctx.beginPath();
-      ctx.roundRect(sx, sy, sw, sh, rad);
-      ctx.fillStyle = scoreColor(score);
-      ctx.fill();
-      ctx.clip();
-      const srcW = scanCanvas.width;
-      const srcH = Math.round(scanCanvas.height * 0.45);
-      const scale = Math.max(sw / srcW, sh / srcH);
-      const dw = srcW * scale, dh = srcH * scale;
-      ctx.drawImage(scanCanvas, 0, 0, srcW, srcH, sx + (sw - dw) / 2, sy, dw, dh);
-      ctx.restore();
+      c.getContext('2d').drawImage(cta, 0, 0, W, H);
       return c;
     }
 
@@ -405,7 +390,7 @@
         { name: '01-cover.png', canvas: drawCover(img), caption: script.slide_1_cover },
         { name: '02-score-' + best.id + '.png', canvas: bestScan, caption: script.slide_2_first_skin_type.overlay_text },
         { name: '03-score-' + worst.id + '.png', canvas: worstScan, caption: script.slide_3_second_skin_type.overlay_text },
-        { name: '04-cta.png', canvas: await drawCta(bestScan, best.score), caption: script.slide_4_cta },
+        { name: '04-cta.png', canvas: await drawCta(), caption: script.slide_4_cta },
       ];
       pack = { product, canvases, script, idea, scores };
       const board = $('board');
