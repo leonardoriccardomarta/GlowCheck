@@ -146,8 +146,12 @@ adminRouter.post('/farm/cover', requireAdmin, async (req, res) => {
   }
   try {
     const buf = await farmCoverImage(parsed.data.imageUrl, parsed.data.name);
-    if (!buf) return res.json({ ok: true, image: null });
-    return res.json({ ok: true, image: `data:image/png;base64,${buf.toString('base64')}` });
+    if (!buf) return res.json({ ok: true, image: null, flux: Boolean(env.FAL_KEY?.trim()) });
+    return res.json({
+      ok: true,
+      image: `data:image/png;base64,${buf.toString('base64')}`,
+      flux: Boolean(env.FAL_KEY?.trim()),
+    });
   } catch (error) {
     console.error(error);
     return res.json({ ok: true, image: null });
