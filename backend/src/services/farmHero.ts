@@ -5,7 +5,7 @@ const BAD_PHOTO =
   /skyline|skyscraper|cityscape|nightscape|downtown|architecture|building|tower|hotel|apartment|wikimedia|wikipedia|pexels|unsplash|flickr|gettyimages|shutterstock|city-night|urban|landscape|screenshot|meme/i;
 
 const AD_PHOTO =
-  /banner|campaign|collage|infographic|promo|advert|coupon|og-image|facebook|instagram|social-share|before-after|comparison|4x|reparac|mais\s|%off|percent.off|testimonial|key.?visual|billboard|claim|eficac|effetiv|effettiv|clinically.proven|vs\.|versus|beforeafter|advertorial|magazine-ad|print-ad|social.?ad/i;
+  /banner|campaign|collage|infographic|promo|advert|coupon|og-image|facebook|instagram|social-share|before-after|comparison|4x|reparac|mais\s|%off|percent.off|testimonial|key.?visual|billboard|claim|eficac|effetiv|effettiv|clinically.proven|vs\.|versus|beforeafter|advertorial|magazine-ad|print-ad|social.?ad|lifestyle|flat.?lay|moodboard|gift.?set|value.?set|routine.?kit|\bduo\b|\btrio\b|\bkit\b|smiling|couple|family|model-|models|light.?weight|absorption|refreshing water|quick absorption|press.?kit|lookbook/i;
 
 const STUDIO_HOST =
   /sephora|ulta|lookfantastic|cultbeauty|notino|douglas|perfumesclub|perfume'?s.?club|laroche-posay|loreal|nocibe|marionnaud|boots\.com|superdrug|spacenk|bluemercury|dermstore|skinstore|feelunique|cocooncenter|atida|docmorris|shopify|cloudinary|scene7|demandware|sfcc|woocommerce/i;
@@ -80,7 +80,7 @@ function searchQueries(query: string) {
   const q = query.replace(/\s+/g, ' ').trim();
   const words = q.split(' ');
   const short = words.slice(0, Math.min(5, words.length)).join(' ');
-  return [...new Set([`${short} product white background`, `${short} packshot`, short, q])];
+  return [...new Set([`${short} packshot`, `${short} bottle white background`, `${short} product photography`, short])];
 }
 
 function scoreHit(hit: HeroHit, query: string) {
@@ -94,11 +94,12 @@ function scoreHit(hit: HeroHit, query: string) {
   const h = hit.height || 800;
   n += Math.min((w * h) / 80000, 55);
   const aspect = w / h;
-  if (aspect > 1.5) n -= 45;
-  if (aspect >= 0.55 && aspect <= 1.2) n += 28;
+  if (aspect > 1.25) n -= 55;
+  if (aspect >= 0.45 && aspect <= 0.82) n += 42;
+  else if (aspect >= 0.82 && aspect <= 1.05) n += 8;
   if (STUDIO_HOST.test(blob)) n += 55;
   if (CATALOG_HOST.test(blob)) n -= 90;
-  if (/packshot|pack-shot|white-bg|on white|product-image|studio|demandware|scene7/.test(blob)) n += 18;
+  if (/packshot|pack-shot|white-bg|on white|product-image|studio|demandware|scene7|isolated|cutout|bottle|pump/.test(blob)) n += 22;
   const tokens = queryTokens(query);
   n += tokens.filter((token) => blob.includes(token)).length * 10;
   if (tokens.length && !tokens.some((token) => blob.includes(token))) n -= 15;
@@ -120,14 +121,16 @@ function pickBest(hits: HeroHit[], query: string, fallback?: string | null) {
     const aspect = (h: HeroHit) => (h.width || 800) / (h.height || 800);
     const pack = (h: HeroHit) => {
       const a = aspect(h);
-      return a >= 0.55 && a <= 1.22 ? 30 : a > 1.45 ? -40 : 0;
+      if (a >= 0.45 && a <= 0.82) return 50;
+      if (a > 1.2) return -50;
+      return 0;
     };
     return b.score + pack(b.hit) - (a.score + pack(a.hit));
   });
   const urls = ranked
     .filter((row) => {
       const a = (row.hit.width || 800) / (row.hit.height || 800);
-      return a <= 1.45;
+      return a <= 1.2;
     })
     .map((row) => row.hit.url);
   if (fallback && !urls.includes(fallback)) urls.push(fallback);
@@ -136,7 +139,7 @@ function pickBest(hits: HeroHit[], query: string, fallback?: string | null) {
 
 async function googleImages(query: string): Promise<HeroHit[]> {
   const html = await timedText(
-    `https://www.google.com/search?tbm=isch&udm=2&hl=en&gl=us&safe=active&tbs=isz:l,itp:photo,iar:s&q=${encodeURIComponent(query)}`,
+    `https://www.google.com/search?tbm=isch&udm=2&hl=en&gl=us&safe=active&tbs=isz:l,itp:photo,iar:t&q=${encodeURIComponent(query)}`,
   );
   if (!html) return [];
   const hits: HeroHit[] = [];
@@ -162,7 +165,7 @@ async function googleImages(query: string): Promise<HeroHit[]> {
 
 async function bingImages(query: string): Promise<HeroHit[]> {
   const html = await timedText(
-    `https://www.bing.com/images/async?q=${encodeURIComponent(query)}&first=0&count=35&mmasync=1&qft=+filterui:photo-photo+filterui:imagesize-large`,
+    `https://www.bing.com/images/async?q=${encodeURIComponent(query)}&first=0&count=35&mmasync=1&qft=+filterui:photo-photo+filterui:imagesize-large+filterui:aspect-tall`,
   );
   const found = [
     ...html.matchAll(/murl":"(https:[^"]+)"[\s\S]{0,280}?"t":"([^"]*)"/g),

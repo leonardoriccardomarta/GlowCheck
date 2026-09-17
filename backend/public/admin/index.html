@@ -377,13 +377,18 @@
       }).catch(() => ({ url: product.imageUrl, urls: [product.imageUrl] }));
       const candidates = [...new Set([...(hero.urls || []), hero.url, product.imageUrl].filter(Boolean))];
       let img = null;
-      for (const url of candidates) {
+      let bestPack = -1;
+      for (const url of candidates.slice(0, 8)) {
         const next = await farmImage(url).catch(() => null);
         if (!next) continue;
         const aspect = next.width / next.height;
-        if (aspect > 1.35) continue;
-        img = next;
-        break;
+        if (aspect > 1.15 || aspect < 0.38) continue;
+        const pack = aspect <= 0.82 ? 2 : aspect <= 0.95 ? 1 : 0;
+        if (pack > bestPack || (pack === bestPack && !img)) {
+          bestPack = pack;
+          img = next;
+          if (pack === 2) break;
+        }
       }
       if (!img) {
         for (const url of candidates) {
