@@ -8,8 +8,9 @@ import {
   checkAdminLogin,
   issueAdminToken,
 } from '../services/adminAuth';
-import { allowedFarmImage, farmLookup, farmScores } from '../services/farmCatalog';
+import { farmLookup, farmScores } from '../services/farmCatalog';
 import { farmScript } from '../services/farmCopy';
+import { allowedFarmImage, farmHeroImage } from '../services/farmHero';
 import { markFarmUsed, unusedFarmIdeas } from '../services/farmUsed';
 
 export const adminRouter = Router();
@@ -103,6 +104,25 @@ adminRouter.get('/farm/ideas', requireAdmin, async (_req, res) => {
   }
 });
 
+adminRouter.post('/farm/hero', requireAdmin, async (req, res) => {
+  const parsed = z
+    .object({
+      query: z.string().min(2).max(160),
+      fallback: z.string().url().max(1200).nullable().optional(),
+    })
+    .safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ ok: false, error: 'INVALID_HERO' });
+  }
+  try {
+    const url = (await farmHeroImage(parsed.data.query)) || parsed.data.fallback || null;
+    return res.json({ ok: true, url });
+  } catch (error) {
+    console.error(error);
+    return res.json({ ok: true, url: parsed.data.fallback || null });
+  }
+});
+
 adminRouter.post('/farm/used', requireAdmin, async (req, res) => {
   const parsed = z
     .object({
@@ -127,20 +147,38 @@ adminRouter.get('/farm/image', requireAdmin, async (req, res) => {
   try {
     const response = await fetch(raw, {
       signal: controller.signal,
-      headers: { 'User-Agent': 'GlowCheck/1.0 (tiktok farm; https://www.glow-check.com)' },
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+        Referer: new URL(raw).origin + '/',
+      },
     });
     if (!response.ok) {
       return res.status(404).json({ ok: false, error: 'IMAGE_NOT_FOUND' });
     }
-    const type = response.headers.get('content-type') || 'image/jpeg';
-    if (!type.startsWith('image/')) {
+    const type = response.headers.get('content-type') || '';
+    if (type.startsWith('text/') || type.includes('json')) {
       return res.status(400).json({ ok: false, error: 'NOT_IMAGE' });
     }
     const buf = Buffer.from(await response.arrayBuffer());
     if (buf.length > 6_000_000) {
       return res.status(413).json({ ok: false, error: 'IMAGE_TOO_LARGE' });
     }
-    res.setHeader('Content-Type', type);
+    const magic =
+      buf.length >= 12 && buf[0] === 0xff && buf[1] === 0xd8
+        ? 'image/jpeg'
+        : buf[0] === 0x89 && buf[1] === 0x50
+          ? 'image/png'
+          : buf[0] === 0x47 && buf[1] === 0x49
+            ? 'image/gif'
+            : buf.slice(8, 12).toString() === 'WEBP'
+              ? 'image/webp'
+              : null;
+    if (!type.startsWith('image/') && !magic) {
+      return res.status(400).json({ ok: false, error: 'NOT_IMAGE' });
+    }
+    res.setHeader('Content-Type', type.startsWith('image/') ? type : magic || 'image/jpeg');
     res.setHeader('Cache-Control', 'public, max-age=86400');
     return res.send(buf);
   } catch {

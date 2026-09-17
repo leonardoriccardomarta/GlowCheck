@@ -36,7 +36,7 @@ function ingredientsOf(product: {
 
 async function searchHost(host: string, terms: string): Promise<FarmHit[]> {
   const url =
-    `https://${host}/cgi/search.pl?action=process&search_simple=1&json=1&page_size=8&sort_by=unique_scans_n` +
+    `https://${host}/cgi/search.pl?action=process&search_simple=1&json=1&page_size=5&sort_by=unique_scans_n` +
     `&search_terms=${encodeURIComponent(terms)}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 4000);
@@ -89,9 +89,13 @@ async function lookupWithImage(barcode: string): Promise<FarmHit | null> {
   for (const host of hosts) {
     const url = `https://${host}/api/v2/product/${barcode}.json?fields=image_front_url,image_url,image_front_small_url`;
     try {
-      const response = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+      const response = await fetch(url, {
+        headers: { 'User-Agent': UA, Accept: 'application/json' },
+      });
       if (!response.ok) continue;
-      const json = (await response.json()) as { product?: { image_front_url?: string; image_url?: string; image_front_small_url?: string } };
+      const json = (await response.json()) as {
+        product?: { image_front_url?: string; image_url?: string; image_front_small_url?: string };
+      };
       imageUrl = json.product ? pickImage(json.product) : null;
       if (imageUrl) break;
     } catch {
@@ -112,7 +116,7 @@ export async function farmLookup(query: string): Promise<FarmHit[]> {
   if (q.length < 2) return [];
   if (isValidGtin(q)) {
     const hit = await lookupWithImage(q);
-    return hit ? [hit] : [];
+    return hit && hit.ingredients.length >= 2 ? [hit] : [];
   }
   const [beauty, food] = await Promise.all([
     searchHost('world.openbeautyfacts.org', q),
@@ -126,7 +130,7 @@ export async function farmLookup(query: string): Promise<FarmHit[]> {
     seen.add(key);
     out.push(hit);
   }
-  return out.slice(0, 10);
+  return out.filter((hit) => hit.ingredients.length >= 2).slice(0, 8);
 }
 
 export function farmScores(input: { name: string; ingredients: string[] }) {
@@ -176,25 +180,4 @@ export function farmScores(input: { name: string; ingredients: string[] }) {
       })),
     };
   });
-}
-
-const IMAGE_HOSTS = [
-  'images.openfoodfacts.org',
-  'images.openbeautyfacts.org',
-  'static.openfoodfacts.org',
-  'static.openbeautyfacts.org',
-  'world.openfoodfacts.org',
-  'world.openbeautyfacts.org',
-  'it.openbeautyfacts.org',
-];
-
-export function allowedFarmImage(raw: string) {
-  try {
-    const parsed = new URL(raw);
-    if (parsed.protocol !== 'https:') return false;
-    const host = parsed.hostname.toLowerCase();
-    return IMAGE_HOSTS.some((allowed) => host === allowed || host.endsWith(`.${allowed}`));
-  } catch {
-    return false;
-  }
 }

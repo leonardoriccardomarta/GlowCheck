@@ -3,7 +3,8 @@
   "framework": null,
   "functions": {
     "api/index.ts": {
-      "includeFiles": "public/**"
+      "includeFiles": "public/**",
+      "maxDuration": 30
     }
   },
   "rewrites": [

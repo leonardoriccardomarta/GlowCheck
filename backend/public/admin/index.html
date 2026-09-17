@@ -144,7 +144,7 @@
   </div>
   <div id="app">
     <h1>TikTok farm</h1>
-    <p>Unused Skintok ideas first. Already posted products stay hidden. Score slides are phone screenshots of the real scan screen.</p>
+    <p>Unused viral ideas with INCI only. Cover is a real pack shot, no text on the photo. Copy lives under the slides.</p>
     <h2>Unused ideas</h2>
     <div id="ideas" class="ideas"></div>
     <div class="row">
@@ -238,27 +238,89 @@
       return c;
     }
 
-    function drawCover(product, img, hook) {
+    function drawImageCover(ctx, img, x, y, w, h) {
+      const scale = Math.max(w / img.width, h / img.height);
+      const dw = img.width * scale, dh = img.height * scale;
+      ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+    }
+
+    function drawImageContain(ctx, img, x, y, w, h) {
+      const scale = Math.min(w / img.width, h / img.height);
+      const dw = img.width * scale, dh = img.height * scale;
+      ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+    }
+
+    function drawCover(img) {
       const c = makeCanvas();
       const ctx = c.getContext('2d');
-      const g = ctx.createLinearGradient(0, 0, 0, H);
-      g.addColorStop(0, '#1c1c1c');
-      g.addColorStop(1, '#111111');
-      ctx.fillStyle = g;
+      ctx.fillStyle = '#111111';
       ctx.fillRect(0, 0, W, H);
-      if (img) {
-        const scale = Math.min(780 / img.width, 900 / img.height);
-        const dw = img.width * scale, dh = img.height * scale;
-        ctx.drawImage(img, (W - dw) / 2, 520, dw, dh);
-      }
-      ctx.fillStyle = 'rgba(255,255,255,.62)';
+      if (!img) return c;
+      ctx.save();
+      ctx.filter = 'blur(42px) saturate(1.18) brightness(0.88)';
+      drawImageCover(ctx, img, -60, -60, W + 120, H + 120);
+      ctx.restore();
+      drawImageContain(ctx, img, 24, 24, W - 48, H - 48);
+      return c;
+    }
+
+    function roundFill(ctx, x, y, w, h, r, color) {
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, r);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    function drawCta(scanCanvas) {
+      const c = makeCanvas();
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#F6F1E8';
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.beginPath();
+      ctx.arc(W / 2 - 148, 148, 30, 0, Math.PI * 2);
+      ctx.fillStyle = NEON;
+      ctx.fill();
+      ctx.strokeStyle = '#111';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(W / 2 - 160, 136, 24, 18, 4);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(W / 2 - 148, 145, 5, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = INK;
+      ctx.textAlign = 'left';
+      ctx.font = '800 42px Poppins, sans-serif';
+      ctx.fillText('GlowCheck', W / 2 - 104, 164);
+
       ctx.textAlign = 'center';
-      ctx.font = '700 22px Poppins, sans-serif';
-      ctx.fillText('GLOWCHECK', W / 2, 120);
-      ctx.fillStyle = '#fff';
-      wrap(ctx, hook || 'POV: same formula. 4 skins.', W / 2, 200, 920, 58);
-      ctx.fillStyle = 'rgba(255,255,255,.8)';
-      wrap(ctx, [product.brand, product.name].filter(Boolean).join(' · '), W / 2, 1720, 860, 36, 700);
+      ctx.fillStyle = INK;
+      wrap(ctx, 'Stop guessing your skin.', W / 2, 250, 920, 68);
+      ctx.fillStyle = '#6B5E4E';
+      ctx.font = '600 28px Poppins, sans-serif';
+      ctx.fillText('One formula. Four skins. Your match.', W / 2, 430);
+
+      roundFill(ctx, 214, 548, 652, 1164, 80, 'rgba(0,0,0,.10)');
+      roundFill(ctx, 198, 520, 684, 1160, 74, '#111');
+
+      const sx = 218, sy = 548, sw = 644, sh = 1048;
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(sx, sy, sw, sh, 54);
+      ctx.clip();
+      const scale = Math.max(sw / scanCanvas.width, sh / scanCanvas.height);
+      const dw = scanCanvas.width * scale, dh = scanCanvas.height * scale;
+      ctx.drawImage(scanCanvas, sx + (sw - dw) / 2, sy + (sh - dh) / 2, dw, dh);
+      ctx.restore();
+      roundFill(ctx, W / 2 - 72, 562, 144, 28, 14, '#111');
+
+      roundFill(ctx, 140, 1748, W - 280, 92, 46, '#111');
+      ctx.fillStyle = NEON;
+      ctx.font = '700 32px Poppins, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('glow-check.com  >', W / 2, 1806);
       return c;
     }
 
@@ -337,25 +399,25 @@
     }
 
     async function render(product, scores, script, idea) {
-      const img = await farmImage(product.imageUrl).catch(() => null);
-      const cta = await loadImg('/admin/cta.png');
+      $('status').innerHTML = 'Finding a real pack shot…';
+      const hero = await api('/admin/farm/hero', {
+        query: [product.brand, product.name].filter(Boolean).join(' '),
+        fallback: product.imageUrl,
+      }).catch(() => ({ url: product.imageUrl }));
+      const img = await farmImage(hero.url || product.imageUrl).catch(() => null)
+        || (product.imageUrl && product.imageUrl !== hero.url
+          ? await farmImage(product.imageUrl).catch(() => null)
+          : null);
       const ranked = [...scores].sort((a, b) => b.score - a.score);
       const best = ranked[0];
       const worst = ranked[ranked.length - 1];
+      const bestScan = await captureScan(product, best);
+      const worstScan = await captureScan(product, worst);
       const canvases = [
-        { name: '01-cover.png', canvas: drawCover(product, img, script.slide_1_cover), caption: script.slide_1_cover },
-        { name: '02-score-' + best.id + '.png', canvas: await captureScan(product, best), caption: script.slide_2_first_skin_type.overlay_text },
-        { name: '03-score-' + worst.id + '.png', canvas: await captureScan(product, worst), caption: script.slide_3_second_skin_type.overlay_text },
-        { name: '04-cta.png', canvas: (() => {
-          const c = makeCanvas();
-          const ctx = c.getContext('2d');
-          ctx.fillStyle = CANVAS;
-          ctx.fillRect(0, 0, W, H);
-          const scale = Math.max(W / cta.width, H / cta.height);
-          const dw = cta.width * scale, dh = cta.height * scale;
-          ctx.drawImage(cta, (W - dw) / 2, (H - dh) / 2, dw, dh);
-          return c;
-        })(), caption: script.slide_4_cta },
+        { name: '01-cover.png', canvas: drawCover(img), caption: script.slide_1_cover },
+        { name: '02-score-' + best.id + '.png', canvas: bestScan, caption: script.slide_2_first_skin_type.overlay_text },
+        { name: '03-score-' + worst.id + '.png', canvas: worstScan, caption: script.slide_3_second_skin_type.overlay_text },
+        { name: '04-cta.png', canvas: drawCta(bestScan), caption: script.slide_4_cta },
       ];
       pack = { product, canvases, script, idea, scores };
       const board = $('board');
@@ -393,6 +455,7 @@
     }
 
     async function loadIdeas() {
+      $('ideas').innerHTML = '<p>Checking unused viral products with INCI…</p>';
       try {
         const json = await api('/admin/farm/ideas', null, 'GET');
         const box = $('ideas');
@@ -400,11 +463,16 @@
         (json.ideas || []).forEach((idea) => {
           const b = document.createElement('button');
           b.className = 'idea';
-          b.innerHTML = '<div><b>' + esc(idea.label) + '</b><span>' + esc(idea.angle) + '</span></div>';
+          const inci = idea.product && idea.product.ingredients ? idea.product.ingredients.length : 0;
+          b.innerHTML = '<div><b>' + esc(idea.label) + '</b><span>' + esc(idea.angle) + ' · ' + inci + ' INCI</span></div>';
           b.onclick = () => {
             selectedIdea = idea;
             $('q').value = idea.query;
-            $('search').click();
+            if (idea.product && idea.product.ingredients && idea.product.ingredients.length >= 2) {
+              build(idea.product);
+            } else {
+              $('search').click();
+            }
           };
           box.appendChild(b);
         });
