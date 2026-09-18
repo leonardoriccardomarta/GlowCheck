@@ -33,7 +33,7 @@ function viralName(product: { name: string; brand?: string | null }) {
   const kept = words.filter((word, i) => i === 0 || !FILLER.test(word));
   let core = kept.slice(0, 2).join(' ');
   if (!core) core = words.slice(0, 2).join(' ');
-  if (core.length > 24) core = kept[0] || words[0] || '';
+  if (core.length > 22) core = kept[0] || words[0] || '';
   if (brand && (!core || /^(moisturis?ing|hydrating|foaming|facial|body)\b/i.test(core))) {
     const shortBrand = brand.split(' ').slice(0, 2).join(' ');
     core = `${shortBrand} ${core}`.trim();
@@ -41,16 +41,29 @@ function viralName(product: { name: string; brand?: string | null }) {
   return core || brand || 'this formula';
 }
 
+function exactName(product: { name: string; brand?: string | null }) {
+  let name = (product.name || '').replace(/\s+/g, ' ').trim();
+  name = name.replace(/\s*\([^)]*\)/g, '').replace(/\s+\d+(\.\d+)?\s*(ml|fl\.?\s*oz)\b.*/i, '');
+  if (name.length > 48) return viralName(product);
+  return name || viralName(product);
+}
+
 function tag(brand: string | null) {
   const slug = (brand || 'skincare').toLowerCase().replace(/[^a-z0-9]+/g, '');
   return slug.slice(0, 18) || 'skincare';
 }
 
-function skinHook(row: FarmScoreRow) {
-  if (row.id === 'combination') return 'combo';
-  if (row.id === 'oily') return 'oily';
-  if (row.id === 'dry') return 'dry';
-  return 'sensitive';
+function productHash(name: string, brand: string | null) {
+  const fromName = name.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  if (fromName.length >= 4 && fromName.length <= 16) return fromName;
+  return tag(brand);
+}
+
+function titleSkin(row: FarmScoreRow) {
+  if (row.id === 'combination') return 'Combo';
+  if (row.id === 'oily') return 'Oily';
+  if (row.id === 'dry') return 'Dry';
+  return 'Sensitive';
 }
 
 function hashSkin(row: FarmScoreRow) {
@@ -65,69 +78,103 @@ function skinType(row: FarmScoreRow) {
   return `${row.label} Skin`;
 }
 
-function winLine(row: FarmScoreRow) {
-  if (row.score >= 88) return `${row.label}: ${row.score}. This is who it loves.`;
-  if (row.score >= 80) return `${row.label}: ${row.score}. Green. Keep swiping.`;
-  if (row.score >= 70) return `${row.label}: ${row.score}. Fine. Not a holy grail.`;
-  return `${row.label}: ${row.score}. Best of the four. Still mid.`;
+function wordCount(text: string) {
+  return text.replace(/[🚩👀✅⚠️💀]/g, '').trim().split(/\s+/).filter(Boolean).length;
 }
 
-function lossLine(row: FarmScoreRow, best: FarmScoreRow) {
-  const drop = best.score - row.score;
-  if (row.score < 55) return `${row.label}: ${row.score}. Same bottle. I'd skip it.`;
-  if (drop >= 12) return `${row.label}: ${row.score}. That's the drop.`;
+function firstWord(name: string) {
+  return name.split(/\s+/)[0] || name;
+}
+
+function problem(worst: FarmScoreRow) {
+  if ((worst.id === 'oily' || worst.id === 'combination') && worst.score < 70) {
+    return { phrase: 'breakouts', tag: 'breakouts' };
+  }
+  if (worst.id === 'oily' || worst.id === 'combination' || worst.occlusionAlert === 'high') {
+    return { phrase: 'clogged pores', tag: 'poreclogging' };
+  }
+  if (worst.id === 'dry') {
+    return { phrase: 'barrier repair', tag: 'barrierrepair' };
+  }
+  return { phrase: 'irritation', tag: 'irritation' };
+}
+
+function verdict(row: FarmScoreRow) {
+  const blob = (row.watches || []).join(' ').toLowerCase();
+  if (row.score >= 80 && row.watch === 0 && row.occlusionAlert !== 'high') {
+    if (row.id === 'oily' || row.id === 'combination') return 'Clean formula, zero pore-cloggers';
+    if (row.id === 'dry') return 'Clean barrier, zero flags';
+    return 'Clean match, zero flags';
+  }
+  if (row.occlusionAlert === 'high' && (row.id === 'oily' || row.id === 'combination')) {
+    return 'Heavy, pore-clogging risk';
+  }
   if (row.watch > 0) {
-    return `${row.label}: ${row.score}. ${row.watch} flag${row.watch === 1 ? '' : 's'} on this skin.`;
-  }
-  return `${row.label}: ${row.score}. If this is your skin, pause.`;
-}
-
-function postTitle(name: string, best: FarmScoreRow, worst: FarmScoreRow, version: 1 | 2) {
-  const gap = best.score - worst.score;
-  const a = skinHook(best);
-  const b = skinHook(worst);
-  if (version === 2) {
-    if (gap >= 10) return `${name} part 2: ${a} ${best.score} vs ${b} ${worst.score}`;
-    return `${name} on ${a} vs ${b} skin. Same bottle`;
-  }
-  if (gap >= 12) return `${name}: ${best.score} on ${a} skin, ${worst.score} on ${b}`;
-  if (worst.score < 60) return `${name} on ${b} skin? I scanned it`;
-  if (best.score >= 80) return `${name} scored ${best.score}, then I changed skin type`;
-  return `I scanned ${name} on 4 skins. Nobody got a 90`;
-}
-
-function caption(name: string, best: FarmScoreRow, worst: FarmScoreRow, version: 1 | 2, ht: string) {
-  const gap = best.score - worst.score;
-  const a = skinHook(best);
-  const b = skinHook(worst);
-  const lines: string[] = [];
-  if (version === 1) {
-    if (gap >= 12) {
-      lines.push(`Same ${name}. ${best.score} on ${a} skin. ${worst.score} on ${b}.`);
-      lines.push('One INCI. Two completely different matches.');
-    } else if (best.score >= 80 && worst.score >= 70) {
-      lines.push(`${name} looks like a holy grail in the comments.`);
-      lines.push(`I scanned it anyway. ${best.score} vs ${worst.score} depending on your skin.`);
-    } else if (worst.score < 60) {
-      lines.push(`I wouldn't call ${name} a match for ${b} skin.`);
-      lines.push(`${best.score} on ${a}. ${worst.score} on ${b}. Same bottle.`);
-    } else {
-      lines.push(`I scanned ${name} on 4 skin types. Nobody got a free 90.`);
-      lines.push(`${a} ${best.score}. ${b} ${worst.score}.`);
+    if (/fragrance|parfum|linalool|limonene|citronellol|geraniol/.test(blob)) {
+      return `${row.watch} fragrance flags`;
     }
-    lines.push("It's not a ranking. It's vs YOUR skin.");
-    lines.push('Comment the bottle you want next. I scan the INCI.');
-    lines.push('glow-check.com');
-  } else {
-    lines.push(`Part 2: ${name} on ${a} vs ${b} skin.`);
-    lines.push(`${best.score} vs ${worst.score}. Same formula. Different match.`);
-    if (gap >= 10) lines.push(`If you're ${b}, this is the slide people skip.`);
-    else lines.push(`Save this if your skin is ${a} or ${b}.`);
-    lines.push('Not sponsored. Just the INCI vs 4 skins.');
-    lines.push('glow-check.com. Drop yours in the comments.');
+    if (/alcohol/.test(blob)) return `${row.watch} alcohol flags`;
+    return `${row.watch} watch flags`;
   }
-  lines.push(`#skintok #skincare #${ht} #${hashSkin(worst)}`);
-  return lines.join('\n\n');
+  if (row.score < 60) return 'Not a match here';
+  return 'Not a perfect match';
+}
+
+function mark(score: number) {
+  if (score >= 80) return '✅';
+  if (score >= 60) return '⚠️';
+  return '💀';
+}
+
+function scoreLine(row: FarmScoreRow) {
+  return `${row.label}: ${row.score}/100 ${mark(row.score)} ${verdict(row)}`;
+}
+
+function postTitle(name: string, best: FarmScoreRow, worst: FarmScoreRow) {
+  const a = titleSkin(best);
+  const b = titleSkin(worst);
+  const gap = best.score - worst.score;
+  const breakout = (worst.id === 'oily' || worst.id === 'combination') && worst.score < 65;
+  const make = (n: string) => {
+    if (breakout) return `Is ${n} breaking you out? 👀`;
+    if (gap >= 12) return `${n}: ${best.score} vs ${worst.score} depending on skin`;
+    return `${n} on ${a} vs ${b} Skin 🚩`;
+  };
+  let title = make(name);
+  if (wordCount(title) > 7) title = make(firstWord(name));
+  return title;
+}
+
+function coverLine(name: string, best: FarmScoreRow, worst: FarmScoreRow) {
+  const a = titleSkin(best);
+  const b = titleSkin(worst);
+  const shock = worst.score < 70 || best.score - worst.score >= 12;
+  const make = (n: string) =>
+    shock ? `Is ${n} actually safe for ${b}? 🚩` : `${n}: ${a} vs ${b} 👀`;
+  let line = make(name);
+  if (wordCount(line) > 8) line = make(firstWord(name));
+  return line;
+}
+
+function caption(product: Pick<FarmHit, 'name' | 'brand'>, best: FarmScoreRow, worst: FarmScoreRow) {
+  const exact = exactName(product);
+  const name = viralName(product);
+  const issue = problem(worst);
+  const a = titleSkin(best).toLowerCase();
+  const b = titleSkin(worst).toLowerCase();
+  const hook = `I scanned ${exact} for ${issue.phrase}.`;
+  const contrast = `${best.score} on ${a} skin. ${worst.score} on ${b} skin. Same formula.`;
+  const cta = "Drop your moisturizer below, I'll check the INCI";
+  const hashes = [
+    `#${productHash(name, product.brand)}`,
+    '#skintok',
+    `#${hashSkin(best)}`,
+    `#${hashSkin(worst)}`,
+    `#${issue.tag}`,
+  ];
+  const unique = [...new Set(hashes)];
+  while (unique.length < 5) unique.push('#skincare');
+  return [hook, contrast, cta, unique.slice(0, 5).join(' ')].join('\n\n');
 }
 
 export function farmWhy(row: FarmScoreRow) {
@@ -156,20 +203,20 @@ export function farmScript(
   product: Pick<FarmHit, 'name' | 'brand'>,
   scores: FarmScoreRow[],
   pair?: [FarmScoreRow, FarmScoreRow],
-  version: 1 | 2 = 1,
+  _version: 1 | 2 = 1,
 ) {
   const ranked = pair ? [...pair].sort((a, b) => b.score - a.score) : [...scores].sort((a, b) => b.score - a.score);
   const best = ranked[0];
   const worst = ranked[ranked.length - 1];
   const name = viralName(product);
-  const ht = tag(product.brand);
-  const overlayBest = winLine(best);
-  const overlayWorst = lossLine(worst, best);
+  const slide1 = coverLine(name, best, worst);
+  const overlayBest = scoreLine(best);
+  const overlayWorst = scoreLine(worst);
 
   return {
-    post_title: postTitle(name, best, worst, version),
-    tiktok_caption: caption(name, best, worst, version, ht),
-    slide_1_cover: '',
+    post_title: postTitle(name, best, worst),
+    tiktok_caption: caption(product, best, worst),
+    slide_1_cover: slide1,
     slide_2_first_skin_type: {
       skin_type: skinType(best),
       score: best.score,
@@ -181,11 +228,11 @@ export function farmScript(
       overlay_text: overlayWorst,
     },
     slide_4_cta: '',
-    slide_copy: ['2. ' + overlayBest, '3. ' + overlayWorst].join('\n'),
+    slide_copy: ['1. ' + slide1, '2. ' + overlayBest, '3. ' + overlayWorst].join('\n'),
     all_skins: scores.map((row) => ({
       skin_type: skinType(row),
       score: row.score,
-      overlay_text: row.score >= (best.score + worst.score) / 2 ? winLine(row) : lossLine(row, best),
+      overlay_text: scoreLine(row),
     })),
   };
 }
