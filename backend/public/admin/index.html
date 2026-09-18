@@ -679,6 +679,21 @@
         const blob = await new Promise((resolve) => item.canvas.toBlob(resolve, 'image/png'));
         zip.file('v2/' + item.name, blob);
       }
+      function copyPack(script) {
+        return (
+          'TITLE\n' + (script.post_title || '') + '\n\n' +
+          'CAPTION\n' + (script.tiktok_caption || '') + '\n\n' +
+          'SLIDES\n' + (script.slide_copy || '') + '\n'
+        );
+      }
+      zip.file('v1/title.txt', pack.script1.post_title || '');
+      zip.file('v1/caption.txt', pack.script1.tiktok_caption || '');
+      zip.file('v1/slides.txt', pack.script1.slide_copy || '');
+      zip.file('v1/copy.txt', copyPack(pack.script1));
+      zip.file('v2/title.txt', pack.script2.post_title || '');
+      zip.file('v2/caption.txt', pack.script2.tiktok_caption || '');
+      zip.file('v2/slides.txt', pack.script2.slide_copy || '');
+      zip.file('v2/copy.txt', copyPack(pack.script2));
       const out = await zip.generateAsync({ type: 'blob' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(out);
