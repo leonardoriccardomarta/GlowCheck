@@ -89,8 +89,8 @@ adminRouter.post('/farm/build', requireAdmin, (req, res) => {
     imageUrl: parsed.data.imageUrl ?? null,
   };
   const pairs = farmPairs(scores);
-  const script = farmScript(product, scores, pairs.v1);
-  const script2 = farmScript(product, scores, pairs.v2);
+  const script = farmScript(product, scores, pairs.v1, 1);
+  const script2 = farmScript(product, scores, pairs.v2, 2);
   return res.json({
     ok: true,
     product,
