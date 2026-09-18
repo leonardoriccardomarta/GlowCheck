@@ -126,12 +126,14 @@ function postTitle(name: string, best: FarmScoreRow, worst: FarmScoreRow) {
 function coverLine(name: string, best: FarmScoreRow, worst: FarmScoreRow) {
   const a = titleSkin(best);
   const b = titleSkin(worst);
-  const shock = worst.score < 70 || best.score - worst.score >= 12;
-  const make = (n: string) =>
-    shock ? `Is ${n} actually safe for ${b}? 🚩` : `${n}: ${a} vs ${b} 👀`;
-  let line = make(name);
-  if (wordCount(line) > 8) line = make(firstWord(name));
-  return line;
+  const gap = best.score - worst.score;
+  const pores =
+    worst.occlusionAlert === 'high' || worst.id === 'oily' || worst.id === 'combination';
+  if (gap >= 12 && best.score >= 80) {
+    return `Rated ${best.score}/100 for ${a}... but RUINS ${b} skin? 👀`;
+  }
+  if (pores) return 'Stop using this if you have clogged pores 🛑';
+  return `Why your skin is still breaking out using ${name} 🚩`;
 }
 
 function caption(product: Pick<FarmHit, 'name' | 'brand'>, best: FarmScoreRow, worst: FarmScoreRow) {
