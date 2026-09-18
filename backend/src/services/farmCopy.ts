@@ -111,14 +111,12 @@ function scoreLine(row: FarmScoreRow) {
 }
 
 function postTitle(name: string, best: FarmScoreRow, worst: FarmScoreRow) {
-  const a = titleSkin(best);
-  const b = titleSkin(worst);
   const gap = best.score - worst.score;
   const breakout = (worst.id === 'oily' || worst.id === 'combination') && worst.score < 65;
   const make = (n: string) => {
     if (breakout) return `Is ${n} breaking you out? 👀`;
     if (gap >= 12) return `${n}: ${best.score} vs ${worst.score} depending on skin`;
-    return `${n} on ${a} vs ${b} Skin 🚩`;
+    return `Is ${n} actually a match? 👀`;
   };
   let title = make(name);
   if (wordCount(title) > 7) title = make(firstWord(name));
