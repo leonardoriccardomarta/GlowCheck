@@ -41,13 +41,6 @@ function viralName(product: { name: string; brand?: string | null }) {
   return core || brand || 'this formula';
 }
 
-function exactName(product: { name: string; brand?: string | null }) {
-  let name = (product.name || '').replace(/\s+/g, ' ').trim();
-  name = name.replace(/\s*\([^)]*\)/g, '').replace(/\s+\d+(\.\d+)?\s*(ml|fl\.?\s*oz)\b.*/i, '');
-  if (name.length > 48) return viralName(product);
-  return name || viralName(product);
-}
-
 function tag(brand: string | null) {
   const slug = (brand || 'skincare').toLowerCase().replace(/[^a-z0-9]+/g, '');
   return slug.slice(0, 18) || 'skincare';
@@ -84,19 +77,6 @@ function wordCount(text: string) {
 
 function firstWord(name: string) {
   return name.split(/\s+/)[0] || name;
-}
-
-function problem(worst: FarmScoreRow) {
-  if ((worst.id === 'oily' || worst.id === 'combination') && worst.score < 70) {
-    return { phrase: 'breakouts', tag: 'breakouts' };
-  }
-  if (worst.id === 'oily' || worst.id === 'combination' || worst.occlusionAlert === 'high') {
-    return { phrase: 'clogged pores', tag: 'poreclogging' };
-  }
-  if (worst.id === 'dry') {
-    return { phrase: 'barrier repair', tag: 'barrierrepair' };
-  }
-  return { phrase: 'irritation', tag: 'irritation' };
 }
 
 function verdict(row: FarmScoreRow) {
@@ -157,24 +137,23 @@ function coverLine(name: string, best: FarmScoreRow, worst: FarmScoreRow) {
 }
 
 function caption(product: Pick<FarmHit, 'name' | 'brand'>, best: FarmScoreRow, worst: FarmScoreRow) {
-  const exact = exactName(product);
-  const name = viralName(product);
-  const issue = problem(worst);
-  const a = titleSkin(best).toLowerCase();
-  const b = titleSkin(worst).toLowerCase();
-  const hook = `I scanned ${exact} for ${issue.phrase}.`;
-  const contrast = `${best.score} on ${a} skin. ${worst.score} on ${b} skin. Same formula.`;
-  const cta = "Drop your moisturizer below, I'll check the INCI";
-  const hashes = [
-    `#${productHash(name, product.brand)}`,
-    '#skintok',
-    `#${hashSkin(best)}`,
-    `#${hashSkin(worst)}`,
-    `#${issue.tag}`,
-  ];
-  const unique = [...new Set(hashes)];
-  while (unique.length < 5) unique.push('#skincare');
-  return [hook, contrast, cta, unique.slice(0, 5).join(' ')].join('\n\n');
+  const a = titleSkin(best);
+  const b = titleSkin(worst);
+  const brandTag = productHash(viralName(product), product.brand);
+  const skinTag = hashSkin(worst);
+  const tail = ` on ${a} vs ${b} Skin 🚩 #${brandTag} #skintok #${skinTag}`;
+  let name = viralName(product).replace(/\s+/g, ' ').trim();
+  const len = (value: string) => [...value].length;
+  while (name && len(name + tail) > 80) {
+    const parts = name.split(' ');
+    if (parts.length > 1) name = parts.slice(0, -1).join(' ');
+    else {
+      const room = Math.max(2, 80 - len(tail));
+      name = [...name].slice(0, room).join('').trim();
+      break;
+    }
+  }
+  return `${name}${tail}`.replace(/\s+/g, ' ').trim();
 }
 
 export function farmWhy(row: FarmScoreRow) {
