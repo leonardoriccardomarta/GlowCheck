@@ -1,12 +1,8 @@
 import sharp from 'sharp';
-import { env } from '../config/env';
 import { allowedFarmImage } from './farmHero';
 
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
-
-const W = 1080;
-const H = 1920;
 
 async function fetchBytes(url: string) {
   if (!allowedFarmImage(url)) return null;
@@ -50,145 +46,34 @@ async function cornerLuma(buf: Buffer) {
   return lum / spots.length;
 }
 
-async function fullBleed(src: Buffer) {
-  return sharp(src)
-    .resize(W, H, { fit: 'cover', position: 'centre' })
-    .modulate({ saturation: 1.16, brightness: 1.03 })
-    .sharpen()
-    .png()
-    .toBuffer();
-}
-
-async function packshotCover(src: Buffer) {
-  let product = src;
-  try {
-    product = await sharp(src).trim({ threshold: 24, background: '#ffffff' }).toBuffer();
-  } catch {
-    product = src;
+async function knockWhite(src: Buffer) {
+  const { data, info } = await sharp(src).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const px = Buffer.from(data);
+  for (let i = 0; i < px.length; i += 4) {
+    if (px[i] > 242 && px[i + 1] > 242 && px[i + 2] > 242) px[i + 3] = 0;
   }
-  const wash = await sharp(product)
-    .resize(W, H, { fit: 'cover' })
-    .modulate({ saturation: 1.42, brightness: 0.84 })
-    .blur(42)
-    .toBuffer();
-  const fitted = await sharp(product)
-    .resize(Math.round(W * 0.9), Math.round(H * 0.78), { fit: 'inside' })
-    .sharpen()
-    .png()
-    .toBuffer();
-  const meta = await sharp(fitted).metadata();
-  const left = Math.round((W - (meta.width || W)) / 2);
-  const top = Math.round((H - (meta.height || H)) / 2);
-  return sharp(wash)
-    .composite([{ input: fitted, left, top }])
-    .png()
-    .toBuffer();
+  return sharp(px, { raw: { width: info.width, height: info.height, channels: 4 } }).png().toBuffer();
 }
 
 export async function farmCoverImage(imageUrl: string, _name?: string): Promise<Buffer | null> {
   const src = await fetchBytes(imageUrl);
   if (!src) return null;
-  const rotated = await sharp(src).rotate().toBuffer();
-  const luma = await cornerLuma(rotated);
-  const local = luma > 205 ? await packshotCover(rotated) : await fullBleed(rotated);
-  const flux = await fluxRedux(local);
-  if (!flux) return local;
-  return sharp(flux).resize(W, H, { fit: 'cover', position: 'centre' }).png().toBuffer();
-}
-
-type FalImage = { url?: string };
-type FalResponse = {
-  images?: FalImage[];
-  status?: string;
-  request_id?: string;
-  status_url?: string;
-  response_url?: string;
-};
-
-async function falJson(url: string, key: string, init?: RequestInit) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 20000);
+  let bottle = await sharp(src).rotate().ensureAlpha().toBuffer();
   try {
-    const response = await fetch(url, {
-      ...init,
-      signal: controller.signal,
-      headers: {
-        Authorization: `Key ${key}`,
-        'Content-Type': 'application/json',
-        ...(init?.headers || {}),
-      },
-    });
-    if (!response.ok) return null;
-    return (await response.json()) as FalResponse;
+    bottle = await sharp(bottle).trim({ threshold: 20, background: '#ffffff' }).toBuffer();
   } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
+    /* keep */
   }
-}
-
-async function downloadImage(url: string) {
-  if (url.startsWith('data:')) {
-    const b64 = url.split(',')[1];
-    return b64 ? Buffer.from(b64, 'base64') : null;
-  }
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12000);
-  try {
-    const response = await fetch(url, { signal: controller.signal });
-    if (!response.ok) return null;
-    return Buffer.from(await response.arrayBuffer());
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-const FAL_MODEL = 'fal-ai/flux-1/schnell/redux';
-
-async function fluxRedux(coverPng: Buffer) {
-  const key = env.FAL_KEY?.trim();
-  if (!key) return null;
-  const jpeg = await sharp(coverPng)
-    .resize(768, 1344, { fit: 'cover', position: 'centre' })
-    .jpeg({ quality: 86 })
-    .toBuffer();
-  const payload = {
-    image_url: `data:image/jpeg;base64,${jpeg.toString('base64')}`,
-    image_size: 'portrait_16_9',
-    num_inference_steps: 4,
-    output_format: 'png',
-    sync_mode: true,
-    num_images: 1,
-  };
-  let json = await falJson(`https://fal.run/${FAL_MODEL}`, key, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-  if (!json?.images?.length) {
-    json =
-      (await falJson(`https://queue.fal.run/${FAL_MODEL}`, key, {
-        method: 'POST',
-        body: JSON.stringify({ ...payload, sync_mode: false }),
-      })) || json;
-  }
-  if (json?.request_id && !json.images?.length) {
-    const statusUrl =
-      json.status_url || `https://queue.fal.run/${FAL_MODEL}/requests/${json.request_id}/status`;
-    const resultUrl =
-      json.response_url || `https://queue.fal.run/${FAL_MODEL}/requests/${json.request_id}`;
-    for (let i = 0; i < 16; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 900));
-      const status = await falJson(statusUrl, key);
-      if (status?.status === 'COMPLETED') {
-        json = (await falJson(resultUrl, key)) || json;
-        break;
-      }
-      if (status?.status === 'FAILED') return null;
+  if ((await cornerLuma(bottle)) > 200) {
+    bottle = await knockWhite(bottle);
+    try {
+      bottle = await sharp(bottle).trim().toBuffer();
+    } catch {
+      /* keep */
     }
   }
-  const url = json?.images?.[0]?.url;
-  if (!url) return null;
-  return downloadImage(url);
+  return sharp(bottle)
+    .resize(720, 900, { fit: 'inside', withoutEnlargement: true })
+    .png()
+    .toBuffer();
 }

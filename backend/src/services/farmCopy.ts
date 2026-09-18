@@ -65,15 +65,9 @@ function skinType(row: FarmScoreRow) {
   return `${row.label} Skin`;
 }
 
-function coverLine(name: string, best: FarmScoreRow, worst: FarmScoreRow, version: 1 | 2) {
-  if (version === 2) return `${name}. ${best.label} vs ${worst.label}. Same INCI.`;
-  if (best.score - worst.score >= 12) return `${name}. Four skins. The scores split.`;
-  return `${name}. I scanned it on 4 skin types.`;
-}
-
 function winLine(row: FarmScoreRow) {
   if (row.score >= 88) return `${row.label}: ${row.score}. This is who it loves.`;
-  if (row.score >= 80) return `${row.label}: ${row.score}. Green — keep swiping.`;
+  if (row.score >= 80) return `${row.label}: ${row.score}. Green. Keep swiping.`;
   if (row.score >= 70) return `${row.label}: ${row.score}. Fine. Not a holy grail.`;
   return `${row.label}: ${row.score}. Best of the four. Still mid.`;
 }
@@ -98,7 +92,7 @@ function postTitle(name: string, best: FarmScoreRow, worst: FarmScoreRow, versio
   }
   if (gap >= 12) return `${name}: ${best.score} on ${a} skin, ${worst.score} on ${b}`;
   if (worst.score < 60) return `${name} on ${b} skin? I scanned it`;
-  if (best.score >= 80) return `${name} scored ${best.score} — then I changed skin type`;
+  if (best.score >= 80) return `${name} scored ${best.score}, then I changed skin type`;
   return `I scanned ${name} on 4 skins. Nobody got a 90`;
 }
 
@@ -122,7 +116,7 @@ function caption(name: string, best: FarmScoreRow, worst: FarmScoreRow, version:
       lines.push(`${a} ${best.score}. ${b} ${worst.score}.`);
     }
     lines.push("It's not a ranking. It's vs YOUR skin.");
-    lines.push('Comment the bottle you want next — I scan the INCI.');
+    lines.push('Comment the bottle you want next. I scan the INCI.');
     lines.push('glow-check.com');
   } else {
     lines.push(`Part 2: ${name} on ${a} vs ${b} skin.`);
@@ -130,7 +124,7 @@ function caption(name: string, best: FarmScoreRow, worst: FarmScoreRow, version:
     if (gap >= 10) lines.push(`If you're ${b}, this is the slide people skip.`);
     else lines.push(`Save this if your skin is ${a} or ${b}.`);
     lines.push('Not sponsored. Just the INCI vs 4 skins.');
-    lines.push('glow-check.com — drop yours in the comments.');
+    lines.push('glow-check.com. Drop yours in the comments.');
   }
   lines.push(`#skintok #skincare #${ht} #${hashSkin(worst)}`);
   return lines.join('\n\n');
@@ -169,14 +163,13 @@ export function farmScript(
   const worst = ranked[ranked.length - 1];
   const name = viralName(product);
   const ht = tag(product.brand);
-  const slide_1_cover = coverLine(name, best, worst, version);
   const overlayBest = winLine(best);
   const overlayWorst = lossLine(worst, best);
 
   return {
     post_title: postTitle(name, best, worst, version),
     tiktok_caption: caption(name, best, worst, version, ht),
-    slide_1_cover,
+    slide_1_cover: '',
     slide_2_first_skin_type: {
       skin_type: skinType(best),
       score: best.score,
@@ -188,7 +181,7 @@ export function farmScript(
       overlay_text: overlayWorst,
     },
     slide_4_cta: '',
-    slide_copy: ['1. ' + slide_1_cover, '2. ' + overlayBest, '3. ' + overlayWorst].join('\n'),
+    slide_copy: ['2. ' + overlayBest, '3. ' + overlayWorst].join('\n'),
     all_skins: scores.map((row) => ({
       skin_type: skinType(row),
       score: row.score,
