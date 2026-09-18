@@ -151,7 +151,7 @@
   </div>
   <div id="app">
     <h1>TikTok farm</h1>
-    <p>Unused viral ideas with INCI only. Cover is the real bottle on a studio slide. Two carousels per product: same hook + CTA, different skins in the middle.</p>
+    <p>Unused viral ideas with INCI only. Cover is always the GlowCheck setup (logo + product name), no pack shot. Two carousels per product: same hook + CTA, different skins in the middle.</p>
     <h2>Unused ideas</h2>
     <div id="ideas" class="ideas"></div>
     <div class="row">
@@ -259,33 +259,92 @@
       return c;
     }
 
-    function drawImageCover(ctx, img, x, y, w, h) {
-      const scale = Math.max(w / img.width, h / img.height);
-      const dw = img.width * scale, dh = img.height * scale;
-      ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+    function coverName(product) {
+      const brand = (product.brand || '').split(',')[0].trim();
+      let name = String(product.name || '').replace(/\s+/g, ' ').trim();
+      name = name.replace(/\s*\([^)]*\)/g, '').replace(/\s+\d+\s*ml\b.*/i, '');
+      if (brand && name.toLowerCase().startsWith(brand.toLowerCase())) {
+        name = name.slice(brand.length).trim().replace(/^[-–—]\s*/, '');
+      }
+      return { brand, name: name || product.name || 'This formula' };
     }
 
-    function drawCover(img) {
+    function wrapLines(ctx, text, max, size, weight) {
+      ctx.font = (weight || 800) + ' ' + size + 'px Poppins, sans-serif';
+      const words = String(text || '').split(' ');
+      const lines = [];
+      let line = '';
+      for (const word of words) {
+        const test = line ? line + ' ' + word : word;
+        if (ctx.measureText(test).width > max && line) {
+          lines.push(line);
+          line = word;
+        } else line = test;
+      }
+      if (line) lines.push(line);
+      return lines.slice(0, 5);
+    }
+
+    async function drawBrandCover(product) {
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
       const c = makeCanvas();
       const ctx = c.getContext('2d');
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
-      ctx.fillStyle = '#111111';
+      ctx.fillStyle = CANVAS;
       ctx.fillRect(0, 0, W, H);
-      if (!img) return c;
+      ctx.textAlign = 'center';
+      const logo = await loadImg('/admin/logo.png?v=8');
+      const logoSize = 156;
+      const logoX = (W - logoSize) / 2;
+      const logoY = 268;
       ctx.save();
-      ctx.filter = 'blur(28px) saturate(1.35) brightness(0.72)';
-      drawImageCover(ctx, img, -40, -40, W + 80, H + 80);
+      ctx.beginPath();
+      ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize * 0.37, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
       ctx.restore();
-      ctx.save();
-      ctx.filter = 'contrast(1.12) saturate(1.14) brightness(1.03)';
-      drawImageCover(ctx, img, 0, 0, W, H);
-      ctx.restore();
-      const vig = ctx.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.28, W / 2, H * 0.52, Math.min(W, H) * 0.9);
-      vig.addColorStop(0, 'rgba(0,0,0,0)');
-      vig.addColorStop(1, 'rgba(0,0,0,0.28)');
-      ctx.fillStyle = vig;
-      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = INK;
+      ctx.font = '700 44px Poppins, sans-serif';
+      ctx.fillText('GlowCheck', W / 2, 492);
+      ctx.fillStyle = MUTED;
+      ctx.font = '600 28px Poppins, sans-serif';
+      ctx.fillText('I scanned', W / 2, 690);
+      const { brand, name } = coverName(product);
+      if (brand) {
+        ctx.fillStyle = MUTED;
+        ctx.font = '700 28px Poppins, sans-serif';
+        ctx.letterSpacing = '4px';
+        ctx.fillText(brand.toUpperCase(), W / 2, 748);
+        ctx.letterSpacing = '0px';
+      }
+      ctx.fillStyle = INK;
+      const size = name.length > 28 ? 68 : 78;
+      const lines = wrapLines(ctx, name, W - 160, size, 800);
+      let y = brand ? 860 : 820;
+      lines.forEach((line) => {
+        ctx.font = '800 ' + size + 'px Poppins, sans-serif';
+        ctx.fillText(line, W / 2, y);
+        y += size + 14;
+      });
+      ctx.fillStyle = MUTED;
+      ctx.font = '600 34px Poppins, sans-serif';
+      ctx.fillText('One formula. Four skins.', W / 2, 1500);
+      const pillW = 620, pillH = 88, pillX = (W - pillW) / 2, pillY = 1640;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(pillX, pillY, pillW, pillH, 44);
+      else {
+        ctx.moveTo(pillX + 44, pillY);
+        ctx.arcTo(pillX + pillW, pillY, pillX + pillW, pillY + pillH, 44);
+        ctx.arcTo(pillX + pillW, pillY + pillH, pillX, pillY + pillH, 44);
+        ctx.arcTo(pillX, pillY + pillH, pillX, pillY, 44);
+        ctx.arcTo(pillX, pillY, pillX + pillW, pillY, 44);
+      }
+      ctx.fillStyle = INK;
+      ctx.fill();
+      ctx.fillStyle = NEON;
+      ctx.font = '800 32px Poppins, sans-serif';
+      ctx.fillText('glow-check.com', W / 2, pillY + 58);
       return c;
     }
 
@@ -423,53 +482,8 @@
     }
 
     async function render(product, scores, script1, script2, idea) {
-      $('status').innerHTML = 'Finding a real pack shot…';
-      const hero = await api('/admin/farm/hero', {
-        query: [product.brand, product.name].filter(Boolean).join(' '),
-        fallback: product.imageUrl,
-      }).catch(() => ({ url: product.imageUrl, urls: [product.imageUrl] }));
-      const candidates = [...new Set([...(hero.urls || []), hero.url, product.imageUrl].filter(Boolean))];
-      let img = null;
-      let pickedUrl = product.imageUrl || null;
-      let bestPack = -1;
-      for (const url of candidates.slice(0, 8)) {
-        const next = await farmImage(url).catch(() => null);
-        if (!next) continue;
-        const aspect = next.width / next.height;
-        if (aspect > 1.15 || aspect < 0.38) continue;
-        const packScore = aspect <= 0.82 ? 2 : aspect <= 0.95 ? 1 : 0;
-        if (packScore > bestPack || (packScore === bestPack && !img)) {
-          bestPack = packScore;
-          img = next;
-          pickedUrl = url;
-          if (packScore === 2) break;
-        }
-      }
-      if (!img) {
-        for (const url of candidates) {
-          img = await farmImage(url).catch(() => null);
-          if (img) {
-            pickedUrl = url;
-            break;
-          }
-        }
-      }
-      $('status').innerHTML = 'Building the cover with FLUX…';
-      let cover = drawCover(img);
-      if (pickedUrl) {
-        try {
-          const made = await api('/admin/farm/cover', {
-            imageUrl: pickedUrl,
-            name: [product.brand, product.name].filter(Boolean).join(' '),
-          });
-          if (made.image) {
-            const pic = await loadImg(made.image);
-            const c = makeCanvas();
-            c.getContext('2d').drawImage(pic, 0, 0, W, H);
-            cover = c;
-          }
-        } catch (e) {}
-      }
+      $('status').innerHTML = 'Building the GlowCheck cover…';
+      const cover = await drawBrandCover(product);
       const cta = await drawCta();
       const ranked = [...scores].sort((a, b) => b.score - a.score);
       const scans = {};
