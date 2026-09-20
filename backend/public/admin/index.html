@@ -532,7 +532,7 @@
       return c;
     }
 
-    function drawPill(ctx, x, y, w, h) {
+    function pillPath(ctx, x, y, w, h) {
       ctx.beginPath();
       if (ctx.roundRect) ctx.roundRect(x, y, w, h, h / 2);
       else {
@@ -542,6 +542,10 @@
         ctx.arcTo(x, y + h, x, y, h / 2);
         ctx.arcTo(x, y, x + w, y, h / 2);
       }
+    }
+
+    function drawPill(ctx, x, y, w, h) {
+      pillPath(ctx, x, y, w, h);
       ctx.fill();
     }
 
@@ -597,7 +601,13 @@
         logging: false,
       });
       host.innerHTML = '';
+      ctx.fillStyle = opts.bg;
+      drawPill(ctx, x, y, w, h);
+      ctx.save();
+      pillPath(ctx, x, y, w, h);
+      ctx.clip();
       ctx.drawImage(shot, x, y, w, h);
+      ctx.restore();
     }
 
     async function drawUrlPill(ctx) {
