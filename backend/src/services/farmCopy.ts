@@ -11,6 +11,7 @@ export type FarmScoreRow = {
   listed: number;
   occlusionAlert: 'low' | 'medium' | 'high';
   watches: string[];
+  fits?: string[];
 };
 
 const FILLER =
@@ -111,16 +112,10 @@ function scoreLine(row: FarmScoreRow) {
 }
 
 function postTitle(name: string, best: FarmScoreRow, worst: FarmScoreRow) {
-  const gap = best.score - worst.score;
-  const breakout = (worst.id === 'oily' || worst.id === 'combination') && worst.score < 65;
-  const make = (n: string) => {
-    if (breakout) return `Is ${n} breaking you out? 👀`;
-    if (gap >= 12) return `${n}: ${best.score} vs ${worst.score} depending on skin`;
-    return `Is ${n} actually a match? 👀`;
-  };
-  let title = make(name);
-  if (wordCount(title) > 7) title = make(firstWord(name));
-  return title;
+  const a = titleSkin(best);
+  const b = titleSkin(worst);
+  const n = wordCount(`${name}: ${a} vs ${b} Skin`) > 7 ? firstWord(name) : name;
+  return `${n}: ${a} vs ${b} Skin 🚩`;
 }
 
 function coverLine(name: string, best: FarmScoreRow, worst: FarmScoreRow) {
@@ -136,24 +131,47 @@ function coverLine(name: string, best: FarmScoreRow, worst: FarmScoreRow) {
   return `Why your skin is still breaking out using ${name} 🚩`;
 }
 
-function caption(product: Pick<FarmHit, 'name' | 'brand'>, best: FarmScoreRow, worst: FarmScoreRow) {
-  const a = titleSkin(best);
-  const b = titleSkin(worst);
-  const brandTag = productHash(viralName(product), product.brand);
-  const skinTag = hashSkin(worst);
-  const tail = ` on ${a} vs ${b} Skin 🚩 #${brandTag} #skintok #${skinTag}`;
-  let name = viralName(product).replace(/\s+/g, ' ').trim();
-  const len = (value: string) => [...value].length;
-  while (name && len(name + tail) > 80) {
-    const parts = name.split(' ');
-    if (parts.length > 1) name = parts.slice(0, -1).join(' ');
-    else {
-      const room = Math.max(2, 80 - len(tail));
-      name = [...name].slice(0, room).join('').trim();
-      break;
-    }
+function bulletWhy(row: FarmScoreRow) {
+  const names = [...(row.watches || []), ...(row.fits || [])];
+  const hit = names.find((item) =>
+    /ceramide|niacinamide|salicylic|fragrance|dimethicone|alcohol|retin/i.test(item),
+  );
+  if (row.occlusionAlert === 'high') {
+    return hit ? `${hit}: pore-clogging risk.` : 'Occlusive, comedogenic risk.';
   }
-  return `${name}${tail}`.replace(/\s+/g, ' ').trim();
+  if (row.watches?.length) {
+    return `${hit || row.watches[0]} flagged for this skin.`;
+  }
+  if (row.score >= 80) {
+    return hit ? `${hit} supports this profile.` : 'Barrier-friendly, low comedogenicity.';
+  }
+  return hit ? `${hit} on the INCI.` : 'Check comedogenicity vs your skin.';
+}
+
+function caption(product: Pick<FarmHit, 'name' | 'brand'>, best: FarmScoreRow, worst: FarmScoreRow) {
+  let exact = (product.name || '').replace(/\s+/g, ' ').trim();
+  exact = exact.replace(/\s*\([^)]*\)/g, '').replace(/\s+\d+(\.\d+)?\s*(ml|fl\.?\s*oz)\b.*/i, '');
+  if (exact.length > 52) exact = viralName(product);
+  const name = viralName(product);
+  const hook = 'Breaking out or saving your barrier? We analyzed the full INCI formula.';
+  const intro = `${hook} ${exact}.`;
+  const bullets = [
+    `• ${best.label}: ${best.score}/100. ${bulletWhy(best)}`,
+    `• ${worst.label}: ${worst.score}/100. ${bulletWhy(worst)}`,
+  ];
+  const cta = 'Quale prodotto scannerizziamo nel prossimo video? Scrivilo nei commenti 👇';
+  const hashes = [
+    '#skintok',
+    `#${productHash(name, product.brand)}`,
+    '#poreclogging',
+    `#${hashSkin(best)}`,
+    `#${hashSkin(worst)}`,
+    '#skincareingredients',
+    `#${tag(product.brand)}`,
+    '#glowcheck',
+  ];
+  const unique = [...new Set(hashes)].slice(0, 8);
+  return [intro, '', ...bullets, '', cta, '', unique.join(' ')].join('\n');
 }
 
 export function farmWhy(row: FarmScoreRow) {

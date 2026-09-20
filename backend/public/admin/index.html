@@ -202,6 +202,7 @@
   <script>
     const W = 1080, H = 1920;
     const INK = '#111111', CANVAS = '#F3F1ED', MUTED = '#6F6A67', NEON = '#00E676';
+    const SAFE = 1470, ZONE = 1350;
     let token = sessionStorage.getItem('glow_admin') || '';
     let pack = null;
     let selectedIdea = null;
@@ -313,9 +314,9 @@
       ctx.fillRect(0, 0, W, H);
       ctx.textAlign = 'center';
       const logo = await loadImg('/admin/logo.png?v=8');
-      const logoSize = 132;
+      const logoSize = 120;
       const logoX = (W - logoSize) / 2;
-      const logoY = 128;
+      const logoY = 96;
       ctx.save();
       ctx.beginPath();
       ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize * 0.37, 0, Math.PI * 2);
@@ -323,48 +324,85 @@
       ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
       ctx.restore();
       ctx.fillStyle = INK;
-      ctx.font = '700 40px Poppins, sans-serif';
-      ctx.fillText('GlowCheck', W / 2, 318);
-      ctx.fillStyle = MUTED;
-      ctx.font = '600 24px Poppins, sans-serif';
-      ctx.fillText('I scanned', W / 2, 370);
+      ctx.font = '700 36px Poppins, sans-serif';
+      ctx.fillText('GlowCheck', W / 2, 268);
       const { brand, name } = coverName(product);
-      let y = 420;
+      let y = 330;
       if (brand) {
         ctx.fillStyle = MUTED;
-        ctx.font = '700 24px Poppins, sans-serif';
+        ctx.font = '700 22px Poppins, sans-serif';
         ctx.letterSpacing = '4px';
         ctx.fillText(brand.toUpperCase(), W / 2, y);
         ctx.letterSpacing = '0px';
-        y += 58;
+        y += 52;
       }
       ctx.fillStyle = INK;
-      const size = name.length > 28 ? 52 : 60;
+      const size = name.length > 28 ? 48 : 56;
       const lines = wrapLines(ctx, name, W - 160, size, 800).slice(0, 2);
       lines.forEach((line) => {
         ctx.font = '800 ' + size + 'px Poppins, sans-serif';
         ctx.fillText(line, W / 2, y);
-        y += size + 10;
+        y += size + 8;
       });
-      drawInSlot(ctx, bottle, 190, 640, 700, 780);
-      ctx.fillStyle = MUTED;
-      ctx.font = '600 34px Poppins, sans-serif';
-      ctx.fillText('One formula. Four skins.', W / 2, 1500);
-      const pillW = 620, pillH = 88, pillX = (W - pillW) / 2, pillY = 1640;
+      const bottleTop = y + 110;
+      drawInSlot(ctx, bottle, 190, bottleTop, 700, Math.max(280, ZONE - 24 - bottleTop));
+      drawSwipeBadge(ctx, 'Swipe for INCI test ➡️');
+      drawUrlPill(ctx);
+      return c;
+    }
+
+    function drawPill(ctx, x, y, w, h) {
       ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(pillX, pillY, pillW, pillH, 44);
+      if (ctx.roundRect) ctx.roundRect(x, y, w, h, h / 2);
       else {
-        ctx.moveTo(pillX + 44, pillY);
-        ctx.arcTo(pillX + pillW, pillY, pillX + pillW, pillY + pillH, 44);
-        ctx.arcTo(pillX + pillW, pillY + pillH, pillX, pillY + pillH, 44);
-        ctx.arcTo(pillX, pillY + pillH, pillX, pillY, 44);
-        ctx.arcTo(pillX, pillY, pillX + pillW, pillY, 44);
+        ctx.moveTo(x + h / 2, y);
+        ctx.arcTo(x + w, y, x + w, y + h, h / 2);
+        ctx.arcTo(x + w, y + h, x, y + h, h / 2);
+        ctx.arcTo(x, y + h, x, y, h / 2);
+        ctx.arcTo(x, y, x + w, y, h / 2);
       }
-      ctx.fillStyle = INK;
       ctx.fill();
+    }
+
+    function drawUrlPill(ctx) {
+      const pillW = 620, pillH = 80, pillX = (W - pillW) / 2, pillY = 1410;
+      ctx.fillStyle = INK;
+      drawPill(ctx, pillX, pillY, pillW, pillH);
       ctx.fillStyle = NEON;
-      ctx.font = '800 32px Poppins, sans-serif';
-      ctx.fillText('glow-check.com', W / 2, pillY + 58);
+      ctx.font = '800 30px Poppins, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('glow-check.com', W / 2, pillY + 52);
+    }
+
+    function drawSwipeBadge(ctx, text) {
+      ctx.font = '800 28px Poppins, sans-serif';
+      const w = Math.min(920, ctx.measureText(text).width + 56);
+      const h = 72, x = (W - w) / 2, y = ZONE;
+      ctx.fillStyle = INK;
+      drawPill(ctx, x, y, w, h);
+      ctx.fillStyle = NEON;
+      ctx.textAlign = 'center';
+      ctx.fillText(text, W / 2, y + 48);
+    }
+
+    function drawNextChip(ctx, text) {
+      ctx.font = '800 26px Poppins, sans-serif';
+      const w = Math.min(700, ctx.measureText(text).width + 48);
+      const h = 64, x = W - 56 - w, y = 1378;
+      ctx.fillStyle = INK;
+      drawPill(ctx, x, y, w, h);
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'right';
+      ctx.fillText(text, x + w - 24, y + 42);
+      ctx.textAlign = 'center';
+    }
+
+    function padSafe(canvas, nextText) {
+      const c = cloneCanvas(canvas);
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = CANVAS;
+      ctx.fillRect(0, SAFE, W, H - SAFE);
+      if (nextText) drawNextChip(ctx, nextText);
       return c;
     }
 
@@ -379,7 +417,13 @@
     async function drawCta() {
       const cta = await loadImg('/admin/cta.png?v=7');
       const c = makeCanvas();
-      c.getContext('2d').drawImage(cta, 0, 0, W, H);
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = CANVAS;
+      ctx.fillRect(0, 0, W, H);
+      ctx.drawImage(cta, 0, 0, W, H);
+      ctx.fillStyle = CANVAS;
+      ctx.fillRect(0, SAFE, W, H - SAFE);
+      drawUrlPill(ctx);
       return c;
     }
 
@@ -453,6 +497,8 @@
       ctx.fillStyle = CANVAS;
       ctx.fillRect(0, 0, W, H);
       ctx.drawImage(shot, 0, 0, W, H);
+      ctx.fillStyle = CANVAS;
+      ctx.fillRect(0, SAFE, W, H - SAFE);
       host.innerHTML = '';
       return c;
     }
@@ -460,8 +506,8 @@
     function slidesOf(cover, cta, a, b, script) {
       return [
         { name: '01-cover.png', canvas: cover, caption: script.slide_1_cover },
-        { name: '02-score-' + a.id + '.png', canvas: a.canvas, caption: script.slide_2_first_skin_type.overlay_text },
-        { name: '03-score-' + b.id + '.png', canvas: b.canvas, caption: script.slide_3_second_skin_type.overlay_text },
+        { name: '02-score-' + a.id + '.png', canvas: padSafe(a.canvas, 'Next: ' + b.label + ' Skin score ➡️'), caption: script.slide_2_first_skin_type.overlay_text },
+        { name: '03-score-' + b.id + '.png', canvas: padSafe(b.canvas, 'Next: Verdict & scan ➡️'), caption: script.slide_3_second_skin_type.overlay_text },
         { name: '04-cta.png', canvas: cta, caption: '' },
       ];
     }
