@@ -118,7 +118,7 @@ adminRouter.get('/farm/ideas', requireAdmin, async (_req, res) => {
 
 adminRouter.get('/farm/trends', requireAdmin, async (_req, res) => {
   try {
-    const [{ source, posts }, ideas] = await Promise.all([farmTrendPosts(), unusedFarmIdeas(12)]);
+    const [{ source, posts, configured, status }, ideas] = await Promise.all([farmTrendPosts(), unusedFarmIdeas(12)]);
     const blueprint = await farmDirector(posts, ideas);
     const looked = await Promise.all(
       blueprint.queries.slice(0, blueprint.recommended_format === 'TIER_LIST_SWIPE' ? 3 : 1).map(async (query) => {
@@ -139,6 +139,8 @@ adminRouter.get('/farm/trends', requireAdmin, async (_req, res) => {
       ok: true,
       source,
       live: source !== 'none',
+      configured: Boolean(configured),
+      status: status || 0,
       posts: posts.slice(0, 8),
       blueprint,
       products,

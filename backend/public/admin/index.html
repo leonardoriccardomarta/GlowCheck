@@ -211,9 +211,10 @@
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script>
-    const W = 1080, H = 1920;
+    const W = 1080, H = 1440;
     const INK = '#111111', CANVAS = '#F3F1ED', MUTED = '#6F6A67', NEON = '#00E676';
-    const SAFE = 1470, ZONE = 1350;
+    const SWIPE_Y = H - 196;
+    const PILL_Y = H - 100;
     let token = sessionStorage.getItem('glow_admin') || '';
     let pack = null;
     let selectedIdea = null;
@@ -281,6 +282,28 @@
       return c;
     }
 
+    async function loadFarmFonts() {
+      if (!document.fonts) return;
+      await document.fonts.ready;
+      await Promise.all([
+        document.fonts.load('800 22px Poppins'),
+        document.fonts.load('800 26px Poppins'),
+        document.fonts.load('800 28px Poppins'),
+        document.fonts.load('800 30px Poppins'),
+        document.fonts.load('700 36px Poppins'),
+        document.fonts.load('800 48px Poppins'),
+        document.fonts.load('800 56px Poppins'),
+      ]).catch(() => {});
+    }
+
+    function drawCoverTop(ctx, img) {
+      if (!img || !img.width) return;
+      const scale = Math.max(W / img.width, H / img.height);
+      const dw = img.width * scale;
+      const dh = img.height * scale;
+      ctx.drawImage(img, (W - dw) / 2, 0, dw, dh);
+    }
+
     function coverName(product) {
       const brand = (product.brand || '').split(',')[0].trim();
       let name = String(product.name || '').replace(/\s+/g, ' ').trim();
@@ -316,7 +339,7 @@
     }
 
     async function drawBrandCover(product, bottle) {
-      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      await loadFarmFonts();
       const c = makeCanvas();
       const ctx = c.getContext('2d');
       ctx.imageSmoothingEnabled = true;
@@ -325,9 +348,9 @@
       ctx.fillRect(0, 0, W, H);
       ctx.textAlign = 'center';
       const logo = await loadImg('/admin/logo.png?v=8');
-      const logoSize = 120;
+      const logoSize = 96;
       const logoX = (W - logoSize) / 2;
-      const logoY = 96;
+      const logoY = 48;
       ctx.save();
       ctx.beginPath();
       ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize * 0.37, 0, Math.PI * 2);
@@ -335,28 +358,28 @@
       ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
       ctx.restore();
       ctx.fillStyle = INK;
-      ctx.font = '700 36px Poppins, sans-serif';
-      ctx.fillText('GlowCheck', W / 2, 268);
+      ctx.font = '700 32px Poppins, sans-serif';
+      ctx.fillText('GlowCheck', W / 2, 186);
       const { brand, name } = coverName(product);
-      let y = 330;
+      let y = 232;
       if (brand) {
         ctx.fillStyle = MUTED;
-        ctx.font = '700 22px Poppins, sans-serif';
+        ctx.font = '700 20px Poppins, sans-serif';
         ctx.letterSpacing = '4px';
         ctx.fillText(brand.toUpperCase(), W / 2, y);
         ctx.letterSpacing = '0px';
-        y += 52;
+        y += 42;
       }
       ctx.fillStyle = INK;
-      const size = name.length > 28 ? 48 : 56;
+      const size = name.length > 28 ? 42 : 50;
       const lines = wrapLines(ctx, name, W - 160, size, 800).slice(0, 2);
       lines.forEach((line) => {
         ctx.font = '800 ' + size + 'px Poppins, sans-serif';
         ctx.fillText(line, W / 2, y);
-        y += size + 8;
+        y += size + 6;
       });
-      const bottleTop = y + 110;
-      drawInSlot(ctx, bottle, 190, bottleTop, 700, Math.max(280, ZONE - 24 - bottleTop));
+      const bottleTop = y + 36;
+      drawInSlot(ctx, bottle, 170, bottleTop, 740, Math.max(240, SWIPE_Y - 20 - bottleTop));
       drawSwipeBadge(ctx, 'Swipe for INCI test ➡️');
       drawUrlPill(ctx);
       return c;
@@ -375,14 +398,14 @@
     }
 
     async function drawBrandMark(ctx) {
-      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      await loadFarmFonts();
       ctx.fillStyle = CANVAS;
       ctx.fillRect(0, 0, W, H);
       ctx.textAlign = 'center';
       const logo = await loadImg('/admin/logo.png?v=8');
-      const logoSize = 120;
+      const logoSize = 96;
       const logoX = (W - logoSize) / 2;
-      const logoY = 72;
+      const logoY = 40;
       ctx.save();
       ctx.beginPath();
       ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize * 0.37, 0, Math.PI * 2);
@@ -390,8 +413,8 @@
       ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
       ctx.restore();
       ctx.fillStyle = INK;
-      ctx.font = '700 36px Poppins, sans-serif';
-      ctx.fillText('GlowCheck', W / 2, 244);
+      ctx.font = '700 32px Poppins, sans-serif';
+      ctx.fillText('GlowCheck', W / 2, 172);
     }
 
     async function drawTierCover(items) {
@@ -406,25 +429,27 @@
       const startX = (W - total) / 2;
       items.forEach((item, i) => {
         const x = startX + i * (colW + gap);
-        drawInSlot(ctx, item.bottle, x, 300, colW, 700);
+        drawInSlot(ctx, item.bottle, x, 210, colW, 520);
         ctx.textAlign = 'center';
         ctx.fillStyle = INK;
-        ctx.font = '800 26px Poppins, sans-serif';
-        const lines = wrapLines(ctx, shortCoverName(item.product), colW - 8, 26, 800).slice(0, 2);
-        let y = 1030;
+        ctx.font = '800 24px Poppins, sans-serif';
+        const lines = wrapLines(ctx, shortCoverName(item.product), colW - 8, 24, 800).slice(0, 2);
+        let y = 760;
         lines.forEach((line) => {
           ctx.fillText(line, x + colW / 2, y);
-          y += 32;
+          y += 28;
         });
-        ctx.font = '800 24px Poppins, sans-serif';
+        ctx.font = '800 22px Poppins, sans-serif';
         const badge = item.badge;
         const bw = Math.min(colW - 8, ctx.measureText(badge).width + 40);
         const bx = x + (colW - bw) / 2;
-        const by = 1110;
+        const by = 830;
         ctx.fillStyle = item.badgeBg;
-        drawPill(ctx, bx, by, bw, 56);
+        drawPill(ctx, bx, by, bw, 52);
+        ctx.textBaseline = 'middle';
         ctx.fillStyle = item.badgeFg;
-        ctx.fillText(badge, x + colW / 2, by + 38);
+        ctx.fillText(badge, x + colW / 2, by + 26);
+        ctx.textBaseline = 'alphabetic';
       });
       drawSwipeBadge(ctx, 'Swipe for scores ➡️');
       drawUrlPill(ctx);
@@ -439,45 +464,45 @@
       await drawBrandMark(ctx);
       ctx.fillStyle = INK;
       const { brand, name } = coverName(product);
-      let y = 300;
+      let y = 210;
       if (brand) {
         ctx.fillStyle = MUTED;
-        ctx.font = '700 22px Poppins, sans-serif';
+        ctx.font = '700 20px Poppins, sans-serif';
         ctx.fillText(brand.toUpperCase(), W / 2, y);
-        y += 48;
+        y += 40;
       }
       ctx.fillStyle = INK;
-      wrapLines(ctx, name, W - 160, 44, 800).slice(0, 2).forEach((line) => {
-        ctx.font = '800 44px Poppins, sans-serif';
+      wrapLines(ctx, name, W - 160, 38, 800).slice(0, 2).forEach((line) => {
+        ctx.font = '800 38px Poppins, sans-serif';
         ctx.fillText(line, W / 2, y);
-        y += 52;
+        y += 44;
       });
       ctx.fillStyle = '#FF1744';
-      ctx.font = '800 22px Poppins, sans-serif';
-      ctx.fillText('INCI RED FLAG CHECK', W / 2, y + 8);
+      ctx.font = '800 20px Poppins, sans-serif';
+      ctx.fillText('INCI RED FLAG CHECK', W / 2, y + 6);
       const flagSet = flags.map((item) => String(item).toLowerCase());
-      const list = (ingredients || []).slice(0, 9);
-      y += 70;
+      const list = (ingredients || []).slice(0, 6);
+      y += 56;
       ctx.textAlign = 'left';
       list.forEach((ing) => {
         const label = String(ing).replace(/\s+/g, ' ').slice(0, 32);
         const low = label.toLowerCase();
         const isFlag = flagSet.some((flag) => low.includes(flag) || flag.includes(low));
-        ctx.font = (isFlag ? 800 : 600) + ' 32px Poppins, sans-serif';
+        ctx.font = (isFlag ? 800 : 600) + ' 28px Poppins, sans-serif';
         const x = 120;
         if (isFlag) {
           const tw = ctx.measureText(label).width;
           ctx.strokeStyle = '#FF1744';
           ctx.lineWidth = 5;
           ctx.beginPath();
-          ctx.ellipse(x + tw / 2, y - 11, tw / 2 + 20, 26, -0.06, 0, Math.PI * 2);
+          ctx.ellipse(x + tw / 2, y - 10, tw / 2 + 20, 22, -0.06, 0, Math.PI * 2);
           ctx.stroke();
           ctx.fillStyle = '#FF1744';
         } else {
           ctx.fillStyle = INK;
         }
         ctx.fillText(label, x, y);
-        y += 68;
+        y += 56;
       });
       ctx.textAlign = 'center';
       drawSwipeBadge(ctx, 'Swipe for skin scores ➡️');
@@ -498,44 +523,49 @@
       ctx.fill();
     }
 
-    function drawUrlPill(ctx) {
-      const pillW = 620, pillH = 80, pillX = (W - pillW) / 2, pillY = 1410;
-      ctx.fillStyle = INK;
-      drawPill(ctx, pillX, pillY, pillW, pillH);
-      ctx.fillStyle = NEON;
-      ctx.font = '800 30px Poppins, sans-serif';
+    function drawLabeledPill(ctx, text, y, opts) {
+      opts = opts || {};
+      let size = opts.size || 26;
+      const h = opts.h || 72;
+      const maxW = opts.maxW || 960;
+      const padX = 44;
+      ctx.font = '800 ' + size + 'px Poppins, sans-serif';
+      while (size > 18 && ctx.measureText(text).width + padX * 2 > maxW) {
+        size -= 2;
+        ctx.font = '800 ' + size + 'px Poppins, sans-serif';
+      }
+      const w = Math.min(maxW, Math.ceil(ctx.measureText(text).width) + padX * 2);
+      const x = opts.right ? W - 40 - w : Math.round((W - w) / 2);
+      ctx.fillStyle = opts.bg;
+      drawPill(ctx, x, y, w, h);
+      ctx.fillStyle = opts.fg;
       ctx.textAlign = 'center';
-      ctx.fillText('glow-check.com', W / 2, pillY + 52);
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, x + w / 2, y + h / 2 + 1);
+      ctx.textBaseline = 'alphabetic';
+    }
+
+    function drawUrlPill(ctx) {
+      drawLabeledPill(ctx, 'glow-check.com', PILL_Y, {
+        size: 28, h: 76, maxW: 640, bg: INK, fg: NEON,
+      });
     }
 
     function drawSwipeBadge(ctx, text) {
-      ctx.font = '800 28px Poppins, sans-serif';
-      const w = Math.min(920, ctx.measureText(text).width + 56);
-      const h = 72, x = (W - w) / 2, y = ZONE;
-      ctx.fillStyle = INK;
-      drawPill(ctx, x, y, w, h);
-      ctx.fillStyle = NEON;
-      ctx.textAlign = 'center';
-      ctx.fillText(text, W / 2, y + 48);
+      drawLabeledPill(ctx, text, SWIPE_Y, {
+        size: 26, h: 72, maxW: 920, bg: INK, fg: NEON,
+      });
     }
 
     function drawNextChip(ctx, text) {
-      ctx.font = '800 26px Poppins, sans-serif';
-      const w = Math.min(700, ctx.measureText(text).width + 48);
-      const h = 64, x = W - 56 - w, y = 1378;
-      ctx.fillStyle = INK;
-      drawPill(ctx, x, y, w, h);
-      ctx.fillStyle = '#fff';
-      ctx.textAlign = 'right';
-      ctx.fillText(text, x + w - 24, y + 42);
-      ctx.textAlign = 'center';
+      drawLabeledPill(ctx, text, PILL_Y, {
+        size: 24, h: 64, maxW: 720, right: true, bg: INK, fg: '#fff',
+      });
     }
 
     function padSafe(canvas, nextText) {
       const c = cloneCanvas(canvas);
       const ctx = c.getContext('2d');
-      ctx.fillStyle = CANVAS;
-      ctx.fillRect(0, SAFE, W, H - SAFE);
       if (nextText) drawNextChip(ctx, nextText);
       return c;
     }
@@ -554,10 +584,7 @@
       const ctx = c.getContext('2d');
       ctx.fillStyle = CANVAS;
       ctx.fillRect(0, 0, W, H);
-      ctx.drawImage(cta, 0, 0, W, H);
-      ctx.fillStyle = CANVAS;
-      ctx.fillRect(0, SAFE, W, H - SAFE);
-      drawUrlPill(ctx);
+      drawCoverTop(ctx, cta);
       return c;
     }
 
@@ -630,9 +657,7 @@
       const ctx = c.getContext('2d');
       ctx.fillStyle = CANVAS;
       ctx.fillRect(0, 0, W, H);
-      ctx.drawImage(shot, 0, 0, W, H);
-      ctx.fillStyle = CANVAS;
-      ctx.fillRect(0, SAFE, W, H - SAFE);
+      drawCoverTop(ctx, shot);
       host.innerHTML = '';
       return c;
     }
@@ -749,6 +774,7 @@
 
     async function render(product, scores, script1, script2, idea, opts) {
       opts = opts || {};
+      await loadFarmFonts();
       if (!opts.cover) $('status').innerHTML = 'Finding a pack shot…';
       const bottle = opts.cover ? null : await fetchBottle(product);
       const cover = opts.cover || await drawBrandCover(product, bottle);
@@ -870,7 +896,9 @@
       $('bpHook').textContent = 'Copy stays the usual GlowCheck title, caption and slides.';
       $('bpLive').innerHTML = json.live
         ? '<span class="ok">Source: ' + esc(json.source) + ' · ' + (json.posts || []).length + ' posts</span>'
-        : '<span>No RapidAPI/Apify key. Director used unused INCI ideas.</span>';
+        : json.configured
+          ? '<span>RapidAPI key is on, but no hashtag posts came back' + (json.status ? ' (HTTP ' + json.status + ')' : '') + '. Using unused INCI ideas.</span>'
+          : '<span>No RapidAPI/Apify key on this server. Add RAPIDAPI_KEY and redeploy.</span>';
       if (format === 'TIER_LIST_SWIPE' && products.length >= 3) {
         await renderTier(products);
         return;
