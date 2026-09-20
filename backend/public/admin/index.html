@@ -43,7 +43,7 @@
     .hit span, .idea span { color: var(--muted); font-size: 12px; }
     .slides { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 18px 0; }
     .slides canvas {
-      width: 100%; height: auto; border-radius: 16px; background: #ddd;
+      width: 100%; height: auto; border-radius: 10px; background: #ddd;
       box-shadow: 0 10px 24px rgba(0,0,0,.12);
     }
     .slide-cap { font-size: 11px; color: var(--muted); margin: 8px 0 0; line-height: 1.35; cursor: pointer; }
@@ -213,8 +213,8 @@
   <script>
     const W = 1080, H = 1440;
     const INK = '#111111', CANVAS = '#F3F1ED', MUTED = '#6F6A67', NEON = '#00E676';
-    const SWIPE_Y = H - 196;
-    const PILL_Y = H - 100;
+    const SWIPE_Y = H - 220;
+    const PILL_Y = H - 118;
     let token = sessionStorage.getItem('glow_admin') || '';
     let pack = null;
     let selectedIdea = null;
@@ -285,15 +285,33 @@
     async function loadFarmFonts() {
       if (!document.fonts) return;
       await document.fonts.ready;
+      const sample = 'Swipe for INCI test glow-check.com Next Sensitive';
       await Promise.all([
-        document.fonts.load('800 22px Poppins'),
-        document.fonts.load('800 26px Poppins'),
-        document.fonts.load('800 28px Poppins'),
-        document.fonts.load('800 30px Poppins'),
-        document.fonts.load('700 36px Poppins'),
-        document.fonts.load('800 48px Poppins'),
-        document.fonts.load('800 56px Poppins'),
+        document.fonts.load('800 22px Poppins', sample),
+        document.fonts.load('800 24px Poppins', sample),
+        document.fonts.load('800 26px Poppins', sample),
+        document.fonts.load('800 28px Poppins', sample),
+        document.fonts.load('800 30px Poppins', sample),
+        document.fonts.load('700 36px Poppins', sample),
+        document.fonts.load('800 48px Poppins', sample),
+        document.fonts.load('800 56px Poppins', sample),
       ]).catch(() => {});
+    }
+
+    function probeTextWidth(text, size, weight) {
+      let el = document.getElementById('fontProbe');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'fontProbe';
+        el.style.cssText = 'position:absolute;left:-9999px;top:0;white-space:nowrap;visibility:hidden;pointer-events:none;font-family:Poppins,sans-serif';
+        document.body.appendChild(el);
+      }
+      el.style.fontWeight = String(weight || 800);
+      el.style.fontSize = size + 'px';
+      el.textContent = text;
+      const dom = el.getBoundingClientRect().width;
+      const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      return Math.ceil(Math.max(dom, 1) * (ios ? 1.28 : 1.1));
     }
 
     function drawCoverTop(ctx, img) {
@@ -527,39 +545,40 @@
       opts = opts || {};
       let size = opts.size || 26;
       const h = opts.h || 72;
-      const maxW = opts.maxW || 960;
-      const padX = 44;
-      ctx.font = '800 ' + size + 'px Poppins, sans-serif';
-      while (size > 18 && ctx.measureText(text).width + padX * 2 > maxW) {
+      const maxW = opts.maxW || 920;
+      const padX = 56;
+      let width = probeTextWidth(text, size, 800);
+      while (size > 18 && width + padX * 2 > maxW) {
         size -= 2;
-        ctx.font = '800 ' + size + 'px Poppins, sans-serif';
+        width = probeTextWidth(text, size, 800);
       }
-      const w = Math.min(maxW, Math.ceil(ctx.measureText(text).width) + padX * 2);
-      const x = opts.right ? W - 40 - w : Math.round((W - w) / 2);
+      ctx.font = '800 ' + size + 'px Poppins, sans-serif';
+      const w = Math.min(maxW, width + padX * 2);
+      const x = Math.max(48, Math.min(W - 48 - w, opts.right ? W - 64 - w : Math.round((W - w) / 2)));
       ctx.fillStyle = opts.bg;
       drawPill(ctx, x, y, w, h);
       ctx.fillStyle = opts.fg;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(text, x + w / 2, y + h / 2 + 1);
+      ctx.fillText(text, x + w / 2, y + h / 2);
       ctx.textBaseline = 'alphabetic';
     }
 
     function drawUrlPill(ctx) {
       drawLabeledPill(ctx, 'glow-check.com', PILL_Y, {
-        size: 28, h: 76, maxW: 640, bg: INK, fg: NEON,
+        size: 26, h: 72, maxW: 640, bg: INK, fg: NEON,
       });
     }
 
     function drawSwipeBadge(ctx, text) {
       drawLabeledPill(ctx, text, SWIPE_Y, {
-        size: 26, h: 72, maxW: 920, bg: INK, fg: NEON,
+        size: 24, h: 68, maxW: 880, bg: INK, fg: NEON,
       });
     }
 
     function drawNextChip(ctx, text) {
       drawLabeledPill(ctx, text, PILL_Y, {
-        size: 24, h: 64, maxW: 720, right: true, bg: INK, fg: '#fff',
+        size: 22, h: 60, maxW: 640, bg: INK, fg: '#fff',
       });
     }
 
@@ -579,7 +598,7 @@
     }
 
     async function drawCta() {
-      const cta = await loadImg('/admin/cta.png?v=8');
+      const cta = await loadImg('/admin/cta.png?v=9');
       const c = makeCanvas();
       const ctx = c.getContext('2d');
       ctx.fillStyle = CANVAS;
@@ -665,8 +684,8 @@
     function slidesOf(cover, cta, a, b, script) {
       return [
         { name: '01-cover.png', canvas: cover, caption: script.slide_1_cover },
-        { name: '02-score-' + a.id + '.png', canvas: padSafe(a.canvas, 'Next: ' + b.label + ' Skin score ➡️'), caption: script.slide_2_first_skin_type.overlay_text },
-        { name: '03-score-' + b.id + '.png', canvas: padSafe(b.canvas, 'Next: Verdict & scan ➡️'), caption: script.slide_3_second_skin_type.overlay_text },
+        { name: '02-score-' + a.id + '.png', canvas: padSafe(a.canvas, 'Next: ' + b.label + ' ➡️'), caption: script.slide_2_first_skin_type.overlay_text },
+        { name: '03-score-' + b.id + '.png', canvas: padSafe(b.canvas, 'Next: CTA ➡️'), caption: script.slide_3_second_skin_type.overlay_text },
         { name: '04-cta.png', canvas: cta, caption: '' },
       ];
     }
