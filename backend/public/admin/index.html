@@ -156,7 +156,7 @@
   </div>
   <div id="app">
     <h1>TikTok farm</h1>
-    <p>Scan TikTok for the viral unused product, then build the usual GlowCheck carousel. Same titles, captions and slide copy. Tier or INCI cover only when the trend calls for it.</p>
+    <p>Scan TikTok. At least half the packs are 3-product tiers or INCI red-flag covers so the grid is not the same white bottle. Same titles, captions and slide copy.</p>
     <div class="row">
       <button id="trends" class="ghost">Scan TikTok trends</button>
     </div>
@@ -360,7 +360,18 @@
       ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
     }
 
-    async function drawBrandCover(product, bottle) {
+    function teaserMark(score) {
+      if (score >= 80) return '✅';
+      if (score >= 60) return '⚠️';
+      return '💀';
+    }
+
+    function teaserText(score, kind) {
+      if (kind === 'winner') return 'Winner: ' + score + '/100 ' + teaserMark(score) + ' (Swipe who fails)';
+      return 'Result: ' + score + '/100 ' + teaserMark(score) + ' (Swipe to see why)';
+    }
+
+    async function drawBrandCover(product, bottle, teaser) {
       await loadFarmFonts();
       const c = makeCanvas();
       const ctx = c.getContext('2d');
@@ -402,7 +413,9 @@
       });
       const bottleTop = y + 36;
       drawInSlot(ctx, bottle, 170, bottleTop, 740, Math.max(240, SWIPE_Y - 20 - bottleTop));
-      await drawSwipeBadge(ctx, 'Swipe for INCI test ➡️');
+      await drawSwipeBadge(ctx, teaser && teaser.score != null
+        ? teaserText(teaser.score)
+        : 'Swipe for INCI test ➡️');
       await drawUrlPill(ctx);
       return c;
     }
@@ -439,7 +452,7 @@
       ctx.fillText('GlowCheck', W / 2, 172);
     }
 
-    async function drawTierCover(items) {
+    async function drawTierCover(items, teaser) {
       const c = makeCanvas();
       const ctx = c.getContext('2d');
       ctx.imageSmoothingEnabled = true;
@@ -473,12 +486,14 @@
         ctx.fillText(badge, x + colW / 2, by + 26);
         ctx.textBaseline = 'alphabetic';
       });
-      await drawSwipeBadge(ctx, 'Swipe for scores ➡️');
+      await drawSwipeBadge(ctx, teaser && teaser.score != null
+        ? teaserText(teaser.score, 'winner')
+        : 'Swipe for scores ➡️');
       await drawUrlPill(ctx);
       return c;
     }
 
-    async function drawRedFlagCover(product, flags, ingredients) {
+    async function drawRedFlagCover(product, flags, ingredients, teaser) {
       const c = makeCanvas();
       const ctx = c.getContext('2d');
       ctx.imageSmoothingEnabled = true;
@@ -527,7 +542,9 @@
         y += 56;
       });
       ctx.textAlign = 'center';
-      await drawSwipeBadge(ctx, 'Swipe for skin scores ➡️');
+      await drawSwipeBadge(ctx, teaser && teaser.score != null
+        ? teaserText(teaser.score)
+        : 'Swipe for skin scores ➡️');
       await drawUrlPill(ctx);
       return c;
     }
@@ -617,8 +634,12 @@
     }
 
     async function drawSwipeBadge(ctx, text) {
+      const size = String(text).length > 32 ? 24 : 28;
+      const h = 80;
+      const padX = Math.round(h * 0.42);
+      const w = Math.min(980, Math.max(700, cssTextWidth(text, size) + padX * 2 + 12));
       await stampPill(ctx, text, SWIPE_Y, {
-        w: 700, h: 80, size: 28, bg: INK, fg: NEON,
+        w, h, size, bg: INK, fg: NEON,
       });
     }
 
@@ -844,11 +865,12 @@
     async function render(product, scores, script1, script2, idea, opts) {
       opts = opts || {};
       await loadFarmFonts();
+      const ranked = [...scores].sort((a, b) => b.score - a.score);
+      const teaser = ranked[ranked.length - 1] || ranked[0];
       if (!opts.cover) $('status').innerHTML = 'Finding a pack shot…';
       const bottle = opts.cover ? null : await fetchBottle(product);
-      const cover = opts.cover || await drawBrandCover(product, bottle);
+      const cover = opts.cover || await drawBrandCover(product, bottle, teaser);
       const cta = await drawCta();
-      const ranked = [...scores].sort((a, b) => b.score - a.score);
       const scans = {};
       for (const row of scores) scans[row.id] = await captureScan(product, row);
       const v1a = ranked[0], v1b = ranked[ranked.length - 1];
@@ -935,7 +957,8 @@
         });
       }
       const drama = built[built.length - 1];
-      const cover = await drawTierCover(items);
+      const winner = poreRow(built[0].scores);
+      const cover = await drawTierCover(items, winner);
       await render(drama.product, drama.scores, drama.script, drama.script2, selectedIdea, {
         cover,
         format: 'TIER_LIST_SWIPE',
@@ -947,7 +970,8 @@
       $('status').innerHTML = 'Scoring INCI red flags…';
       const built = await scoredHit(hit);
       const flags = [...new Set(built.scores.flatMap((row) => row.watches || []))];
-      const cover = await drawRedFlagCover(built.product, flags, hit.ingredients || []);
+      const teaser = [...built.scores].sort((a, b) => a.score - b.score)[0];
+      const cover = await drawRedFlagCover(built.product, flags, hit.ingredients || [], teaser);
       await render(built.product, built.scores, built.script, built.script2, selectedIdea, {
         cover,
         format: 'RED_FLAG_INCI',
@@ -962,17 +986,17 @@
       $('blueprint').hidden = false;
       $('bpFormat').textContent = format + (json.live ? ' · live TikTok' : ' · catalog director');
       $('bpTopic').textContent = blueprint.trending_topic || '';
-      $('bpHook').textContent = 'Copy stays the usual GlowCheck title, caption and slides.';
+      $('bpHook').textContent = 'Copy stays the usual GlowCheck title, caption and slides. Cover mix: tiers, red-flag INCI, single bottle.';
       $('bpLive').innerHTML = json.live
         ? '<span class="ok">Source: ' + esc(json.source) + ' · ' + (json.posts || []).length + ' posts</span>'
         : json.configured
           ? '<span>RapidAPI key is on, but no hashtag posts came back' + (json.status ? ' (HTTP ' + json.status + ')' : '') + '. Using unused INCI ideas.</span>'
           : '<span>No RapidAPI/Apify key on this server. Add RAPIDAPI_KEY and redeploy.</span>';
-      if (format === 'TIER_LIST_SWIPE' && products.length >= 3) {
+      if (format === 'TIER_LIST_SWIPE' && products.length >= 2) {
         await renderTier(products);
         return;
       }
-      if (format === 'RED_FLAG_INCI' && products[0]) {
+      if ((format === 'RED_FLAG_INCI' || format === 'TIER_LIST_SWIPE') && products[0]) {
         await renderRedFlag(products[0]);
         return;
       }

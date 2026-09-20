@@ -118,22 +118,26 @@ adminRouter.get('/farm/ideas', requireAdmin, async (_req, res) => {
 
 adminRouter.get('/farm/trends', requireAdmin, async (_req, res) => {
   try {
-    const [{ source, posts, configured, status }, ideas] = await Promise.all([farmTrendPosts(), unusedFarmIdeas(12)]);
+    const [{ source, posts, configured, status }, ideas] = await Promise.all([farmTrendPosts(), unusedFarmIdeas(16)]);
     const blueprint = await farmDirector(posts, ideas);
+    const need = blueprint.recommended_format === 'TIER_LIST_SWIPE' ? 3 : 1;
     const looked = await Promise.all(
-      blueprint.queries.slice(0, blueprint.recommended_format === 'TIER_LIST_SWIPE' ? 3 : 1).map(async (query) => {
+      blueprint.queries.slice(0, need).map(async (query) => {
         const hits = await farmLookup(query);
         return hits.find((item) => item.ingredients.length >= 2) || null;
       }),
     );
     const products = looked.filter((item): item is NonNullable<typeof item> => Boolean(item));
-    if (products.length < (blueprint.recommended_format === 'TIER_LIST_SWIPE' ? 3 : 1)) {
+    if (products.length < need) {
       for (const idea of ideas) {
         if (!idea.product || idea.product.ingredients.length < 2) continue;
         if (products.some((item) => item.name === idea.product.name)) continue;
         products.push(idea.product);
-        if (products.length >= (blueprint.recommended_format === 'TIER_LIST_SWIPE' ? 3 : 1)) break;
+        if (products.length >= need) break;
       }
+    }
+    if (blueprint.recommended_format === 'TIER_LIST_SWIPE' && products.length < 2) {
+      blueprint.recommended_format = 'RED_FLAG_INCI';
     }
     return res.json({
       ok: true,
