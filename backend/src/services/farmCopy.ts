@@ -159,7 +159,7 @@ function caption(product: Pick<FarmHit, 'name' | 'brand'>, best: FarmScoreRow, w
     `• ${best.label}: ${best.score}/100. ${bulletWhy(best)}`,
     `• ${worst.label}: ${worst.score}/100. ${bulletWhy(worst)}`,
   ];
-  const cta = 'Quale prodotto scannerizziamo nel prossimo video? Scrivilo nei commenti 👇';
+  const cta = 'Which product should we scan next? Drop it in the comments 👇';
   const hashes = [
     '#skintok',
     `#${productHash(name, product.brand)}`,
