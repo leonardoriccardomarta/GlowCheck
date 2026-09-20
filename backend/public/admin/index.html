@@ -64,6 +64,9 @@
     #shotHost {
       position: fixed; left: -4200px; top: 0; width: 390px; pointer-events: none;
     }
+    #pillHost {
+      position: fixed; left: -4200px; top: 800px; width: 1080px; pointer-events: none;
+    }
     .phone {
       width: 390px; height: 693px; background: #F3F1ED; color: #111; overflow: hidden;
       font-family: Poppins, sans-serif; position: relative;
@@ -208,6 +211,7 @@
     <button id="zip" hidden>Export 2 carousels (.zip)</button>
   </div>
   <div id="shotHost"></div>
+  <div id="pillHost"></div>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script>
@@ -398,8 +402,8 @@
       });
       const bottleTop = y + 36;
       drawInSlot(ctx, bottle, 170, bottleTop, 740, Math.max(240, SWIPE_Y - 20 - bottleTop));
-      drawSwipeBadge(ctx, 'Swipe for INCI test ➡️');
-      drawUrlPill(ctx);
+      await drawSwipeBadge(ctx, 'Swipe for INCI test ➡️');
+      await drawUrlPill(ctx);
       return c;
     }
 
@@ -469,8 +473,8 @@
         ctx.fillText(badge, x + colW / 2, by + 26);
         ctx.textBaseline = 'alphabetic';
       });
-      drawSwipeBadge(ctx, 'Swipe for scores ➡️');
-      drawUrlPill(ctx);
+      await drawSwipeBadge(ctx, 'Swipe for scores ➡️');
+      await drawUrlPill(ctx);
       return c;
     }
 
@@ -523,8 +527,8 @@
         y += 56;
       });
       ctx.textAlign = 'center';
-      drawSwipeBadge(ctx, 'Swipe for skin scores ➡️');
-      drawUrlPill(ctx);
+      await drawSwipeBadge(ctx, 'Swipe for skin scores ➡️');
+      await drawUrlPill(ctx);
       return c;
     }
 
@@ -541,50 +545,87 @@
       ctx.fill();
     }
 
-    function drawLabeledPill(ctx, text, y, opts) {
-      opts = opts || {};
-      const w = opts.w || 620;
-      const h = opts.h || 80;
-      const x = opts.right ? W - 56 - w : Math.round((W - w) / 2);
-      let size = opts.size || 28;
-      const inner = w - h;
-      const fits = (s) => {
-        ctx.font = '800 ' + s + 'px Poppins, sans-serif';
-        return ctx.measureText(text).width <= inner && probeTextWidth(text, s, 800) <= inner;
-      };
-      while (size > 16 && !fits(size)) size -= 1;
-      ctx.font = '800 ' + size + 'px Poppins, sans-serif';
-      ctx.fillStyle = opts.bg;
-      drawPill(ctx, x, y, w, h);
-      ctx.fillStyle = opts.fg;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(text, x + w / 2, y + h / 2);
-      ctx.textBaseline = 'alphabetic';
+    function cssTextWidth(text, size) {
+      const el = document.createElement('span');
+      el.style.cssText = 'position:absolute;left:-9999px;top:0;white-space:nowrap;visibility:hidden;pointer-events:none;font:800 ' + size + 'px Poppins,sans-serif;line-height:1';
+      el.textContent = text;
+      document.body.appendChild(el);
+      const w = el.getBoundingClientRect().width;
+      el.remove();
+      return Math.ceil(w);
     }
 
-    function drawUrlPill(ctx) {
-      drawLabeledPill(ctx, 'glow-check.com', PILL_Y, {
+    async function stampPill(ctx, text, y, opts) {
+      const w = Math.round(opts.w);
+      const h = Math.round(opts.h);
+      const padX = Math.round(h * 0.42);
+      const x = opts.right ? W - 56 - w : Math.round((W - w) / 2);
+      let size = opts.size || 28;
+      const node = document.createElement('div');
+      node.style.cssText = [
+        'width:' + w + 'px',
+        'height:' + h + 'px',
+        'border-radius:' + (h / 2) + 'px',
+        'background:' + opts.bg,
+        'color:' + opts.fg,
+        'font:800 ' + size + 'px Poppins,sans-serif',
+        'display:flex',
+        'align-items:center',
+        'justify-content:center',
+        'box-sizing:border-box',
+        'padding:0 ' + padX + 'px',
+        'white-space:nowrap',
+        'overflow:hidden',
+        'line-height:1',
+        'letter-spacing:0',
+        'text-align:center',
+      ].join(';');
+      node.textContent = text;
+      const host = $('pillHost');
+      host.innerHTML = '';
+      host.appendChild(node);
+      while (size > 16 && node.scrollWidth > w + 1) {
+        size -= 1;
+        node.style.fontSize = size + 'px';
+      }
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const shot = await html2canvas(node, {
+        width: w,
+        height: h,
+        scale: 2,
+        backgroundColor: opts.bg,
+        logging: false,
+      });
+      host.innerHTML = '';
+      ctx.drawImage(shot, x, y, w, h);
+    }
+
+    async function drawUrlPill(ctx) {
+      await stampPill(ctx, 'glow-check.com', PILL_Y, {
         w: 620, h: 80, size: 30, bg: INK, fg: NEON,
       });
     }
 
-    function drawSwipeBadge(ctx, text) {
-      drawLabeledPill(ctx, text, SWIPE_Y, {
-        w: 780, h: 72, size: 28, bg: INK, fg: NEON,
+    async function drawSwipeBadge(ctx, text) {
+      await stampPill(ctx, text, SWIPE_Y, {
+        w: 700, h: 80, size: 28, bg: INK, fg: NEON,
       });
     }
 
-    function drawNextChip(ctx, text) {
-      drawLabeledPill(ctx, text, PILL_Y, {
-        w: 620, h: 64, size: 26, right: true, bg: INK, fg: '#fff',
+    async function drawNextChip(ctx, text) {
+      const size = 26;
+      const h = 64;
+      const padX = Math.round(h * 0.42);
+      const w = Math.min(920, Math.max(220, cssTextWidth(text, size) + padX * 2 + 8));
+      await stampPill(ctx, text, PILL_Y, {
+        w, h, size, right: true, bg: INK, fg: '#fff',
       });
     }
 
-    function padSafe(canvas, nextText) {
+    async function padSafe(canvas, nextText) {
       const c = cloneCanvas(canvas);
       const ctx = c.getContext('2d');
-      if (nextText) drawNextChip(ctx, nextText);
+      if (nextText) await drawNextChip(ctx, nextText);
       return c;
     }
 
@@ -680,11 +721,11 @@
       return c;
     }
 
-    function slidesOf(cover, cta, a, b, script) {
+    async function slidesOf(cover, cta, a, b, script) {
       return [
         { name: '01-cover.png', canvas: cover, caption: script.slide_1_cover },
-        { name: '02-score-' + a.id + '.png', canvas: padSafe(a.canvas, 'Next: ' + b.label + ' Skin score ➡️'), caption: script.slide_2_first_skin_type.overlay_text },
-        { name: '03-score-' + b.id + '.png', canvas: padSafe(b.canvas, 'Next: Verdict & scan ➡️'), caption: script.slide_3_second_skin_type.overlay_text },
+        { name: '02-score-' + a.id + '.png', canvas: await padSafe(a.canvas, 'Next: ' + b.label + ' Skin score ➡️'), caption: script.slide_2_first_skin_type.overlay_text },
+        { name: '03-score-' + b.id + '.png', canvas: await padSafe(b.canvas, 'Next: Verdict & scan ➡️'), caption: script.slide_3_second_skin_type.overlay_text },
         { name: '04-cta.png', canvas: cta, caption: '' },
       ];
     }
@@ -804,8 +845,8 @@
       const rest = ranked.slice(1, -1);
       const v2a = rest[0] || ranked[0];
       const v2b = rest[1] || ranked[Math.min(1, ranked.length - 1)];
-      const v1 = slidesOf(cover, cta, { ...v1a, canvas: scans[v1a.id] }, { ...v1b, canvas: scans[v1b.id] }, script1);
-      const v2 = slidesOf(cover, cta, { ...v2a, canvas: scans[v2a.id] }, { ...v2b, canvas: scans[v2b.id] }, script2);
+      const v1 = await slidesOf(cover, cta, { ...v1a, canvas: scans[v1a.id] }, { ...v1b, canvas: scans[v1b.id] }, script1);
+      const v2 = await slidesOf(cover, cta, { ...v2a, canvas: scans[v2a.id] }, { ...v2b, canvas: scans[v2b.id] }, script2);
       pack = {
         format: opts.format || 'DEEP_DIVE',
         product,
