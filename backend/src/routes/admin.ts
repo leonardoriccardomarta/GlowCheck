@@ -8,11 +8,11 @@ import {
   checkAdminLogin,
   issueAdminToken,
 } from '../services/adminAuth';
-import { farmLookup, farmScores } from '../services/farmCatalog';
+import { farmLookup, farmScores, type FarmHit } from '../services/farmCatalog';
 import { farmPairs, farmScript, farmWhy } from '../services/farmCopy';
 import { allowedFarmImage, farmHeroImage } from '../services/farmHero';
 import { farmCoverImage } from '../services/farmCover';
-import { markFarmUsed, unusedFarmIdeas } from '../services/farmUsed';
+import { markFarmProductsUsed, markFarmUsed, unusedFarmIdeas } from '../services/farmUsed';
 import { farmTrendPosts } from '../services/farmTrends';
 import { farmDirector } from '../services/farmDirector';
 
@@ -118,16 +118,23 @@ adminRouter.get('/farm/ideas', requireAdmin, async (_req, res) => {
 
 adminRouter.get('/farm/trends', requireAdmin, async (_req, res) => {
   try {
-    const [{ source, posts, configured, status }, ideas] = await Promise.all([farmTrendPosts(), unusedFarmIdeas(16)]);
+    const [{ source, posts, configured, status }, ideas] = await Promise.all([
+      farmTrendPosts(),
+      unusedFarmIdeas(16, { rotate: true }),
+    ]);
     const blueprint = await farmDirector(posts, ideas);
     const need = blueprint.recommended_format === 'TIER_LIST_SWIPE' ? 3 : 1;
-    const looked = await Promise.all(
-      blueprint.queries.slice(0, need).map(async (query) => {
-        const hits = await farmLookup(query);
-        return hits.find((item) => item.ingredients.length >= 2) || null;
-      }),
-    );
-    const products = looked.filter((item): item is NonNullable<typeof item> => Boolean(item));
+    const products: FarmHit[] = [];
+    for (const query of blueprint.queries.slice(0, need)) {
+      const fromIdea = ideas.find((idea) => idea.query.toLowerCase() === query.toLowerCase());
+      if (fromIdea?.product && fromIdea.product.ingredients.length >= 2) {
+        if (!products.some((item) => item.name === fromIdea.product.name)) products.push(fromIdea.product);
+        continue;
+      }
+      const hits = await farmLookup(query);
+      const hit = hits.find((item) => item.ingredients.length >= 2) || null;
+      if (hit && !products.some((item) => item.name === hit.name)) products.push(hit);
+    }
     if (products.length < need) {
       for (const idea of ideas) {
         if (!idea.product || idea.product.ingredients.length < 2) continue;
@@ -139,6 +146,7 @@ adminRouter.get('/farm/trends', requireAdmin, async (_req, res) => {
     if (blueprint.recommended_format === 'TIER_LIST_SWIPE' && products.length < 2) {
       blueprint.recommended_format = 'RED_FLAG_INCI';
     }
+    if (products.length) await markFarmProductsUsed(products);
     return res.json({
       ok: true,
       source,

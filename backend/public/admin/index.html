@@ -1073,6 +1073,7 @@
       try {
         const json = await api('/admin/farm/trends', null, 'GET');
         await applyBlueprint(json);
+        loadIdeas();
         $('status').innerHTML = '<span class="ok">Trend pack ready · ' + esc(pack && pack.format || json.blueprint && json.blueprint.recommended_format || '') + '</span>';
       } catch (e) {
         $('status').innerHTML = '<span class="err">' + e.message + '</span>';

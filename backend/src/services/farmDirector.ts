@@ -79,49 +79,35 @@ export function enforceFormatMix(groqFormat: FarmFormat, ideas: ReadyFarmIdea[])
   return format;
 }
 
-function fillQueries(format: FarmFormat, queries: string[], ideas: ReadyFarmIdea[]): string[] {
-  const catalog = ideas.map((idea) => idea.query).filter(Boolean);
-  const unique: string[] = [];
-  for (const query of [...queries, ...catalog]) {
-    if (!query) continue;
-    if (unique.some((item) => item.toLowerCase() === query.toLowerCase())) continue;
-    unique.push(query);
-  }
-  if (format === 'TIER_LIST_SWIPE') return unique.slice(0, 3);
-  if (format === 'RED_FLAG_INCI') {
-    const flag = redFlagIdea(ideas);
-    const preferred = queries[0] || flag?.query || unique[0];
-    return preferred ? [preferred] : unique.slice(0, 1);
-  }
-  return unique.slice(0, 1);
-}
-
-function fillItems(format: FarmFormat, items: string[], ideas: ReadyFarmIdea[]): string[] {
-  const catalog = ideas.map((idea) => idea.label).filter(Boolean);
-  const unique: string[] = [];
-  for (const item of [...items, ...catalog]) {
-    if (!item) continue;
-    if (unique.some((row) => row.toLowerCase() === item.toLowerCase())) continue;
-    unique.push(item);
-  }
+function pickFromCatalog(format: FarmFormat, ideas: ReadyFarmIdea[]): { queries: string[]; items: string[] } {
   const need = format === 'TIER_LIST_SWIPE' ? 3 : 1;
-  return unique.slice(0, need);
+  const start = format === 'RED_FLAG_INCI' ? redFlagIdea(ideas) : ideas[0];
+  const pool = start ? [start, ...ideas.filter((idea) => idea.query !== start.query)] : ideas;
+  const unique: ReadyFarmIdea[] = [];
+  for (const idea of pool) {
+    if (!idea?.query) continue;
+    if (unique.some((row) => row.query.toLowerCase() === idea.query.toLowerCase())) continue;
+    unique.push(idea);
+    if (unique.length >= need) break;
+  }
+  return {
+    queries: unique.map((idea) => idea.query),
+    items: unique.map((idea) => idea.label),
+  };
 }
 
 export function heuristicBlueprint(ideas: ReadyFarmIdea[]): FarmBlueprint {
   const format = enforceFormatMix('DEEP_DIVE', ideas);
-  const top = ideas.slice(0, 3);
-  const one = format === 'RED_FLAG_INCI' ? redFlagIdea(ideas) || top[0] : top[0];
-  const queries = fillQueries(format, one?.query ? [one.query] : [], ideas);
-  const items = fillItems(format, one?.label ? [one.label] : [], ideas);
+  const picked = pickFromCatalog(format, ideas);
+  const one = ideas.find((idea) => idea.query === picked.queries[0]) || ideas[0];
   return {
     trending_topic: one?.angle || 'Skintok INCI check',
     recommended_format: format,
     hook_text: one
       ? `Why your skin is still breaking out using ${one.label} 🚩`
       : 'Stop using this if you have clogged pores 🛑',
-    items: items.length ? items : ['CeraVe'],
-    queries: queries.length ? queries : ['CeraVe PM'],
+    items: picked.items.length ? picked.items : ['CeraVe'],
+    queries: picked.queries.length ? picked.queries : ['CeraVe PM'],
     slides_blueprint: slidesFor(format),
   };
 }
@@ -152,7 +138,7 @@ ${catalog || '(empty)'}
 Return JSON:
 {"trending_topic":"","recommended_format":"TIER_LIST_SWIPE","hook_text":"","items":[""],"queries":[""],"slides_blueprint":[{"slide":1,"type":"tier_cover"},{"slide":2,"type":"score_worst"},{"slide":3,"type":"score_best"},{"slide":4,"type":"cta"}]}
 Rules:
-- queries must be searchable product names from the catalog
+- queries MUST be unused catalog products from the list above, never the same bottle as a previous pack
 - At least 50% TIER_LIST_SWIPE or RED_FLAG_INCI. DEEP_DIVE at most half the time.
 - TIER_LIST_SWIPE: 3 different unused products side by side. Use for comparisons, rankings, dupes, "which is better", or whenever the grid would otherwise be another single white bottle. Then 3 queries.
 - RED_FLAG_INCI: 1 product with fragrance, alcohol, essential oil, or pore-clogger drama. Circle flagged INCI.
@@ -186,16 +172,13 @@ Rules:
     const parsed = JSON.parse(raw) as Partial<FarmBlueprint>;
     const groqFormat = formatOf(String(parsed.recommended_format || ''));
     const recommended_format = enforceFormatMix(groqFormat, ideas);
-    const items = Array.isArray(parsed.items) ? parsed.items.map(String).filter(Boolean).slice(0, 3) : fallback.items;
-    const queries = Array.isArray(parsed.queries)
-      ? parsed.queries.map(String).filter(Boolean).slice(0, 3)
-      : fallback.queries;
+    const picked = pickFromCatalog(recommended_format, ideas);
     return {
       trending_topic: String(parsed.trending_topic || fallback.trending_topic).slice(0, 80),
       recommended_format,
       hook_text: String(parsed.hook_text || fallback.hook_text).slice(0, 90),
-      items: fillItems(recommended_format, items.length ? items : fallback.items, ideas),
-      queries: fillQueries(recommended_format, queries.length ? queries : fallback.queries, ideas),
+      items: picked.items.length ? picked.items : fallback.items,
+      queries: picked.queries.length ? picked.queries : fallback.queries,
       slides_blueprint:
         Array.isArray(parsed.slides_blueprint) && parsed.slides_blueprint.length
           ? parsed.slides_blueprint
