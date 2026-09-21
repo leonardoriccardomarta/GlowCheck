@@ -9,7 +9,7 @@ import {
   issueAdminToken,
 } from '../services/adminAuth';
 import { farmLookup, farmScores, type FarmHit } from '../services/farmCatalog';
-import { farmPairs, farmScript, farmWhy } from '../services/farmCopy';
+import { farmPairs, farmScript, farmStory, farmWhy, pickFarmFlag } from '../services/farmCopy';
 import { allowedFarmImage, farmHeroImage } from '../services/farmHero';
 import { farmCoverImage } from '../services/farmCover';
 import { markFarmProductsUsed, markFarmUsed, readFarmScan, unusedFarmIdeas } from '../services/farmUsed';
@@ -103,6 +103,53 @@ adminRouter.post('/farm/build', requireAdmin, (req, res) => {
       v1: pairs.v1.map((row) => row.id),
       v2: pairs.v2.map((row) => row.id),
     },
+  });
+});
+
+adminRouter.post('/farm/story', requireAdmin, (req, res) => {
+  const parsed = z
+    .object({
+      format: z.enum(['DEEP_DIVE', 'TIER_LIST_SWIPE', 'RED_FLAG_INCI']).optional(),
+      product: z.object({
+        name: z.string().min(1).max(160),
+        brand: z.string().max(80).nullable().optional(),
+      }),
+      products: z
+        .array(
+          z.object({
+            name: z.string().min(1).max(160),
+            brand: z.string().max(80).nullable().optional(),
+          }),
+        )
+        .max(3)
+        .optional(),
+      scores: z.array(z.any()).min(1).max(8),
+      bestScores: z.array(z.any()).max(8).optional(),
+      worstScores: z.array(z.any()).max(8).optional(),
+      flag: z.string().max(80).optional(),
+      ingredients: z.array(z.string().max(120)).max(80).optional(),
+    })
+    .safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ ok: false, error: 'INVALID_STORY' });
+  }
+  const product = { name: parsed.data.product.name, brand: parsed.data.product.brand ?? null };
+  const scores = parsed.data.scores;
+  const payload = {
+    format: parsed.data.format || 'DEEP_DIVE' as const,
+    product,
+    products: parsed.data.products?.map((item) => ({ name: item.name, brand: item.brand ?? null })),
+    scores,
+    bestScores: parsed.data.bestScores,
+    worstScores: parsed.data.worstScores,
+    flag: parsed.data.flag,
+    ingredients: parsed.data.ingredients,
+  };
+  return res.json({
+    ok: true,
+    script: farmStory({ ...payload, version: 1 }),
+    script2: farmStory({ ...payload, version: 2 }),
+    flag: parsed.data.flag || pickFarmFlag(scores, parsed.data.ingredients || []),
   });
 });
 

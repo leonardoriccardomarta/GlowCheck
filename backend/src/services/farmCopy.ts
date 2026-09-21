@@ -118,18 +118,43 @@ function postTitle(name: string, best: FarmScoreRow, worst: FarmScoreRow) {
   return `${n}: ${a} vs ${b} Skin 🚩`;
 }
 
-function coverLine(name: string, best: FarmScoreRow, worst: FarmScoreRow) {
-  const a = titleSkin(best);
-  const b = titleSkin(worst);
-  const gap = best.score - worst.score;
-  const pores =
-    worst.occlusionAlert === 'high' || worst.id === 'oily' || worst.id === 'combination';
-  if (gap >= 12 && best.score >= 80) {
-    return `Rated ${best.score}/100 for ${a}... but RUINS ${b} skin? 👀`;
-  }
-  if (pores) return 'Stop using this if you have clogged pores 🛑';
+function coverLine(name: string, _best: FarmScoreRow, _worst: FarmScoreRow) {
   return `Why your skin is still breaking out using ${name} 🚩`;
 }
+
+export function pickFarmFlag(scores: FarmScoreRow[], ingredients: string[] = []) {
+  const watches = scores.flatMap((row) => row.watches || []);
+  const prefer = watches.find((item) =>
+    /alcohol|fragrance|parfum|linalool|limonene|citronellol|geraniol|essential/i.test(item),
+  );
+  if (prefer) return prefer;
+  if (watches[0]) return watches[0];
+  return (
+    ingredients.find((item) => /alcohol|parfum|fragrance|linalool|limonene/i.test(item)) ||
+    ingredients[0] ||
+    'this ingredient'
+  );
+}
+
+export function flagWhy(flag: string) {
+  const low = flag.toLowerCase();
+  if (/alcohol/.test(low)) {
+    return 'It can strip the barrier and inflame sensitive or acne-prone skin.';
+  }
+  if (/fragrance|parfum|linalool|limonene|citronellol|geraniol/.test(low)) {
+    return 'Fragrance allergens sit on the INCI and are a top irritation trigger.';
+  }
+  if (/dimethicone|isopropyl|myristate|palmitate/.test(low)) {
+    return 'Occlusive / comedogenic risk if you clog easily.';
+  }
+  return 'Flagged on this INCI for irritation or pore-clogging risk.';
+}
+
+const SWIPE = {
+  DEEP_DIVE: 'INCI Score on next slide ➡️',
+  TIER_LIST_SWIPE: 'Worst to best inside ➡️',
+  RED_FLAG_INCI: 'Full formula breakdown ➡️',
+} as const;
 
 function bulletWhy(row: FarmScoreRow) {
   const names = [...(row.watches || []), ...(row.fits || [])];
@@ -211,8 +236,12 @@ export function farmScript(
   const overlayWorst = scoreLine(worst);
 
   return {
+    format: 'DEEP_DIVE' as const,
     post_title: postTitle(name, best, worst),
     tiktok_caption: caption(product, best, worst),
+    swipe_trigger: SWIPE.DEEP_DIVE,
+    next_2: 'Next: ' + worst.label + ' Skin score ➡️',
+    next_3: 'Next: Verdict & scan ➡️',
     slide_1_cover: slide1,
     slide_2_first_skin_type: {
       skin_type: skinType(best),
@@ -232,4 +261,142 @@ export function farmScript(
       overlay_text: scoreLine(row),
     })),
   };
+}
+
+function shortPeer(product: Pick<FarmHit, 'name' | 'brand'>) {
+  return viralName(product);
+}
+
+export function farmStory(input: {
+  format?: 'DEEP_DIVE' | 'TIER_LIST_SWIPE' | 'RED_FLAG_INCI';
+  product: Pick<FarmHit, 'name' | 'brand'>;
+  products?: Pick<FarmHit, 'name' | 'brand'>[];
+  scores: FarmScoreRow[];
+  bestScores?: FarmScoreRow[];
+  worstScores?: FarmScoreRow[];
+  flag?: string;
+  ingredients?: string[];
+  version?: 1 | 2;
+}) {
+  const format = input.format || 'DEEP_DIVE';
+  if (format === 'TIER_LIST_SWIPE') {
+    const peers = (input.products || [input.product]).slice(0, 3);
+    const names = peers.map(shortPeer);
+    const bestScores = input.bestScores || input.scores;
+    const worstScores = input.worstScores || input.scores;
+    const best = [...bestScores].sort((a, b) => b.score - a.score)[0];
+    const worst = [...worstScores].sort((a, b) => a.score - b.score)[0];
+    const worstName = shortPeer(peers[peers.length - 1] || input.product);
+    const bestName = shortPeer(peers[0] || input.product);
+    const hook = 'One of these secretly clogs your pores 👀';
+    const overlayWorst = `${worstName}: ${worst.score}/100 ${mark(worst.score)} ${verdict(worst)}`;
+    const overlayBest = `${bestName}: ${best.score}/100 ${mark(best.score)} ${verdict(best)}`;
+    const title = '3 Formulas: Safe or Breakout? 🚩';
+    const intro = `Which of these 3 viral formulas clogs pores? We ranked the full INCI. ${names.join(' vs ')}.`;
+    const bullets = [
+      `• Worst: ${worstName} ${worst.score}/100. ${bulletWhy(worst)}`,
+      `• Best: ${bestName} ${best.score}/100. ${bulletWhy(best)}`,
+    ];
+    const hashes = [
+      '#skintok',
+      '#poreclogging',
+      '#skincareingredients',
+      '#glowcheck',
+      ...peers.map((item) => `#${tag(item.brand)}`),
+    ];
+    const caption = [
+      intro,
+      '',
+      ...bullets,
+      '',
+      'Which product should we scan next? Drop it in the comments 👇',
+      '',
+      [...new Set(hashes)].slice(0, 8).join(' '),
+    ].join('\n');
+    return {
+      format,
+      post_title: title,
+      tiktok_caption: caption,
+      swipe_trigger: SWIPE.TIER_LIST_SWIPE,
+      next_2: 'Next: Best formula ➡️',
+      next_3: 'Next: Verdict & scan ➡️',
+      slide_1_cover: hook,
+      slide_2_first_skin_type: {
+        skin_type: skinType(worst),
+        score: worst.score,
+        overlay_text: overlayWorst,
+      },
+      slide_3_second_skin_type: {
+        skin_type: skinType(best),
+        score: best.score,
+        overlay_text: overlayBest,
+      },
+      slide_4_cta: '',
+      slide_copy: ['1. ' + hook, '2. ' + overlayWorst, '3. ' + overlayBest].join('\n'),
+      all_skins: [],
+    };
+  }
+  if (format === 'RED_FLAG_INCI') {
+    const flag = input.flag || pickFarmFlag(input.scores, input.ingredients || []);
+    const pair = farmPairs(input.scores);
+    const use = input.version === 2 ? pair.v2 : pair.v1;
+    const ranked = [...use].sort((a, b) => b.score - a.score);
+    const best = ranked[0];
+    const worst = ranked[ranked.length - 1];
+    const name = viralName(input.product);
+    const hook = 'Stop using this if you see this ingredient 🛑';
+    const overlayFlag = `${flag}: ${flagWhy(flag)}`;
+    const overlayVerdict = scoreLine(worst);
+    const titleBase = `Stop If You See ${flag}`;
+    const title = wordCount(titleBase) > 7 ? `Stop If You See This 🛑` : `${titleBase} 🛑`;
+    const intro = `This INCI flag sits in ${name}. Here's why it can inflame skin.`;
+    const bullets = [
+      `• Flag: ${flag}. ${flagWhy(flag)}`,
+      `• Verdict: ${worst.label} ${worst.score}/100. ${bulletWhy(worst)}`,
+    ];
+    const hashes = [
+      '#skintok',
+      `#${productHash(name, input.product.brand)}`,
+      '#poreclogging',
+      '#skincareingredients',
+      `#${tag(input.product.brand)}`,
+      '#glowcheck',
+    ];
+    const caption = [
+      intro,
+      '',
+      ...bullets,
+      '',
+      'Which product should we scan next? Drop it in the comments 👇',
+      '',
+      [...new Set(hashes)].slice(0, 8).join(' '),
+    ].join('\n');
+    return {
+      format,
+      post_title: title,
+      tiktok_caption: caption,
+      swipe_trigger: SWIPE.RED_FLAG_INCI,
+      next_2: 'Next: Final score ➡️',
+      next_3: 'Next: Verdict & scan ➡️',
+      slide_1_cover: hook,
+      slide_2_first_skin_type: {
+        skin_type: flag,
+        score: worst.score,
+        overlay_text: overlayFlag,
+      },
+      slide_3_second_skin_type: {
+        skin_type: skinType(worst),
+        score: worst.score,
+        overlay_text: overlayVerdict,
+      },
+      slide_4_cta: '',
+      slide_copy: ['1. ' + hook, '2. ' + overlayFlag, '3. ' + overlayVerdict].join('\n'),
+      all_skins: input.scores.map((row) => ({
+        skin_type: skinType(row),
+        score: row.score,
+        overlay_text: scoreLine(row),
+      })),
+    };
+  }
+  return farmScript(input.product, input.scores, input.version === 2 ? farmPairs(input.scores).v2 : farmPairs(input.scores).v1, input.version || 1);
 }

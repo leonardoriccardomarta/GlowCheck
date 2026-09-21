@@ -219,6 +219,7 @@
     const INK = '#111111', CANVAS = '#F3F1ED', MUTED = '#6F6A67', NEON = '#00E676';
     const SWIPE_Y = H - 196;
     const PILL_Y = H - 100;
+    const HOOK_Y = H - 292;
     let token = sessionStorage.getItem('glow_admin') || '';
     let pack = null;
     let selectedIdea = null;
@@ -366,12 +367,17 @@
       return '💀';
     }
 
-    function teaserText(score, kind) {
-      if (kind === 'winner') return 'Winner: ' + score + '/100 ' + teaserMark(score) + ' (Swipe who fails)';
-      return 'Result: ' + score + '/100 ' + teaserMark(score) + ' (Swipe to see why)';
+    async function drawCoverStory(ctx, hook, swipe) {
+      await stampPill(ctx, hook || 'Why your skin is still breaking out 🚩', HOOK_Y, {
+        w: 980, h: 88, size: 26, bg: INK, fg: '#fff', wrap: true,
+      });
+      await stampPill(ctx, swipe || 'INCI Score on next slide ➡️', SWIPE_Y, {
+        w: 780, h: 80, size: 26, bg: INK, fg: NEON,
+      });
+      await drawUrlPill(ctx);
     }
 
-    async function drawBrandCover(product, bottle, teaser) {
+    async function drawBrandCover(product, bottle, story) {
       await loadFarmFonts();
       const c = makeCanvas();
       const ctx = c.getContext('2d');
@@ -412,11 +418,8 @@
         y += size + 6;
       });
       const bottleTop = y + 36;
-      drawInSlot(ctx, bottle, 170, bottleTop, 740, Math.max(240, SWIPE_Y - 20 - bottleTop));
-      await drawSwipeBadge(ctx, teaser && teaser.score != null
-        ? teaserText(teaser.score)
-        : 'Swipe for INCI test ➡️');
-      await drawUrlPill(ctx);
+      drawInSlot(ctx, bottle, 170, bottleTop, 740, Math.max(240, HOOK_Y - 24 - bottleTop));
+      await drawCoverStory(ctx, story && story.slide_1_cover, story && story.swipe_trigger);
       return c;
     }
 
@@ -452,7 +455,7 @@
       ctx.fillText('GlowCheck', W / 2, 172);
     }
 
-    async function drawTierCover(items, teaser) {
+    async function drawTierCover(items, story) {
       const c = makeCanvas();
       const ctx = c.getContext('2d');
       ctx.imageSmoothingEnabled = true;
@@ -486,14 +489,11 @@
         ctx.fillText(badge, x + colW / 2, by + 26);
         ctx.textBaseline = 'alphabetic';
       });
-      await drawSwipeBadge(ctx, teaser && teaser.score != null
-        ? teaserText(teaser.score, 'winner')
-        : 'Swipe for scores ➡️');
-      await drawUrlPill(ctx);
+      await drawCoverStory(ctx, story && story.slide_1_cover, story && story.swipe_trigger || 'Worst to best inside ➡️');
       return c;
     }
 
-    async function drawRedFlagCover(product, flags, ingredients, teaser) {
+    async function drawRedFlagCover(product, flags, ingredients, story) {
       const c = makeCanvas();
       const ctx = c.getContext('2d');
       ctx.imageSmoothingEnabled = true;
@@ -518,34 +518,32 @@
       ctx.font = '800 20px Poppins, sans-serif';
       ctx.fillText('INCI RED FLAG CHECK', W / 2, y + 6);
       const flagSet = flags.map((item) => String(item).toLowerCase());
-      const list = (ingredients || []).slice(0, 6);
-      y += 56;
+      const list = (ingredients || []).slice(0, 5);
+      y += 48;
       ctx.textAlign = 'left';
       list.forEach((ing) => {
+        if (y > HOOK_Y - 36) return;
         const label = String(ing).replace(/\s+/g, ' ').slice(0, 32);
         const low = label.toLowerCase();
         const isFlag = flagSet.some((flag) => low.includes(flag) || flag.includes(low));
-        ctx.font = (isFlag ? 800 : 600) + ' 28px Poppins, sans-serif';
+        ctx.font = (isFlag ? 800 : 600) + ' 30px Poppins, sans-serif';
         const x = 120;
         if (isFlag) {
           const tw = ctx.measureText(label).width;
           ctx.strokeStyle = '#FF1744';
-          ctx.lineWidth = 5;
+          ctx.lineWidth = 6;
           ctx.beginPath();
-          ctx.ellipse(x + tw / 2, y - 10, tw / 2 + 20, 22, -0.06, 0, Math.PI * 2);
+          ctx.ellipse(x + tw / 2, y - 10, tw / 2 + 22, 24, -0.06, 0, Math.PI * 2);
           ctx.stroke();
           ctx.fillStyle = '#FF1744';
         } else {
           ctx.fillStyle = INK;
         }
         ctx.fillText(label, x, y);
-        y += 56;
+        y += 58;
       });
       ctx.textAlign = 'center';
-      await drawSwipeBadge(ctx, teaser && teaser.score != null
-        ? teaserText(teaser.score)
-        : 'Swipe for skin scores ➡️');
-      await drawUrlPill(ctx);
+      await drawCoverStory(ctx, story && story.slide_1_cover, story && story.swipe_trigger || 'Full formula breakdown ➡️');
       return c;
     }
 
@@ -595,9 +593,9 @@
         'justify-content:center',
         'box-sizing:border-box',
         'padding:0 ' + padX + 'px',
-        'white-space:nowrap',
+        opts.wrap ? 'white-space:normal' : 'white-space:nowrap',
         'overflow:hidden',
-        'line-height:1',
+        opts.wrap ? 'line-height:1.15' : 'line-height:1',
         'letter-spacing:0',
         'text-align:center',
       ].join(';');
@@ -605,7 +603,7 @@
       const host = $('pillHost');
       host.innerHTML = '';
       host.appendChild(node);
-      while (size > 16 && node.scrollWidth > w + 1) {
+      while (size > 16 && (opts.wrap ? node.scrollHeight > h + 2 : node.scrollWidth > w + 1)) {
         size -= 1;
         node.style.fontSize = size + 'px';
       }
@@ -752,11 +750,59 @@
       return c;
     }
 
+    async function drawIngredientSlide(product, flag, why) {
+      await loadFarmFonts();
+      const c = makeCanvas();
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      await drawBrandMark(ctx);
+      ctx.fillStyle = '#FF1744';
+      ctx.font = '800 22px Poppins, sans-serif';
+      ctx.fillText('THE INCI FLAG', W / 2, 220);
+      const label = String(flag || 'This ingredient').replace(/\s+/g, ' ');
+      ctx.fillStyle = INK;
+      const size = label.length > 22 ? 48 : 56;
+      const lines = wrapLines(ctx, label, W - 160, size, 800).slice(0, 2);
+      let y = 320;
+      lines.forEach((line) => {
+        ctx.font = '800 ' + size + 'px Poppins, sans-serif';
+        const tw = ctx.measureText(line).width;
+        ctx.strokeStyle = '#FF1744';
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.ellipse(W / 2, y - 18, tw / 2 + 28, size * 0.55, -0.04, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = '#FF1744';
+        ctx.fillText(line, W / 2, y);
+        y += size + 12;
+      });
+      ctx.fillStyle = MUTED;
+      ctx.font = '700 22px Poppins, sans-serif';
+      const { brand, name } = coverName(product);
+      ctx.fillText((brand ? brand + ' · ' : '') + name, W / 2, y + 36);
+      ctx.fillStyle = INK;
+      ctx.font = '700 32px Poppins, sans-serif';
+      const whyLines = wrapLines(ctx, why || 'Flagged on this INCI for irritation risk.', W - 180, 32, 700).slice(0, 4);
+      let yy = y + 120;
+      whyLines.forEach((line) => {
+        ctx.fillText(line, W / 2, yy);
+        yy += 42;
+      });
+      await stampPill(ctx, 'Final score next ➡️', SWIPE_Y, {
+        w: 700, h: 80, size: 26, bg: INK, fg: NEON,
+      });
+      await drawUrlPill(ctx);
+      return c;
+    }
+
     async function slidesOf(cover, cta, a, b, script) {
+      const next2 = (script && script.next_2) || ('Next: ' + b.label + ' Skin score ➡️');
+      const next3 = (script && script.next_3) || 'Next: Verdict & scan ➡️';
       return [
         { name: '01-cover.png', canvas: cover, caption: script.slide_1_cover },
-        { name: '02-score-' + a.id + '.png', canvas: await padSafe(a.canvas, 'Next: ' + b.label + ' Skin score ➡️'), caption: script.slide_2_first_skin_type.overlay_text },
-        { name: '03-score-' + b.id + '.png', canvas: await padSafe(b.canvas, 'Next: Verdict & scan ➡️'), caption: script.slide_3_second_skin_type.overlay_text },
+        { name: '02-score-' + a.id + '.png', canvas: await padSafe(a.canvas, next2), caption: script.slide_2_first_skin_type.overlay_text },
+        { name: '03-score-' + b.id + '.png', canvas: await padSafe(b.canvas, next3), caption: script.slide_3_second_skin_type.overlay_text },
         { name: '04-cta.png', canvas: cta, caption: '' },
       ];
     }
@@ -848,7 +894,7 @@
       document.querySelectorAll('.v2copy').forEach((el) => {
         el.style.display = dual ? '' : 'none';
       });
-      $('zip').textContent = 'Export 2 carousels (.zip)';
+      $('zip').textContent = dual ? 'Export 2 carousels (.zip)' : 'Export carousel (.zip)';
     }
 
     function showBoard(label, slides, extra) {
@@ -866,10 +912,9 @@
       opts = opts || {};
       await loadFarmFonts();
       const ranked = [...scores].sort((a, b) => b.score - a.score);
-      const teaser = ranked[ranked.length - 1] || ranked[0];
       if (!opts.cover) $('status').innerHTML = 'Finding a pack shot…';
       const bottle = opts.cover ? null : await fetchBottle(product);
-      const cover = opts.cover || await drawBrandCover(product, bottle, teaser);
+      const cover = opts.cover || await drawBrandCover(product, bottle, script1);
       const cta = await drawCta();
       const scans = {};
       for (const row of scores) scans[row.id] = await captureScan(product, row);
@@ -946,6 +991,16 @@
       const built = [];
       for (const hit of hits.slice(0, 3)) built.push(await scoredHit(hit));
       built.sort((a, b) => poreRow(b.scores).score - poreRow(a.scores).score);
+      const best = built[0];
+      const worst = built[built.length - 1];
+      const story = await api('/admin/farm/story', {
+        format: 'TIER_LIST_SWIPE',
+        product: worst.product,
+        products: built.map((row) => row.product),
+        scores: worst.scores,
+        bestScores: best.scores,
+        worstScores: worst.scores,
+      });
       $('status').innerHTML = 'Building tier cover…';
       const items = [];
       for (let i = 0; i < built.length; i++) {
@@ -956,27 +1011,79 @@
           ...tierBadge(i),
         });
       }
-      const drama = built[built.length - 1];
-      const winner = poreRow(built[0].scores);
-      const cover = await drawTierCover(items, winner);
-      await render(drama.product, drama.scores, drama.script, drama.script2, selectedIdea, {
+      const cover = await drawTierCover(items, story.script);
+      const cta = await drawCta();
+      const worstRow = [...worst.scores].sort((a, b) => a.score - b.score)[0];
+      const bestRow = [...best.scores].sort((a, b) => b.score - a.score)[0];
+      const worstScan = await captureScan(worst.product, worstRow);
+      const bestScan = await captureScan(best.product, bestRow);
+      const slides = await slidesOf(
         cover,
+        cta,
+        { id: 'worst', label: worstRow.label, canvas: worstScan },
+        { id: 'best', label: bestRow.label, canvas: bestScan },
+        story.script,
+      );
+      pack = {
         format: 'TIER_LIST_SWIPE',
+        product: worst.product,
         products: built.map((row) => row.product),
-      });
+        idea: selectedIdea,
+        scores: worst.scores,
+        script1: story.script,
+        script2: story.script2 || story.script,
+        script: story.script,
+        version: 1,
+        v1: slides,
+        v2: [],
+      };
+      showCopyMode(false);
+      showBoard('Tier list · worst to best', slides);
     }
 
     async function renderRedFlag(hit) {
       $('status').innerHTML = 'Scoring INCI red flags…';
       const built = await scoredHit(hit);
       const flags = [...new Set(built.scores.flatMap((row) => row.watches || []))];
-      const teaser = [...built.scores].sort((a, b) => a.score - b.score)[0];
-      const cover = await drawRedFlagCover(built.product, flags, hit.ingredients || [], teaser);
-      await render(built.product, built.scores, built.script, built.script2, selectedIdea, {
-        cover,
+      const story = await api('/admin/farm/story', {
         format: 'RED_FLAG_INCI',
-        products: [built.product],
+        product: built.product,
+        scores: built.scores,
+        ingredients: hit.ingredients || [],
+        flag: flags[0],
       });
+      const flag = story.flag || flags[0] || 'this ingredient';
+      const cover = await drawRedFlagCover(built.product, flags.length ? flags : [flag], hit.ingredients || [], story.script);
+      const flagSlide = await drawIngredientSlide(
+        built.product,
+        flag,
+        story.script.slide_2_first_skin_type.overlay_text,
+      );
+      const verdict = [...built.scores].sort((a, b) => a.score - b.score)[0];
+      const verdictScan = await captureScan(built.product, verdict);
+      const cta = await drawCta();
+      const slides = await slidesOf(
+        cover,
+        cta,
+        { id: 'flag', label: 'Flag', canvas: flagSlide },
+        { id: verdict.id, label: verdict.label, canvas: verdictScan },
+        story.script,
+      );
+      pack = {
+        format: 'RED_FLAG_INCI',
+        product: built.product,
+        products: [built.product],
+        idea: selectedIdea,
+        scores: built.scores,
+        script1: story.script,
+        script2: story.script2 || story.script,
+        script: story.script,
+        version: 1,
+        v1: slides,
+        v2: [],
+      };
+      showCopyMode(false);
+      showBoard('INCI red flag · ' + flag, slides);
     }
 
     async function applyBlueprint(json) {
@@ -986,7 +1093,7 @@
       $('blueprint').hidden = false;
       $('bpFormat').textContent = format + (json.live ? ' · live TikTok' : ' · catalog director');
       $('bpTopic').textContent = blueprint.trending_topic || '';
-      $('bpHook').textContent = 'Copy stays the usual GlowCheck title, caption and slides. Cover mix: tiers, red-flag INCI, single bottle.';
+      $('bpHook').textContent = 'Cover, hook and slides now match the format: 1 bottle, 3-product rank, or INCI red flag.';
       $('bpLive').innerHTML = json.live
         ? '<span class="ok">Source: ' + esc(json.source) + ' · ' + (json.posts || []).length + ' posts</span>'
         : json.configured
