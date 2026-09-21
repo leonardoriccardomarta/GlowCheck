@@ -12,7 +12,7 @@ import { farmLookup, farmScores, type FarmHit } from '../services/farmCatalog';
 import { farmPairs, farmScript, farmWhy } from '../services/farmCopy';
 import { allowedFarmImage, farmHeroImage } from '../services/farmHero';
 import { farmCoverImage } from '../services/farmCover';
-import { markFarmProductsUsed, markFarmUsed, unusedFarmIdeas } from '../services/farmUsed';
+import { markFarmProductsUsed, markFarmUsed, readFarmScan, unusedFarmIdeas } from '../services/farmUsed';
 import { farmTrendPosts } from '../services/farmTrends';
 import { farmDirector } from '../services/farmDirector';
 
@@ -122,7 +122,7 @@ adminRouter.get('/farm/trends', requireAdmin, async (_req, res) => {
       farmTrendPosts(),
       unusedFarmIdeas(16, { rotate: true }),
     ]);
-    const blueprint = await farmDirector(posts, ideas);
+    const blueprint = await farmDirector(posts, ideas, await readFarmScan());
     const need = blueprint.recommended_format === 'TIER_LIST_SWIPE' ? 3 : 1;
     const products: FarmHit[] = [];
     for (const query of blueprint.queries.slice(0, need)) {

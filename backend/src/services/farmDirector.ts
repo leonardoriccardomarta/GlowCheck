@@ -14,26 +14,13 @@ export type FarmBlueprint = {
   slides_blueprint: { slide: number; type: string; verdict?: string; text?: string; items?: string[] }[];
 };
 
-const FORMAT_ROTATION: FarmFormat[] = [
-  'TIER_LIST_SWIPE',
-  'DEEP_DIVE',
-  'RED_FLAG_INCI',
-  'TIER_LIST_SWIPE',
-];
+const FORMAT_ROTATION: FarmFormat[] = ['TIER_LIST_SWIPE', 'RED_FLAG_INCI', 'DEEP_DIVE'];
 
-function formatOf(value: string): FarmFormat {
-  if (value === 'TIER_LIST_SWIPE' || value === 'RED_FLAG_INCI') return value;
-  return 'DEEP_DIVE';
-}
-
-function hashSlot(ideas: ReadyFarmIdea[]): number {
-  const key = ideas.map((idea) => idea.query || idea.label).join('|') || 'glow';
-  let h = 2166136261;
-  for (let i = 0; i < key.length; i++) {
-    h ^= key.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return (h >>> 0) % FORMAT_ROTATION.length;
+export function formatForScan(scan: number, ideas: ReadyFarmIdea[]): FarmFormat {
+  let format = FORMAT_ROTATION[((scan % FORMAT_ROTATION.length) + FORMAT_ROTATION.length) % FORMAT_ROTATION.length];
+  if (format === 'TIER_LIST_SWIPE' && ideas.length < 2) format = 'RED_FLAG_INCI';
+  if (format === 'RED_FLAG_INCI' && !ideas.length) format = 'DEEP_DIVE';
+  return format;
 }
 
 function redFlagIdea(ideas: ReadyFarmIdea[]): ReadyFarmIdea | undefined {
@@ -71,14 +58,6 @@ function slidesFor(format: FarmFormat): FarmBlueprint['slides_blueprint'] {
   ];
 }
 
-export function enforceFormatMix(groqFormat: FarmFormat, ideas: ReadyFarmIdea[]): FarmFormat {
-  let format = groqFormat;
-  if (format === 'DEEP_DIVE') format = FORMAT_ROTATION[hashSlot(ideas)];
-  if (format === 'TIER_LIST_SWIPE' && ideas.length < 2) format = 'RED_FLAG_INCI';
-  if (format === 'RED_FLAG_INCI' && !ideas.length) format = 'DEEP_DIVE';
-  return format;
-}
-
 function pickFromCatalog(format: FarmFormat, ideas: ReadyFarmIdea[]): { queries: string[]; items: string[] } {
   const need = format === 'TIER_LIST_SWIPE' ? 3 : 1;
   const start = format === 'RED_FLAG_INCI' ? redFlagIdea(ideas) : ideas[0];
@@ -96,8 +75,8 @@ function pickFromCatalog(format: FarmFormat, ideas: ReadyFarmIdea[]): { queries:
   };
 }
 
-export function heuristicBlueprint(ideas: ReadyFarmIdea[]): FarmBlueprint {
-  const format = enforceFormatMix('DEEP_DIVE', ideas);
+export function heuristicBlueprint(ideas: ReadyFarmIdea[], scan = 0): FarmBlueprint {
+  const format = formatForScan(scan, ideas);
   const picked = pickFromCatalog(format, ideas);
   const one = ideas.find((idea) => idea.query === picked.queries[0]) || ideas[0];
   return {
@@ -112,8 +91,8 @@ export function heuristicBlueprint(ideas: ReadyFarmIdea[]): FarmBlueprint {
   };
 }
 
-export async function farmDirector(posts: TrendPost[], ideas: ReadyFarmIdea[]): Promise<FarmBlueprint> {
-  const fallback = heuristicBlueprint(ideas);
+export async function farmDirector(posts: TrendPost[], ideas: ReadyFarmIdea[], scan = 0): Promise<FarmBlueprint> {
+  const fallback = heuristicBlueprint(ideas, scan);
   const key = env.GROQ_API_KEY?.trim();
   if (!key) return fallback;
   const catalog = ideas
@@ -170,8 +149,7 @@ Rules:
     const raw = extractVisionJson(json.choices?.[0]?.message?.content ?? '');
     if (!raw) return fallback;
     const parsed = JSON.parse(raw) as Partial<FarmBlueprint>;
-    const groqFormat = formatOf(String(parsed.recommended_format || ''));
-    const recommended_format = enforceFormatMix(groqFormat, ideas);
+    const recommended_format = formatForScan(scan, ideas);
     const picked = pickFromCatalog(recommended_format, ideas);
     return {
       trending_topic: String(parsed.trending_topic || fallback.trending_topic).slice(0, 80),
@@ -179,10 +157,7 @@ Rules:
       hook_text: String(parsed.hook_text || fallback.hook_text).slice(0, 90),
       items: picked.items.length ? picked.items : fallback.items,
       queries: picked.queries.length ? picked.queries : fallback.queries,
-      slides_blueprint:
-        Array.isArray(parsed.slides_blueprint) && parsed.slides_blueprint.length
-          ? parsed.slides_blueprint
-          : slidesFor(recommended_format),
+      slides_blueprint: slidesFor(recommended_format),
     };
   } catch {
     return fallback;

@@ -103,6 +103,16 @@ export async function bumpFarmScan(): Promise<number> {
   }
 }
 
+export async function readFarmScan(): Promise<number> {
+  try {
+    await ensureDb();
+    const rows = await sqlClient()`SELECT label FROM farm_used WHERE idea_key = ${SCAN_KEY}`;
+    return Number(rows[0]?.label || 0) || 0;
+  } catch {
+    return 0;
+  }
+}
+
 export async function unusedFarmIdeas(limit = 8, opts?: { rotate?: boolean }): Promise<ReadyFarmIdea[]> {
   const used = await usedKeys();
   const unused = FARM_IDEAS.filter((idea) => isUnused(idea, used));
