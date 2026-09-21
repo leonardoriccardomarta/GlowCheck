@@ -219,7 +219,6 @@
     const INK = '#111111', CANVAS = '#F3F1ED', MUTED = '#6F6A67', NEON = '#00E676';
     const SWIPE_Y = H - 196;
     const PILL_Y = H - 100;
-    const HOOK_Y = H - 292;
     let token = sessionStorage.getItem('glow_admin') || '';
     let pack = null;
     let selectedIdea = null;
@@ -367,10 +366,7 @@
       return '💀';
     }
 
-    async function drawCoverStory(ctx, hook, swipe) {
-      await stampPill(ctx, hook || 'Why your skin is still breaking out 🚩', HOOK_Y, {
-        w: 980, h: 88, size: 26, bg: INK, fg: '#fff', wrap: true,
-      });
+    async function drawCoverStory(ctx, swipe) {
       await stampPill(ctx, swipe || 'INCI Score on next slide ➡️', SWIPE_Y, {
         w: 780, h: 80, size: 26, bg: INK, fg: NEON,
       });
@@ -418,8 +414,8 @@
         y += size + 6;
       });
       const bottleTop = y + 36;
-      drawInSlot(ctx, bottle, 170, bottleTop, 740, Math.max(240, HOOK_Y - 24 - bottleTop));
-      await drawCoverStory(ctx, story && story.slide_1_cover, story && story.swipe_trigger);
+      drawInSlot(ctx, bottle, 170, bottleTop, 740, Math.max(240, SWIPE_Y - 20 - bottleTop));
+      await drawCoverStory(ctx, story && story.swipe_trigger);
       return c;
     }
 
@@ -489,7 +485,7 @@
         ctx.fillText(badge, x + colW / 2, by + 26);
         ctx.textBaseline = 'alphabetic';
       });
-      await drawCoverStory(ctx, story && story.slide_1_cover, story && story.swipe_trigger || 'Worst to best inside ➡️');
+      await drawCoverStory(ctx, (story && story.swipe_trigger) || 'Worst to best inside ➡️');
       return c;
     }
 
@@ -522,7 +518,7 @@
       y += 48;
       ctx.textAlign = 'left';
       list.forEach((ing) => {
-        if (y > HOOK_Y - 36) return;
+        if (y > SWIPE_Y - 36) return;
         const label = String(ing).replace(/\s+/g, ' ').slice(0, 32);
         const low = label.toLowerCase();
         const isFlag = flagSet.some((flag) => low.includes(flag) || flag.includes(low));
@@ -543,7 +539,7 @@
         y += 58;
       });
       ctx.textAlign = 'center';
-      await drawCoverStory(ctx, story && story.slide_1_cover, story && story.swipe_trigger || 'Full formula breakdown ➡️');
+      await drawCoverStory(ctx, (story && story.swipe_trigger) || 'Full formula breakdown ➡️');
       return c;
     }
 
@@ -1093,7 +1089,7 @@
       $('blueprint').hidden = false;
       $('bpFormat').textContent = format + (json.live ? ' · live TikTok' : ' · catalog director');
       $('bpTopic').textContent = blueprint.trending_topic || '';
-      $('bpHook').textContent = 'Cover, hook and slides now match the format: 1 bottle, 3-product rank, or INCI red flag.';
+      $('bpHook').textContent = 'Paste the Slide 1 hook as native TikTok text. The image only has the swipe chip and glow-check.com.';
       $('bpLive').innerHTML = json.live
         ? '<span class="ok">Source: ' + esc(json.source) + ' · ' + (json.posts || []).length + ' posts</span>'
         : json.configured
